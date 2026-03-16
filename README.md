@@ -20,6 +20,25 @@ contractor gets auto-priced estimates based off of saved inventory, and technici
 - [ ] 5 pts Experience: 3 instances where elements re-order themselves on smaller screens
 - [ ] 20 pts Professional, organized and smooth experience
 
+##Features
+```
+Contractor
+├── CRUD operations on projects
+├── AI find materials-calc prices
+├── Manage workers
+|   ├── Review Worker shift logs
+|   ├── CRUD operations
+├── Buy Materials
+|   ├── AI alerts when timeline says is time to buy
+├── Set Project Timeline/Scheduling
+
+Workers
+├── Shift Form
+|   ├── Voice to fill out
+|   ├── user edit voice-filled form
+|   ├── Manual Form (no ai voice)
+├── CRUD Shift Form
+```
 
 
 
@@ -38,6 +57,10 @@ Rubric items:
 
 
 Features:
+- Deployed App that runs
+- Have Data in DB
+- CRUD on Worker
+- CRUD on Contractor
 
 
 #### Delivered
