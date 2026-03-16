@@ -19,24 +19,26 @@ contractor gets auto-priced estimates based off of saved inventory, and technici
 - [ ] 5 pts Experience: all experiences mobile friendly
 - [ ] 5 pts Experience: 3 instances where elements re-order themselves on smaller screens
 - [ ] 20 pts Professional, organized and smooth experience
-### END RUBRIC
+
 
 
 
 
 ## Project Schedule
 
-### Mar. 16, 2026
+### Mar. 17, 2026
 
 #### Estimates:
 
 Rubric items:
-- item 1 with description
-- item 2 with description
+- [ ] 5 pts Technology: Network Calls that read and write data
+- [ ] 5 pts Technology: CI/CD pipeline
+- [ ] 5 pts Technology: tests run in pipeline, pipeline aborts if they fail
+- [ ] 5 pts Technology: linting in pipeline
 
 Features:
-- feature 4 with description
-- feature 5 with description
+- 
+- 
 
 #### Delivered
 
@@ -45,4 +47,41 @@ Rubric Items:
 
 Features:
 
-### Nov 1
+### Mar. 20
+
+#### Estimates:
+
+Rubric items:
+
+
+Features:
+
+-
+-
+#### Delivered
+
+Rubric Items:
+
+
+Features:
+
+### Mar. 
+
+#### Estimates:
+
+Rubric items:
+
+
+Features:
+
+-
+-
+#### Delivered
+
+Rubric Items:
+
+
+Features:
+
+### Mar. 
+
