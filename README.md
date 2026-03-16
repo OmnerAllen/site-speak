@@ -36,9 +36,9 @@ Rubric items:
 - [ ] 5 pts Technology: tests run in pipeline, pipeline aborts if they fail
 - [ ] 5 pts Technology: linting in pipeline
 
+
 Features:
-- 
-- 
+
 
 #### Delivered
 
