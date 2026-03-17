@@ -203,13 +203,11 @@ Features:
 Rubric items:
 Note: We are just working more on these, can't really finish a singular one
 - [ ] 1+ action(s) automatically adjust the UI when performed
-- [ ] 
-- [ ] 
+- [ ] Professional, organized and smooth experience
 
 Features:
-- [ ] AI Project Scheduling materials recommended purchase
-- [ ] 
-- [ ] 
+- [ ] AI Project Scheduling materials recommended purchase based on stage time
+- [ ] Design rules of thumb for our UI
 
 #### Delivered
 
@@ -226,14 +224,12 @@ Features:
 
 Rubric items:
 Note: We are just working more on these, can't really finish a singular one
-- [ ] 
-- [ ] 
-- [ ] 
+- [ ] Professional, organized and smooth experience
+- [ ] Toasts / global notifications or alerts
 
 Features:
-- [ ] 
-- [ ] 
-- [ ] 
+- [ ] Implement design for desktop
+- [ ] Fine tune error handling and messages - UI
 
 #### Delivered
 
@@ -249,14 +245,13 @@ Features:
 
 Rubric items:
 Note: We are just working more on these, can't really finish a singular one
-- [ ] 
-- [ ] 
-- [ ] 
+- [ ] 3 instances where elements re-order themselves on smaller screens
+- [ ] all experiences mobile friendly
 
 Features:
-- [ ] 
-- [ ] 
-- [ ] 
+- [ ] Make this work on a phone
+- [ ] Make it incredibly intuitive on a phone
+- [ ] Easy to use worker voice-to-text on phone
 
 #### Delivered
 
@@ -272,14 +267,13 @@ Features:
 
 Rubric items:
 Note: We are just working more on these, can't really finish a singular one
-- [ ] 
-- [ ] 
-- [ ] 
+- [ ] Professional, organized and smooth experience
+- [ ] Personal Rubric item: Testing with real people
 
 Features:
-- [ ] 
-- [ ] 
-- [ ] 
+- [ ] Beautiful design
+- [ ] Smooth transitions
+- [ ] No bugs, only features we didn't know about ;)
 
 #### Delivered
 
@@ -296,13 +290,10 @@ Features:
 Rubric items:
 Note: We are just working more on these, can't really finish a singular one
 - [ ] Project Scope is 2-3 times larger than IM
-- [ ] 
-- [ ] 
+- [ ] All of them
 
 Features:
-- [ ] 
-- [ ] 
-- [ ] 
+- [ ] Final touch-ups, make sure everything works.
 
 #### Delivered
 
