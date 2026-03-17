@@ -20,7 +20,7 @@ contractor gets auto-priced estimates based off of saved inventory, and technici
 - [ ] 5 pts Experience: 3 instances where elements re-order themselves on smaller screens
 - [ ] 20 pts Professional, organized and smooth experience
 
-##Features
+## Features
 ```
 Contractor
 ├── CRUD operations on projects
@@ -57,10 +57,10 @@ Rubric items:
 
 
 Features:
-- Deployed App that runs
-- Have Data in DB
-- CRUD on Worker
-- CRUD on Contractor
+- [ ] Deployed App that runs
+- [ ] Have Data in DB
+- [ ] CRUD on Worker
+- [ ] CRUD on Contractor
 
 
 #### Delivered
@@ -75,7 +75,9 @@ Features:
 #### Estimates:
 
 Rubric items:
-
+- [ ] 
+- [ ] 
+- [ ] 
 
 Features:
 
@@ -107,4 +109,10 @@ Rubric Items:
 Features:
 
 ### Mar. 
+
+
+Backlog Features:
+- Customizable Worker Forms
+- Error in estimates (waste factor and markup)
+- Real Material usage
 
