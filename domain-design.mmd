@@ -1,0 +1,34 @@
+%% Domain Design Diagram
+%% Based on conceptual sketch: Company, Employees, Projects, Suppliers, etc.
+%% Layout: Employees (left), Projects (middle), Suppliers (right)
+
+flowchart TB
+    subgraph left[" "]
+        Employees
+        WorkLog
+    end
+
+    subgraph center[" "]
+        Company
+        Projects
+        Stages
+        Equipment
+        Materials
+    end
+
+    subgraph right[" "]
+        Suppliers
+    end
+
+    Company -->|has| Employees
+    Company -->|has| Suppliers
+    Company -->|has| Projects
+    Employees -->|logs| WorkLog
+    Employees <-.->|works on| Projects
+    Projects -->|has| Stages
+    Stages -->|uses| Equipment
+    Stages -->|uses| Materials
+
+    style left fill:none,stroke:none
+    style center fill:none,stroke:none
+    style right fill:none,stroke:none

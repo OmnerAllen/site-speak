@@ -22,8 +22,9 @@ contractor gets auto-priced estimates based off of saved inventory, and technici
 
 ## Features
 ```
-Contractor
+Admin
 ├── CRUD operations on projects
+|   ├── CRUD stages (demo, prep, build/install, qa)
 ├── AI find materials-calc prices
 ├── Manage workers
 |   ├── Review Worker shift logs
@@ -38,9 +39,24 @@ Workers
 |   ├── user edit voice-filled form
 |   ├── Manual Form (no ai voice)
 ├── CRUD Shift Form
+
+Everyone
+├── Dashboard
+├── Login
 ```
 
-
+## Pages
+A - CRUD Employee
+A - CRUD Projects
+    - CRUD Stages
+A - Project Scheduling
+A - CRUD Equipment
+A - CRUD Materials
+A - CRUD Suppliers
+W/A - Review Work Log
+W - Fill Work Log
+W/A - Home Page / Dashboard
+Login Page
 
 
 ## Project Schedule
@@ -59,8 +75,7 @@ Rubric items:
 Features:
 - [ ] Deployed App that runs
 - [ ] Have Data in DB
-- [ ] CRUD on Worker
-- [ ] CRUD on Contractor
+- [ ] Minimal Backend to talk to DB
 
 
 #### Delivered
@@ -70,19 +85,24 @@ Rubric Items:
 
 Features:
 
-### Mar. 24
+### Mar. 24, 2026
 
 #### Estimates:
 
 Rubric items:
-- [ ] 
-- [ ] 
-- [ ] 
+Note: These will be throughout the project, this is initial setup
+- [ ] Client side state stores
+- [ ] Toasts / global notifications or alerts
+- [ ] Error handling
+- [ ] 3+ generic form input components
 
 Features:
+Note: Will create generic form for all of these
+- [ ] CRUD Suppliers
+- [ ] CRUD Materials
+- [ ] CRUD Equipment
+- [ ] Home / Dashboard
 
--
--
 #### Delivered
 
 Rubric Items:
@@ -90,17 +110,20 @@ Rubric Items:
 
 Features:
 
-### Mar. 
+
+
+### Mar. 27, 2026
 
 #### Estimates:
 
 Rubric items:
-
+- [ ] authentication and user account support
+- [ ] authorized pages and public pages
 
 Features:
+- [ ] Login Page
+- [ ] RBAC - Roles Based Access
 
--
--
 #### Delivered
 
 Rubric Items:
@@ -108,9 +131,185 @@ Rubric Items:
 
 Features:
 
-### Mar. 
+### Mar. 31, 2026
+
+#### Estimates:
+
+Rubric items:
+- [ ] 10+ pages or views
+- [ ] 4+ generic layout components
+
+Features:
+- [ ] CRUD Projects
+- [ ] CRUD Stages
+- [ ] Rest of pages are created
+
+#### Delivered
+
+Rubric Items:
 
 
+Features:
+
+
+### Apr. 3, 2026
+
+#### Estimates:
+
+Rubric items:
+Note: We are just working more on these, can't really finish a singular one
+- [ ] Project scope is 2-3 times larger than Inventory Management (per group member)
+- [ ] Toasts / global notifications or alerts
+- [ ] Error handling (both on api requests and render errors)
+
+Features:
+- [ ] CRUD Employees
+- [ ] CRUD Worklog
+- [ ] Project Scheduling
+
+#### Delivered
+
+Rubric Items:
+
+
+Features:
+
+
+### Apr. 7, 2026
+
+#### Estimates:
+
+Rubric items:
+Note: We are just working more on these, can't really finish a singular one
+- [ ] 1+ action(s) can be performed autonomously
+- [ ] 1+ action(s) require user confirmation to perform
+
+Features:
+- [ ] Voice-To-Text for worklogs
+- [ ] AI material estimates
+
+#### Delivered
+
+Rubric Items:
+
+
+Features:
+
+
+### Apr. 10, 2026 
+
+#### Estimates:
+
+Rubric items:
+Note: We are just working more on these, can't really finish a singular one
+- [ ] 1+ action(s) automatically adjust the UI when performed
+- [ ] 
+- [ ] 
+
+Features:
+- [ ] AI Project Scheduling materials recommended purchase
+- [ ] 
+- [ ] 
+
+#### Delivered
+
+Rubric Items:
+
+
+Features:
+
+
+
+### Apr. 14, 2026
+
+#### Estimates:
+
+Rubric items:
+Note: We are just working more on these, can't really finish a singular one
+- [ ] 
+- [ ] 
+- [ ] 
+
+Features:
+- [ ] 
+- [ ] 
+- [ ] 
+
+#### Delivered
+
+Rubric Items:
+
+
+Features:
+
+
+### Apr. 17, 2026 
+
+#### Estimates:
+
+Rubric items:
+Note: We are just working more on these, can't really finish a singular one
+- [ ] 
+- [ ] 
+- [ ] 
+
+Features:
+- [ ] 
+- [ ] 
+- [ ] 
+
+#### Delivered
+
+Rubric Items:
+
+
+Features:
+
+
+### Apr. 21, 2026
+
+#### Estimates:
+
+Rubric items:
+Note: We are just working more on these, can't really finish a singular one
+- [ ] 
+- [ ] 
+- [ ] 
+
+Features:
+- [ ] 
+- [ ] 
+- [ ] 
+
+#### Delivered
+
+Rubric Items:
+
+
+Features:
+
+
+### Apr. 24, 2026
+
+#### Estimates:
+
+Rubric items:
+Note: We are just working more on these, can't really finish a singular one
+- [ ] Project Scope is 2-3 times larger than IM
+- [ ] 
+- [ ] 
+
+Features:
+- [ ] 
+- [ ] 
+- [ ] 
+
+#### Delivered
+
+Rubric Items:
+
+
+Features:
 Backlog Features:
 - Customizable Worker Forms
 - Error in estimates (waste factor and markup)
