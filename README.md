@@ -43,6 +43,11 @@ Workers
 Everyone
 ├── Dashboard
 ├── Login
+
+Auth - Authorization in house stuff
+├── User
+├── Group (Many to Many between them)
+├── Permissions
 ```
 
 ## Pages
