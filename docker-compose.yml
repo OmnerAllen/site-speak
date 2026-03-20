@@ -11,11 +11,11 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql
-      - ./schema.sql:/docker-entrypoint-initdb.d/01-schema.sql
-      - ./1-seed_supplier.sql:/docker-entrypoint-initdb.d/02-seed_supplier.sql
-      - ./2-seed_equipment.sql:/docker-entrypoint-initdb.d/03-seed_equipment.sql
-      - ./2-seed_material.sql:/docker-entrypoint-initdb.d/04-seed_material.sql
-      - ./3-seed_basic.sql:/docker-entrypoint-initdb.d/05-seed_basic.sql
+      - ./database/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql
+      - ./database/1-seed_supplier.sql:/docker-entrypoint-initdb.d/02-seed_supplier.sql
+      - ./database/2-seed_equipment.sql:/docker-entrypoint-initdb.d/03-seed_equipment.sql
+      - ./database/2-seed_material.sql:/docker-entrypoint-initdb.d/04-seed_material.sql
+      - ./database/3-seed_basic.sql:/docker-entrypoint-initdb.d/05-seed_basic.sql
 
   client:
     image: node:20-alpine
