@@ -8,6 +8,7 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE TABLE company (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     name VARCHAR(255) NOT NULL,
+    address VARCHAR(255) NOT NULL,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW(),
     deleted_at TIMESTAMPTZ
@@ -24,11 +25,11 @@ CREATE TABLE employee (
     deleted_at TIMESTAMPTZ
 );
 
--- Suppliers (belongs to Company)
+-- Suppliers (independent table)
 CREATE TABLE supplier (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    company_id UUID NOT NULL REFERENCES company(id) ON DELETE CASCADE,
     name VARCHAR(255) NOT NULL,
+    address VARCHAR(255) NOT NULL,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW(),
     deleted_at TIMESTAMPTZ
@@ -39,6 +40,7 @@ CREATE TABLE project (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     company_id UUID NOT NULL REFERENCES company(id) ON DELETE CASCADE,
     name VARCHAR(255) NOT NULL,
+    address VARCHAR(255) NOT NULL,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW(),
     deleted_at TIMESTAMPTZ
@@ -46,10 +48,10 @@ CREATE TABLE project (
 
 -- Employee-Project assignment (many-to-many: employees work on projects)
 CREATE TABLE employee_project (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     employee_id UUID NOT NULL REFERENCES employee(id) ON DELETE CASCADE,
     project_id UUID NOT NULL REFERENCES project(id) ON DELETE CASCADE,
     assigned_at TIMESTAMPTZ DEFAULT NOW(),
-    PRIMARY KEY (employee_id, project_id),
     deleted_at TIMESTAMPTZ
 );
 
@@ -57,7 +59,7 @@ CREATE TABLE employee_project (
 CREATE TABLE stage (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     project_id UUID NOT NULL REFERENCES project(id) ON DELETE CASCADE,
-    name VARCHAR(255) NOT NULL,
+    name VARCHAR(255) NOT NULL CHECK (name IN ('demo', 'prep', 'build/install', 'qa')),
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW(),
     deleted_at TIMESTAMPTZ
@@ -67,6 +69,9 @@ CREATE TABLE stage (
 CREATE TABLE equipment (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     name VARCHAR(255) NOT NULL,
+    cost_per_day DECIMAL(10, 2),
+    cost_half_day DECIMAL(10, 2),
+    place_to_rent_from VARCHAR(255),
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW(),
     deleted_at TIMESTAMPTZ
@@ -76,7 +81,7 @@ CREATE TABLE equipment (
 CREATE TABLE material (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     product_name VARCHAR(255) NOT NULL,
-    brand VARCHAR(255),
+    supplier_id UUID REFERENCES supplier(id) ON DELETE SET NULL,
     unit VARCHAR(50),
     product_type VARCHAR(100),
     price_per_unit DECIMAL(10, 2),
@@ -88,21 +93,21 @@ CREATE TABLE material (
 
 -- Stage-Equipment association
 CREATE TABLE stage_equipment (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     stage_id UUID NOT NULL REFERENCES stage(id) ON DELETE CASCADE,
     equipment_id UUID NOT NULL REFERENCES equipment(id) ON DELETE CASCADE,
-    quantity DECIMAL(10, 2) DEFAULT 1,
-    assigned_at TIMESTAMPTZ DEFAULT NOW(),
-    PRIMARY KEY (stage_id, equipment_id),
+    half_day_bool BOOLEAN DEFAULT False, 
+    date_of_use DATE NOT NULL,
     deleted_at TIMESTAMPTZ
 );
 
 -- Stage-Materials association
 CREATE TABLE stage_material (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     stage_id UUID NOT NULL REFERENCES stage(id) ON DELETE CASCADE,
     material_id UUID NOT NULL REFERENCES material(id) ON DELETE CASCADE,
     quantity DECIMAL(10, 2) DEFAULT 1,
     assigned_at TIMESTAMPTZ DEFAULT NOW(),
-    PRIMARY KEY (stage_id, material_id),
     deleted_at TIMESTAMPTZ
 );
 
@@ -111,8 +116,8 @@ CREATE TABLE work_log (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     employee_id UUID NOT NULL REFERENCES employee(id) ON DELETE CASCADE,
     project_id UUID NOT NULL REFERENCES project(id) ON DELETE CASCADE,
-    logged_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    hours DECIMAL(10, 2),
+    started_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    ended_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     notes TEXT,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW(),
@@ -122,7 +127,6 @@ CREATE TABLE work_log (
 -- Indexes for common lookups
 CREATE INDEX idx_employee_company ON employee(company_id);
 CREATE INDEX idx_project_company ON project(company_id);
-CREATE INDEX idx_supplier_company ON supplier(company_id);
 CREATE INDEX idx_stage_project ON stage(project_id);
 CREATE INDEX idx_stage_equipment_stage ON stage_equipment(stage_id);
 CREATE INDEX idx_stage_material_stage ON stage_material(stage_id);
