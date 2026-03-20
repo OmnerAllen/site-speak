@@ -1,39 +1,40 @@
-version: '3.8'
+# version: '3.8'
 
 services:
   # Database Service
-  db:
-    image: postgres:15-alpine
-    container_name: sitespeak-postgres
-    restart: always
-    environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: sitespeak
-    ports:
-      - "5432:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-      # Initialize the database automatically on first startup
-      - ./schema.sql:/docker-entrypoint-initdb.d/01-schema.sql
-      - ./seed_basic.sql:/docker-entrypoint-initdb.d/02-seed_basic.sql
-      - ./seed_material.sql:/docker-entrypoint-initdb.d/03-seed_material.sql
+  # db:
+  #   image: postgres:15-alpine
+  #   container_name: sitespeak-postgres
+  #   restart: always
+  #   environment:
+  #     POSTGRES_USER: postgres
+  #     POSTGRES_PASSWORD: postgres
+  #     POSTGRES_DB: sitespeak
+  #   ports:
+  #     - "5432:5432"
+  #   volumes:
+  #     - postgres_data:/var/lib/postgresql/data
+  #     # Initialize the database automatically on first startup
+  #     - ./schema.sql:/docker-entrypoint-initdb.d/01-schema.sql
+  #     - ./seed_basic.sql:/docker-entrypoint-initdb.d/02-seed_basic.sql
+  #     - ./seed_material.sql:/docker-entrypoint-initdb.d/03-seed_material.sql
 
-  # Frontend Vite Service (Development)
   client:
     image: node:20-alpine
     container_name: sitespeak-client
-    working_dir: /app
     ports:
       - "5173:5173"
+    working_dir: /app
     environment:
       - NODE_ENV=development
     volumes:
       - ./client:/app
-    # Uses PNPM to install and run the dev server exposing it to the docker network
-    command: /bin/sh -c "npm install -g pnpm && pnpm install && pnpm run dev --host 0.0.0.0"
-    depends_on:
-      - db
+      - /app/node_modules
+    command: >-
+      sh -c "npm install -g pnpm && pnpm i && pnpm run dev --host 0.0.0.0"
+    
+    # depends_on:
+    #   - db
 
-volumes:
-  postgres_data:
+# volumes:
+#   postgres_data:
