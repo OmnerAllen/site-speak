@@ -17,6 +17,22 @@ services:
       - ./database/2-seed_material.sql:/docker-entrypoint-initdb.d/04-seed_material.sql
       - ./database/3-seed_basic.sql:/docker-entrypoint-initdb.d/05-seed_basic.sql
 
+  api:
+    image: mcr.microsoft.com/dotnet/sdk:10.0
+    container_name: sitespeak-api
+    ports:
+      - "5000:5000"
+    working_dir: /app
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=http://+:5000
+      - ConnectionStrings__DefaultConnection=Host=db;Port=5432;Database=sitespeak;Username=postgres;Password=postgres
+    volumes:
+      - ./api:/app
+    command: dotnet watch run --non-interactive --no-launch-profile
+    depends_on:
+      - db
+
   client:
     image: node:20-alpine
     container_name: sitespeak-client
