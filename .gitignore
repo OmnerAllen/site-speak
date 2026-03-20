@@ -33,3 +33,6 @@ dist-ssr
 .env.*
 !.env.example
 coverage/
+
+bin/
+obj/
