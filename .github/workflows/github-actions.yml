@@ -18,26 +18,37 @@ jobs:
       - name: Check out repository code
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
         with:
-          node-version: '20'
+          username: ${{ vars.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Install pnpm
-        uses: pnpm/action-setup@v3
-        with:
-          version: 8
-      - name: Cache pnpm modules
-        uses: actions/cache@v3
-        with:
-          path: ~/.pnpm-store
-          key: ${{ runner.os }}-pnpm-${{ hashFiles('client/pnpm-lock.yaml') }}
-          restore-keys: |
-            ${{ runner.os }}-pnpm-
+      - name: build and push Docker image
+        run: |
+          docker build -t omallen/site-speak:0.0.$GITHUB_RUN_NUMBER -f Dockerfile .
+          docker push omallen/site-speak:0.0.$GITHUB_RUN_NUMBER
 
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+      # - name: Setup Node.js
+      #   uses: actions/setup-node@v4
+      #   with:
+      #     node-version: '20'
 
-      - name: Build the project
-        run: pnpm run build
+      # - name: Install pnpm
+      #   uses: pnpm/action-setup@v3
+      #   with:
+      #     version: 8
+      # - name: Cache pnpm modules
+      #   uses: actions/cache@v3
+      #   with:
+      #     path: ~/.pnpm-store
+      #     key: ${{ runner.os }}-pnpm-${{ hashFiles('client/pnpm-lock.yaml') }}
+      #     restore-keys: |
+      #       ${{ runner.os }}-pnpm-
+
+      # - name: Install dependencies
+      #   run: pnpm install --frozen-lockfile
+
+      # - name: Build the project
+      #   run: pnpm run build
 
