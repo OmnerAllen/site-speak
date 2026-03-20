@@ -132,6 +132,6 @@ CREATE INDEX idx_stage_equipment_stage ON stage_equipment(stage_id);
 CREATE INDEX idx_stage_material_stage ON stage_material(stage_id);
 CREATE INDEX idx_work_log_employee ON work_log(employee_id);
 CREATE INDEX idx_work_log_project ON work_log(project_id);
-CREATE INDEX idx_work_log_logged_at ON work_log(logged_at);
+CREATE INDEX idx_work_log_started_at ON work_log(started_at);
 CREATE INDEX idx_employee_project_employee ON employee_project(employee_id);
 CREATE INDEX idx_employee_project_project ON employee_project(project_id);
