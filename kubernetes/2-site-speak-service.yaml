@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: Service
+metadata:
+  namespace: ${NAMESPACE}
+  name: site-speak-service
+  labels:
+    app: site-speak
+spec:
+  selector:
+    app: site-speak
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 80

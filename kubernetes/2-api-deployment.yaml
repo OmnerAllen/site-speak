@@ -1,0 +1,32 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: ${NAMESPACE}
+  name: api-deployment
+  labels:
+    app: api
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: api
+  template:
+    metadata:
+      labels:
+        app: api
+    spec:
+      containers:
+      - name: api
+        image: omallen/site-speak-api:0.0.${GITHUB_RUN_NUMBER}
+        ports:
+        - containerPort: 5000
+        env:
+        - name: ASPNETCORE_ENVIRONMENT
+          value: Production
+        - name: ASPNETCORE_URLS
+          value: http://+:5000
+        - name: ConnectionStrings__DefaultConnection
+          value: Host=postgres-service;Port=5432;Database=$(POSTGRES_DB);Username=$(POSTGRES_USER);Password=$(POSTGRES_PASSWORD)
+        envFrom:
+        - secretRef:
+            name: postgres-secret

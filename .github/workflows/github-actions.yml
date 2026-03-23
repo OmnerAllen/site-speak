@@ -11,6 +11,8 @@ on:
 jobs:
   site-speak-deploy:
     runs-on: self-hosted
+    env:
+      NAMESPACE: site-speak-v${{ github.run_number - 11 }}
     steps:
       - name: Check out repository code
         uses: actions/checkout@v4
@@ -21,10 +23,35 @@ jobs:
           username: ${{ vars.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: build and push Docker image
+      - name: build and push client Docker image
         run: |
-          docker build -t omallen/site-speak:0.0.$GITHUB_RUN_NUMBER -f Dockerfile .
+          docker build -t omallen/site-speak:0.0.$GITHUB_RUN_NUMBER -f Dockerfile.client .
           docker push omallen/site-speak:0.0.$GITHUB_RUN_NUMBER
+
+      - name: build and push API Docker image
+        run: |
+          docker build -t omallen/site-speak-api:0.0.$GITHUB_RUN_NUMBER -f Dockerfile.api .
+          docker push omallen/site-speak-api:0.0.$GITHUB_RUN_NUMBER
+
+      - name: Deploy namespace
+        run: envsubst < kubernetes/0-namespace.yml | kubectl apply -f -
+
+      - name: Create Postgres init-sql ConfigMap
+        run: |
+          kubectl create configmap init-sql \
+            --namespace=$NAMESPACE \
+            --from-file=01-schema.sql=database/schema.sql \
+            --from-file=02-seed_supplier.sql=database/1-seed_supplier.sql \
+            --from-file=03-seed_equipment.sql=database/2-seed_equipment.sql \
+            --from-file=04-seed_material.sql=database/2-seed_material.sql \
+            --from-file=05-seed_basic.sql=database/3-seed_basic.sql \
+            --dry-run=client -o yaml | kubectl apply -f -
+
+      - name: Deploy Kubernetes manifests
+        run: |
+          for f in kubernetes/*.y*ml; do
+            envsubst < "$f" | kubectl apply -f -
+          done
 
       # - name: Setup Node.js
       #   uses: actions/setup-node@v4

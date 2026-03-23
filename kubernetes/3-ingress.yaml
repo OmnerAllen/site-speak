@@ -1,0 +1,25 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: site-speak-ingress
+  namespace: ${NAMESPACE}
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: site-speak.duckdns.org
+    http:
+      paths:
+      - path: /api
+        pathType: Prefix
+        backend:
+          service:
+            name: api-service
+            port:
+              number: 5000
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: site-speak-service
+            port:
+              number: 80

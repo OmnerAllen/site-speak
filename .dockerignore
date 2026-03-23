@@ -1,0 +1,47 @@
+# Git
+.git
+.gitignore
+
+# CI/CD
+.github
+
+# Kubernetes
+kubernetes
+
+# Editor / IDE
+.vscode
+.idea
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+.DS_Store
+.cursor
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# Node
+client/node_modules
+client/dist
+client/dist-ssr
+.pnpm-store
+coverage
+
+# .NET
+api/bin
+api/obj
+
+# Docker
+docker-compose.yml
+.dockerignore

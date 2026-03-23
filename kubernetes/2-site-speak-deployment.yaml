@@ -1,0 +1,22 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: ${NAMESPACE}
+  name: site-speak-deployment
+  labels:
+    app: site-speak
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: site-speak
+  template:
+    metadata:
+      labels:
+        app: site-speak
+    spec:
+      containers:
+      - name: site-speak
+        image: omallen/site-speak:0.0.${GITHUB_RUN_NUMBER}
+        ports:
+        - containerPort: 80
