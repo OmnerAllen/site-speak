@@ -53,7 +53,7 @@ export default function CustomForms() {
         
         <button
           type="submit"
-          className="w-full bg-grass-700 text-grass-100 font-medium py-2 px-4 rounded-md hover:bg-brick-600 focus:outline-none focus:ring-2 focus:ring-brick-500 focus:ring-offset-2 transition-colors"
+          className="w-full bg-grass-700 text-grass-100 font-medium py-2 px-4 rounded-md hover:bg-grass-600 focus:outline-none focus:ring-2 focus:ring-brick-500 focus:ring-offset-2 transition-colors"
         >
           Submit Form
         </button>
