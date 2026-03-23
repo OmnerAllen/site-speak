@@ -86,11 +86,39 @@ Features:
 #### Delivered
 
 Rubric Items:
+- [x] 5 pts Technology: Network Calls that read and write data
+- [x] 5 pts Technology: CI/CD pipeline
+- [x] 5 pts Technology: tests run in pipeline, pipeline aborts if they fail
+- [x] 5 pts Technology: linting in pipeline
+
+Features:
+- [x] Deployed App that runs
+- [x] Have Data in DB
+- [x] Minimal Backend to talk to DB
+
+
+### Mar. 24, 2026
+
+#### Estimates:
+
+Rubric items:
+- [ ] authentication and user account support
+- [ ] authorized pages and public pages
+- [ ] 3+ generic form input components
+
+Features:
+- [ ] Login Page
+- [ ] RBAC - Roles Based Access
+- [ ] Color Scheme
+
+#### Delivered
+
+Rubric Items:
 
 
 Features:
 
-### Mar. 24, 2026
+### Mar. 27, 2026
 
 #### Estimates:
 
@@ -99,7 +127,6 @@ Note: These will be throughout the project, this is initial setup
 - [ ] Client side state stores
 - [ ] Toasts / global notifications or alerts
 - [ ] Error handling
-- [ ] 3+ generic form input components
 
 Features:
 Note: Will create generic form for all of these
@@ -115,26 +142,6 @@ Rubric Items:
 
 Features:
 
-
-
-### Mar. 27, 2026
-
-#### Estimates:
-
-Rubric items:
-- [ ] authentication and user account support
-- [ ] authorized pages and public pages
-
-Features:
-- [ ] Login Page
-- [ ] RBAC - Roles Based Access
-
-#### Delivered
-
-Rubric Items:
-
-
-Features:
 
 ### Mar. 31, 2026
 
