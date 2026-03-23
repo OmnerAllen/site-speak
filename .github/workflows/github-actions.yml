@@ -12,7 +12,7 @@ jobs:
   site-speak-deploy:
     runs-on: self-hosted
     env:
-      NAMESPACE: site-speak-v${{ github.run_number - 11 }}
+      NAMESPACE: site-speak-v${{ github.run_number }}
     steps:
       - name: Check out repository code
         uses: actions/checkout@v4
