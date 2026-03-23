@@ -9,13 +9,6 @@ spec:
   - host: site-speak.duckdns.org
     http:
       paths:
-      - path: /api
-        pathType: Prefix
-        backend:
-          service:
-            name: api-service
-            port:
-              number: 5000
       - path: /
         pathType: Prefix
         backend:
