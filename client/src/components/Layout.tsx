@@ -1,6 +1,6 @@
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "react-oidc-context";
-import { useUser } from "../auth/UserContext";
+import { useUser } from "../auth/useUser";
 
 function NavLink({ to, children }: { to: string; children: React.ReactNode }) {
   const { pathname } = useLocation();

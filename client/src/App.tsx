@@ -1,5 +1,8 @@
+import { Suspense } from "react";
 import { Routes, Route } from "react-router-dom";
+import { ErrorBoundary } from "react-error-boundary";
 import { ProtectedRoute } from "./auth/ProtectedRoute";
+import { ErrorFallback } from "./components/ErrorFallback";
 import Layout from "./components/Layout";
 import Login from "./pages/Login";
 import Projects from "./pages/Projects";
@@ -8,25 +11,35 @@ import CustomForms from "./pages/CustomForms";
 export default function App() {
   return (
     <Layout>
-      <Routes>
-        <Route path="/login" element={<Login />} />
-        <Route
-          path="/"
-          element={
-            <ProtectedRoute>
-              <Projects />
-            </ProtectedRoute>
+      <ErrorBoundary FallbackComponent={ErrorFallback}>
+        <Suspense
+          fallback={
+            <div className="p-8 text-center text-brick-300 animate-pulse">
+              Loading...
+            </div>
           }
-        />
-        <Route
-          path="/custom-forms"
-          element={
-            <ProtectedRoute>
-              <CustomForms />
-            </ProtectedRoute>
-          }
-        />
-      </Routes>
+        >
+          <Routes>
+            <Route path="/login" element={<Login />} />
+            <Route
+              path="/"
+              element={
+                <ProtectedRoute>
+                  <Projects />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/custom-forms"
+              element={
+                <ProtectedRoute>
+                  <CustomForms />
+                </ProtectedRoute>
+              }
+            />
+          </Routes>
+        </Suspense>
+      </ErrorBoundary>
     </Layout>
   );
 }

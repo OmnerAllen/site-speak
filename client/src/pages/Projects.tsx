@@ -1,31 +1,22 @@
-import { useEffect, useState } from "react";
-import { fetchMyProjects } from "../api";
-import { useUser } from "../auth/UserContext";
+import { useSuspenseQuery } from "@tanstack/react-query";
+import { useUser } from "../auth/useUser";
 import type { Project } from "../types";
 
 export default function Projects() {
   const { profile } = useUser();
-  const [projects, setProjects] = useState<Project[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    fetchMyProjects()
-      .then(setProjects)
-      .catch((err) => setError(err.message))
-      .finally(() => setLoading(false));
-  }, []);
-
-  if (loading)
-    return (
-      <div className="p-8 text-center text-brick-300 animate-pulse">
-        Loading projects...
-      </div>
-    );
-  if (error)
-    return (
-      <div className="p-8 text-center text-radioactive-400">Error: {error}</div>
-    );
+  const { data: projects } = useSuspenseQuery({
+    queryKey: ["my-projects"],
+    queryFn: async () => {
+      const res = await fetch("/api/my/projects");
+      if (res.status === 401) {
+        document.cookie = "id_token=; path=/; max-age=0";
+        window.location.href = "/";
+        throw new Error("Session expired");
+      }
+      if (!res.ok) throw new Error(`Failed to load projects: ${res.status}`);
+      return res.json() as Promise<Project[]>;
+    },
+  });
 
   return (
     <div className="max-w-4xl mx-auto p-6 md:p-12">

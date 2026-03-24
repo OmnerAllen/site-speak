@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 import { useAuth } from "react-oidc-context";
-import { useUser } from "./UserContext";
+import { useUser } from "./useUser";
 
 interface Props {
   children: React.ReactNode;
