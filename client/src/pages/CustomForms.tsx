@@ -47,7 +47,7 @@ export default function CustomForms() {
           label="sample time selector"
           name="time"
           value={formData.time}
-          onChange={handleChange}
+          onChange={(val) => setFormData((prev) => ({ ...prev, time: val }))}
           required
         />
         
