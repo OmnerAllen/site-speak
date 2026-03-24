@@ -45,6 +45,7 @@ jobs:
             --from-file=03-seed_equipment.sql=database/2-seed_equipment.sql \
             --from-file=04-seed_material.sql=database/2-seed_material.sql \
             --from-file=05-seed_basic.sql=database/3-seed_basic.sql \
+            --from-file=06-seed_auth.sql=database/4-seed_auth.sql \
             --dry-run=client -o yaml | kubectl apply -f -
 
       - name: Deploy Kubernetes manifests

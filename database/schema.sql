@@ -124,6 +124,40 @@ CREATE TABLE work_log (
     deleted_at TIMESTAMPTZ
 );
 
+-- Auth / RBAC tables
+
+CREATE TABLE "user" (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    keycloak_sub VARCHAR(255) UNIQUE NOT NULL,
+    email VARCHAR(255) UNIQUE NOT NULL,
+    employee_id UUID REFERENCES employee(id),
+    company_id UUID REFERENCES company(id),
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE role (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    name VARCHAR(50) UNIQUE NOT NULL
+);
+
+CREATE TABLE permission (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    name VARCHAR(100) UNIQUE NOT NULL
+);
+
+CREATE TABLE user_role (
+    user_id UUID REFERENCES "user"(id) ON DELETE CASCADE,
+    role_id UUID REFERENCES role(id) ON DELETE CASCADE,
+    PRIMARY KEY (user_id, role_id)
+);
+
+CREATE TABLE role_permission (
+    role_id UUID REFERENCES role(id) ON DELETE CASCADE,
+    permission_id UUID REFERENCES permission(id) ON DELETE CASCADE,
+    PRIMARY KEY (role_id, permission_id)
+);
+
 -- Indexes for common lookups
 CREATE INDEX idx_employee_company ON employee(company_id);
 CREATE INDEX idx_project_company ON project(company_id);
@@ -135,3 +169,6 @@ CREATE INDEX idx_work_log_project ON work_log(project_id);
 CREATE INDEX idx_work_log_started_at ON work_log(started_at);
 CREATE INDEX idx_employee_project_employee ON employee_project(employee_id);
 CREATE INDEX idx_employee_project_project ON employee_project(project_id);
+CREATE INDEX idx_user_keycloak_sub ON "user"(keycloak_sub);
+CREATE INDEX idx_user_email ON "user"(email);
+CREATE INDEX idx_user_employee ON "user"(employee_id);
