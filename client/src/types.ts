@@ -6,6 +6,16 @@ export interface Project {
   updatedAt: string;
 }
 
+export type FormFieldType = "small-text" | "large-text" | "time";
+
+export interface FormFieldConfig {
+  type: FormFieldType;
+  label: string;
+  name: string;
+  placeholder?: string;
+  required?: boolean;
+}
+
 export interface UserProfile {
   id: string;
   keycloakSub: string;
