@@ -6,14 +6,32 @@ on:
   pull_request:
     branches:
       - main
+    types: [opened, synchronize, closed]
   workflow_dispatch:
 
 jobs:
-  site-speak-deploy:
+  cleanup-pr-namespace:
+    if: github.event_name == 'pull_request' && github.event.action == 'closed'
     runs-on: self-hosted
-    env:
-      NAMESPACE: site-speak-v${{ github.run_number }}
     steps:
+      - name: Delete PR Namespace
+        run: |
+          PR_USER=$(echo "${{ github.event.pull_request.user.login }}" | tr '[:upper:]' '[:lower:]')
+          kubectl delete namespace "site-speak-pr-${PR_USER}" --ignore-not-found
+
+  site-speak-deploy:
+    if: github.event_name != 'pull_request' || github.event.action != 'closed'
+    runs-on: self-hosted
+    steps:
+      - name: Set target namespace
+        run: |
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            PR_USER=$(echo "${{ github.event.pull_request.user.login }}" | tr '[:upper:]' '[:lower:]')
+            echo "NAMESPACE=site-speak-pr-${PR_USER}" >> $GITHUB_ENV
+          else
+            echo "NAMESPACE=site-speak-prod" >> $GITHUB_ENV
+          fi
+
       - name: Check out repository code
         uses: actions/checkout@v4
 
@@ -54,26 +72,4 @@ jobs:
             envsubst < "$f" | kubectl apply -f -
           done
 
-      # - name: Setup Node.js
-      #   uses: actions/setup-node@v4
-      #   with:
-      #     node-version: '20'
-
-      # - name: Install pnpm
-      #   uses: pnpm/action-setup@v3
-      #   with:
-      #     version: 8
-      # - name: Cache pnpm modules
-      #   uses: actions/cache@v3
-      #   with:
-      #     path: ~/.pnpm-store
-      #     key: ${{ runner.os }}-pnpm-${{ hashFiles('client/pnpm-lock.yaml') }}
-      #     restore-keys: |
-      #       ${{ runner.os }}-pnpm-
-
-      # - name: Install dependencies
-      #   run: pnpm install --frozen-lockfile
-
-      # - name: Build the project
-      #   run: pnpm run build
 
