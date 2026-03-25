@@ -24,6 +24,13 @@ export interface Equipment {
   placeToRentFrom: string;
 }
 
+export interface Supplier {
+  id: string;
+  name: string;
+  address: string;
+  phone: string;
+}
+
 export type FormFieldType = "small-text" | "large-text" | "time" | "number";
 
 export interface FormFieldConfig {

@@ -10,7 +10,7 @@ import Projects from "./pages/Projects";
 import Materials from "./pages/Materials";
 import EquipmentPage from "./pages/Equipment";
 import CustomForms from "./pages/CustomForms";
-import CreateSupplier from "./pages/CreateSupplier";
+import Suppliers from "./pages/Suppliers";
 
 export default function App() {
   return (
@@ -66,10 +66,10 @@ export default function App() {
               }
             />
             <Route
-              path="/create-supplier"
+              path="/suppliers"
               element={
                 <ProtectedRoute>
-                  <CreateSupplier />
+                  <Suppliers />
                 </ProtectedRoute>
               }
             />
