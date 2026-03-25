@@ -6,7 +6,25 @@ export interface Project {
   updatedAt: string;
 }
 
-export type FormFieldType = "small-text" | "large-text" | "time";
+export interface Material {
+  id: string;
+  productName: string;
+  supplierName: string;
+  unit: string;
+  productType: string;
+  pricePerUnit: number;
+  currency: string;
+}
+
+export interface Equipment {
+  id: string;
+  name: string;
+  costPerDay: number;
+  costHalfDay: number;
+  placeToRentFrom: string;
+}
+
+export type FormFieldType = "small-text" | "large-text" | "time" | "number";
 
 export interface FormFieldConfig {
   type: FormFieldType;
@@ -14,6 +32,7 @@ export interface FormFieldConfig {
   name: string;
   placeholder?: string;
   required?: boolean;
+  step?: string;
 }
 
 export interface UserProfile {

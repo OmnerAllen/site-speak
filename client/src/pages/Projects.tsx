@@ -1,9 +1,7 @@
 import { useSuspenseQuery } from "@tanstack/react-query";
-import { useUser } from "../auth/useUser";
 import type { Project } from "../types";
 
 export default function Projects() {
-  const { profile } = useUser();
   const { data: projects } = useSuspenseQuery({
     queryKey: ["my-projects"],
     queryFn: async () => {
@@ -20,15 +18,6 @@ export default function Projects() {
 
   return (
     <div className="max-w-4xl mx-auto p-6 md:p-12">
-      {profile?.companyName && (
-        <header className="bg-brick-900 border border-brick-800 rounded-xl p-8 mb-10 shadow-lg">
-          <h1 className="text-3xl font-bold text-grass-300 mb-1">
-            {profile.companyName}
-          </h1>
-          <p className="text-brick-400 text-sm">Your company dashboard</p>
-        </header>
-      )}
-
       <section>
         <div className="flex items-center justify-between mb-6 pb-4 border-b border-brick-800">
           <h2 className="text-2xl font-bold text-brick-100">
