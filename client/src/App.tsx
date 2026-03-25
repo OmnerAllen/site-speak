@@ -7,6 +7,7 @@ import Layout from "./components/Layout";
 import Login from "./pages/Login";
 import Projects from "./pages/Projects";
 import CustomForms from "./pages/CustomForms";
+import CreateSupplier from "./pages/CreateSupplier";
 
 export default function App() {
   return (
@@ -34,6 +35,14 @@ export default function App() {
               element={
                 <ProtectedRoute>
                   <CustomForms />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/create-supplier"
+              element={
+                <ProtectedRoute>
+                  <CreateSupplier />
                 </ProtectedRoute>
               }
             />
