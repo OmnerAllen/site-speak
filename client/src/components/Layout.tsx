@@ -41,7 +41,10 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             </Link>
             {auth.isAuthenticated && (
               <div className="hidden sm:flex items-center gap-1">
-                <NavLink to="/">Projects</NavLink>
+                <NavLink to="/">Dashboard</NavLink>
+                <NavLink to="/projects">Projects</NavLink>
+                <NavLink to="/materials">Materials</NavLink>
+                <NavLink to="/equipment">Equipment</NavLink>
                 <NavLink to="/custom-forms">Forms</NavLink>
                 <NavLink to="/create-supplier">Add Supplier</NavLink>
               </div>

@@ -5,7 +5,10 @@ import { ProtectedRoute } from "./auth/ProtectedRoute";
 import { ErrorFallback } from "./components/ErrorFallback";
 import Layout from "./components/Layout";
 import Login from "./pages/Login";
+import Dashboard from "./pages/Dashboard";
 import Projects from "./pages/Projects";
+import Materials from "./pages/Materials";
+import EquipmentPage from "./pages/Equipment";
 import CustomForms from "./pages/CustomForms";
 import CreateSupplier from "./pages/CreateSupplier";
 
@@ -26,7 +29,31 @@ export default function App() {
               path="/"
               element={
                 <ProtectedRoute>
+                  <Dashboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/projects"
+              element={
+                <ProtectedRoute>
                   <Projects />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/materials"
+              element={
+                <ProtectedRoute>
+                  <Materials />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/equipment"
+              element={
+                <ProtectedRoute>
+                  <EquipmentPage />
                 </ProtectedRoute>
               }
             />
