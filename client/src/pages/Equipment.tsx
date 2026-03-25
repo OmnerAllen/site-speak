@@ -1,6 +1,12 @@
 import { useState } from "react";
+import {
+  useSuspenseQuery,
+  useMutation,
+  useQueryClient,
+} from "@tanstack/react-query";
 import { DynamicForm } from "../components/DynamicForm";
 import { ResourceList } from "../components/ResourceList";
+import { api } from "../api";
 import type { Equipment, FormFieldConfig } from "../types";
 
 const EQUIPMENT_FIELDS: FormFieldConfig[] = [
@@ -36,72 +42,8 @@ const EQUIPMENT_FIELDS: FormFieldConfig[] = [
   },
 ];
 
-const INITIAL_EQUIPMENT: Equipment[] = [
-  {
-    id: "1",
-    name: "Mini Excavator (3.5 Ton)",
-    costPerDay: 385.0,
-    costHalfDay: 245.0,
-    placeToRentFrom: "Ace Rents (Provo)",
-  },
-  {
-    id: "2",
-    name: "Skid Steer (Tracked)",
-    costPerDay: 340.0,
-    costHalfDay: 215.0,
-    placeToRentFrom: "United Rentals (Provo)",
-  },
-  {
-    id: "3",
-    name: "Telehandler (5500lb Reach)",
-    costPerDay: 550.0,
-    costHalfDay: 360.0,
-    placeToRentFrom: "Sunbelt Rentals (Lindon)",
-  },
-  {
-    id: "4",
-    name: "Concrete Boom Pump (38M)",
-    costPerDay: 950.0,
-    costHalfDay: 600.0,
-    placeToRentFrom: "United Rentals (Provo)",
-  },
-  {
-    id: "5",
-    name: "Ride-on Power Trowel",
-    costPerDay: 220.0,
-    costHalfDay: 145.0,
-    placeToRentFrom: "Ace Rents (Spanish Fork)",
-  },
-  {
-    id: "6",
-    name: "Towable Generator (20kW)",
-    costPerDay: 195.0,
-    costHalfDay: 120.0,
-    placeToRentFrom: "Sunbelt Rentals (Orem)",
-  },
-  {
-    id: "7",
-    name: "Vibratory Soil Compactor",
-    costPerDay: 295.0,
-    costHalfDay: 185.0,
-    placeToRentFrom: "United Rentals (Provo)",
-  },
-  {
-    id: "8",
-    name: "Scissor Lift (26ft Electric)",
-    costPerDay: 155.0,
-    costHalfDay: 95.0,
-    placeToRentFrom: "Sunbelt Rentals (Lindon)",
-  },
-];
-
 function emptyFormValues(): Record<string, string> {
-  return {
-    name: "",
-    costPerDay: "",
-    costHalfDay: "",
-    placeToRentFrom: "",
-  };
+  return { name: "", costPerDay: "", costHalfDay: "", placeToRentFrom: "" };
 }
 
 function equipmentToFormValues(e: Equipment): Record<string, string> {
@@ -114,7 +56,30 @@ function equipmentToFormValues(e: Equipment): Record<string, string> {
 }
 
 export default function EquipmentPage() {
-  const [equipment, setEquipment] = useState<Equipment[]>(INITIAL_EQUIPMENT);
+  const queryClient = useQueryClient();
+  const { data: equipment } = useSuspenseQuery({
+    queryKey: ["equipment"],
+    queryFn: api.getEquipment,
+  });
+
+  const createMutation = useMutation({
+    mutationFn: (body: Omit<Equipment, "id">) => api.createEquipment(body),
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: ["equipment"] }),
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: ({ id, ...body }: Equipment) => api.updateEquipment(id, body),
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: ["equipment"] }),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => api.deleteEquipment(id),
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: ["equipment"] }),
+  });
+
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formValues, setFormValues] = useState<Record<string, string>>(
@@ -140,29 +105,17 @@ export default function EquipmentPage() {
   };
 
   const handleSubmit = (values: Record<string, string>) => {
+    const body = {
+      name: values.name,
+      costPerDay: parseFloat(values.costPerDay) || 0,
+      costHalfDay: parseFloat(values.costHalfDay) || 0,
+      placeToRentFrom: values.placeToRentFrom,
+    };
+
     if (editingId) {
-      setEquipment((prev) =>
-        prev.map((e) =>
-          e.id === editingId
-            ? {
-                ...e,
-                name: values.name,
-                costPerDay: parseFloat(values.costPerDay) || 0,
-                costHalfDay: parseFloat(values.costHalfDay) || 0,
-                placeToRentFrom: values.placeToRentFrom,
-              }
-            : e,
-        ),
-      );
+      updateMutation.mutate({ id: editingId, ...body });
     } else {
-      const newEquipment: Equipment = {
-        id: crypto.randomUUID(),
-        name: values.name,
-        costPerDay: parseFloat(values.costPerDay) || 0,
-        costHalfDay: parseFloat(values.costHalfDay) || 0,
-        placeToRentFrom: values.placeToRentFrom,
-      };
-      setEquipment((prev) => [newEquipment, ...prev]);
+      createMutation.mutate(body);
     }
     handleCancel();
   };
@@ -221,9 +174,7 @@ export default function EquipmentPage() {
           { label: "Rental", value: (e) => e.placeToRentFrom },
         ]}
         onEdit={handleEdit}
-        onDelete={(id) =>
-          setEquipment((prev) => prev.filter((e) => e.id !== id))
-        }
+        onDelete={(id) => deleteMutation.mutate(id)}
         emptyMessage="No equipment yet. Add one above."
       />
     </div>

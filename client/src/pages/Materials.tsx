@@ -1,6 +1,12 @@
 import { useState } from "react";
+import {
+  useSuspenseQuery,
+  useMutation,
+  useQueryClient,
+} from "@tanstack/react-query";
 import { DynamicForm } from "../components/DynamicForm";
 import { ResourceList } from "../components/ResourceList";
+import { api } from "../api";
 import type { FormFieldConfig, Material } from "../types";
 
 const MATERIAL_FIELDS: FormFieldConfig[] = [
@@ -49,81 +55,6 @@ const MATERIAL_FIELDS: FormFieldConfig[] = [
   },
 ];
 
-const INITIAL_MATERIALS: Material[] = [
-  {
-    id: "1",
-    productName: "Hammer",
-    supplierName: "Lippro",
-    unit: "Piece",
-    productType: "Tool",
-    pricePerUnit: 2.95,
-    currency: "USD",
-  },
-  {
-    id: "2",
-    productName: "Hand Saw",
-    supplierName: "Tekiro",
-    unit: "Piece",
-    productType: "Tool",
-    pricePerUnit: 3.54,
-    currency: "USD",
-  },
-  {
-    id: "3",
-    productName: "Ceramic Tile",
-    supplierName: "Roman",
-    unit: "Box",
-    productType: "Tile",
-    pricePerUnit: 4.42,
-    currency: "USD",
-  },
-  {
-    id: "4",
-    productName: "Wall Paint",
-    supplierName: "Dulux",
-    unit: "Can",
-    productType: "Paint",
-    pricePerUnit: 7.08,
-    currency: "USD",
-  },
-  {
-    id: "5",
-    productName: "PVC Pipe",
-    supplierName: "Wavin",
-    unit: "Meter",
-    productType: "Plumbing",
-    pricePerUnit: 0.88,
-    currency: "USD",
-  },
-  {
-    id: "6",
-    productName: "Tiga Roda 50 kg",
-    supplierName: "Tiga Roda",
-    unit: "Sack",
-    productType: "Cement",
-    pricePerUnit: 4.48,
-    currency: "USD",
-  },
-  {
-    id: "7",
-    productName: "3000 PSI Standard Ready-Mix",
-    supplierName: "Geneva Rock",
-    unit: "1 cubic yard",
-    productType: "Concrete",
-    pricePerUnit: 145.0,
-    currency: "USD",
-  },
-  {
-    id: "8",
-    productName: "Rebar 10mm",
-    supplierName: "Gunung Steel",
-    unit: "Meter",
-    productType: "Steel",
-    pricePerUnit: 1.47,
-    currency: "USD",
-  },
-];
-
 function emptyFormValues(): Record<string, string> {
   return {
     productName: "",
@@ -147,7 +78,30 @@ function materialToFormValues(m: Material): Record<string, string> {
 }
 
 export default function Materials() {
-  const [materials, setMaterials] = useState<Material[]>(INITIAL_MATERIALS);
+  const queryClient = useQueryClient();
+  const { data: materials } = useSuspenseQuery({
+    queryKey: ["materials"],
+    queryFn: api.getMaterials,
+  });
+
+  const createMutation = useMutation({
+    mutationFn: (body: Omit<Material, "id">) => api.createMaterial(body),
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: ["materials"] }),
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: ({ id, ...body }: Material) => api.updateMaterial(id, body),
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: ["materials"] }),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => api.deleteMaterial(id),
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: ["materials"] }),
+  });
+
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formValues, setFormValues] = useState<Record<string, string>>(
@@ -173,33 +127,19 @@ export default function Materials() {
   };
 
   const handleSubmit = (values: Record<string, string>) => {
+    const body = {
+      productName: values.productName,
+      supplierName: values.supplierName,
+      unit: values.unit,
+      productType: values.productType,
+      pricePerUnit: parseFloat(values.pricePerUnit) || 0,
+      currency: values.currency,
+    };
+
     if (editingId) {
-      setMaterials((prev) =>
-        prev.map((m) =>
-          m.id === editingId
-            ? {
-                ...m,
-                productName: values.productName,
-                supplierName: values.supplierName,
-                unit: values.unit,
-                productType: values.productType,
-                pricePerUnit: parseFloat(values.pricePerUnit) || 0,
-                currency: values.currency,
-              }
-            : m,
-        ),
-      );
+      updateMutation.mutate({ id: editingId, ...body });
     } else {
-      const newMaterial: Material = {
-        id: crypto.randomUUID(),
-        productName: values.productName,
-        supplierName: values.supplierName,
-        unit: values.unit,
-        productType: values.productType,
-        pricePerUnit: parseFloat(values.pricePerUnit) || 0,
-        currency: values.currency,
-      };
-      setMaterials((prev) => [newMaterial, ...prev]);
+      createMutation.mutate(body);
     }
     handleCancel();
   };
@@ -240,7 +180,7 @@ export default function Materials() {
         titleKey="productName"
         badgeKey="productType"
         columns={[
-          { label: "Supplier", value: (m) => m.supplierName },
+          { label: "Supplier", value: (m) => m.supplierName || "—" },
           { label: "Unit", value: (m) => m.unit },
           {
             label: "Price",
@@ -255,9 +195,7 @@ export default function Materials() {
           },
         ]}
         onEdit={handleEdit}
-        onDelete={(id) =>
-          setMaterials((prev) => prev.filter((m) => m.id !== id))
-        }
+        onDelete={(id) => deleteMutation.mutate(id)}
         emptyMessage="No materials yet. Add one above."
       />
     </div>

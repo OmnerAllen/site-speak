@@ -62,28 +62,7 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         {
             OnMessageReceived = context =>
             {
-                var token = context.Request.Cookies["id_token"];
-                Console.WriteLine($"[Auth:MessageReceived] Path={context.Request.Path} CookiePresent={token is not null} TokenLength={token?.Length ?? 0}");
-                context.Token = token;
-                return Task.CompletedTask;
-            },
-            OnTokenValidated = context =>
-            {
-                var sub = context.Principal?.FindFirstValue("sub");
-                var email = context.Principal?.FindFirstValue("email");
-                Console.WriteLine($"[Auth:TokenValidated] sub={sub} email={email}");
-                return Task.CompletedTask;
-            },
-            OnAuthenticationFailed = context =>
-            {
-                Console.WriteLine($"[Auth:FAILED] {context.Exception.GetType().Name}: {context.Exception.Message}");
-                if (context.Exception.InnerException is not null)
-                    Console.WriteLine($"[Auth:FAILED:Inner] {context.Exception.InnerException.Message}");
-                return Task.CompletedTask;
-            },
-            OnChallenge = context =>
-            {
-                Console.WriteLine($"[Auth:Challenge] Path={context.Request.Path} Error={context.Error} ErrorDescription={context.ErrorDescription}");
+                context.Token = context.Request.Cookies["id_token"];
                 return Task.CompletedTask;
             }
         };
@@ -102,9 +81,7 @@ var app = builder.Build();
 app.UseAuthentication();
 app.UseAuthorization();
 
-Console.WriteLine($"[Startup] Auth issuer: {keycloakIssuer} (using embedded JWKS — no runtime discovery needed)");
-
-// ── Public ──────────────────────────────────────────────────────────────
+// ── Health ───────────────────────────────────────────────────────────────
 
 app.MapGet("/", () => "Hello World!");
 
@@ -117,15 +94,7 @@ app.MapGet("/health/db", async (NpgsqlDataSource db) =>
     return Results.Ok(new { status = "healthy", result });
 });
 
-app.MapGet("/health/auth", () => Results.Ok(new
-{
-    status = "ok",
-    issuer = keycloakIssuer,
-    mode = "embedded JWKS",
-    signingKeys = jwks.GetSigningKeys().Count()
-}));
-
-// ── Auth ────────────────────────────────────────────────────────────────
+// ── User ─────────────────────────────────────────────────────────────────
 
 app.MapGet("/me", async (ClaimsPrincipal user, NpgsqlDataSource db) =>
 {
@@ -224,20 +193,293 @@ app.MapGet("/me", async (ClaimsPrincipal user, NpgsqlDataSource db) =>
     });
 }).RequireAuthorization();
 
+// ── Suppliers ────────────────────────────────────────────────────────────
+
+app.MapGet("/suppliers", async (NpgsqlDataSource db) =>
+{
+    await using var conn = await db.OpenConnectionAsync();
+    await using var cmd = conn.CreateCommand();
+    cmd.CommandText = "SELECT id, name, address, phone FROM supplier WHERE deleted_at IS NULL ORDER BY name";
+
+    var list = new List<object>();
+    await using var reader = await cmd.ExecuteReaderAsync();
+    while (await reader.ReadAsync())
+    {
+        list.Add(new
+        {
+            id = reader.GetGuid(0),
+            name = reader.GetString(1),
+            address = reader.GetString(2),
+            phone = reader.IsDBNull(3) ? "" : reader.GetString(3)
+        });
+    }
+    return Results.Ok(list);
+}).RequireAuthorization();
+
+app.MapPost("/suppliers", async (SupplierBody body, NpgsqlDataSource db) =>
+{
+    await using var conn = await db.OpenConnectionAsync();
+    await using var cmd = conn.CreateCommand();
+    cmd.CommandText = """
+        INSERT INTO supplier (name, address, phone)
+        VALUES ($1, $2, $3)
+        RETURNING id, name, address, phone
+        """;
+    cmd.Parameters.AddWithValue(body.Name);
+    cmd.Parameters.AddWithValue(body.Address);
+    cmd.Parameters.AddWithValue((object?)body.Phone ?? DBNull.Value);
+
+    await using var reader = await cmd.ExecuteReaderAsync();
+    await reader.ReadAsync();
+    return Results.Created($"/suppliers/{reader.GetGuid(0)}", new
+    {
+        id = reader.GetGuid(0),
+        name = reader.GetString(1),
+        address = reader.GetString(2),
+        phone = reader.IsDBNull(3) ? "" : reader.GetString(3)
+    });
+}).RequireAuthorization();
+
+app.MapPut("/suppliers/{id:guid}", async (Guid id, SupplierBody body, NpgsqlDataSource db) =>
+{
+    await using var conn = await db.OpenConnectionAsync();
+    await using var cmd = conn.CreateCommand();
+    cmd.CommandText = """
+        UPDATE supplier SET name = $2, address = $3, phone = $4, updated_at = NOW()
+        WHERE id = $1 AND deleted_at IS NULL
+        RETURNING id, name, address, phone
+        """;
+    cmd.Parameters.AddWithValue(id);
+    cmd.Parameters.AddWithValue(body.Name);
+    cmd.Parameters.AddWithValue(body.Address);
+    cmd.Parameters.AddWithValue((object?)body.Phone ?? DBNull.Value);
+
+    await using var reader = await cmd.ExecuteReaderAsync();
+    if (!await reader.ReadAsync()) return Results.NotFound();
+    return Results.Ok(new
+    {
+        id = reader.GetGuid(0),
+        name = reader.GetString(1),
+        address = reader.GetString(2),
+        phone = reader.IsDBNull(3) ? "" : reader.GetString(3)
+    });
+}).RequireAuthorization();
+
+app.MapDelete("/suppliers/{id:guid}", async (Guid id, NpgsqlDataSource db) =>
+{
+    await using var conn = await db.OpenConnectionAsync();
+    await using var cmd = conn.CreateCommand();
+    cmd.CommandText = "UPDATE supplier SET deleted_at = NOW() WHERE id = $1 AND deleted_at IS NULL";
+    cmd.Parameters.AddWithValue(id);
+    return await cmd.ExecuteNonQueryAsync() > 0 ? Results.NoContent() : Results.NotFound();
+}).RequireAuthorization();
+
+// ── Equipment ────────────────────────────────────────────────────────────
+
+app.MapGet("/equipment", async (NpgsqlDataSource db) =>
+{
+    await using var conn = await db.OpenConnectionAsync();
+    await using var cmd = conn.CreateCommand();
+    cmd.CommandText = "SELECT id, name, cost_per_day, cost_half_day, place_to_rent_from FROM equipment WHERE deleted_at IS NULL ORDER BY name";
+
+    var list = new List<object>();
+    await using var reader = await cmd.ExecuteReaderAsync();
+    while (await reader.ReadAsync())
+    {
+        list.Add(new
+        {
+            id = reader.GetGuid(0),
+            name = reader.GetString(1),
+            costPerDay = reader.GetDecimal(2),
+            costHalfDay = reader.GetDecimal(3),
+            placeToRentFrom = reader.IsDBNull(4) ? "" : reader.GetString(4)
+        });
+    }
+    return Results.Ok(list);
+}).RequireAuthorization();
+
+app.MapPost("/equipment", async (EquipmentBody body, NpgsqlDataSource db) =>
+{
+    await using var conn = await db.OpenConnectionAsync();
+    await using var cmd = conn.CreateCommand();
+    cmd.CommandText = """
+        INSERT INTO equipment (name, cost_per_day, cost_half_day, place_to_rent_from)
+        VALUES ($1, $2, $3, $4)
+        RETURNING id, name, cost_per_day, cost_half_day, place_to_rent_from
+        """;
+    cmd.Parameters.AddWithValue(body.Name);
+    cmd.Parameters.AddWithValue(body.CostPerDay);
+    cmd.Parameters.AddWithValue(body.CostHalfDay);
+    cmd.Parameters.AddWithValue(body.PlaceToRentFrom);
+
+    await using var reader = await cmd.ExecuteReaderAsync();
+    await reader.ReadAsync();
+    return Results.Created($"/equipment/{reader.GetGuid(0)}", new
+    {
+        id = reader.GetGuid(0),
+        name = reader.GetString(1),
+        costPerDay = reader.GetDecimal(2),
+        costHalfDay = reader.GetDecimal(3),
+        placeToRentFrom = reader.IsDBNull(4) ? "" : reader.GetString(4)
+    });
+}).RequireAuthorization();
+
+app.MapPut("/equipment/{id:guid}", async (Guid id, EquipmentBody body, NpgsqlDataSource db) =>
+{
+    await using var conn = await db.OpenConnectionAsync();
+    await using var cmd = conn.CreateCommand();
+    cmd.CommandText = """
+        UPDATE equipment SET name = $2, cost_per_day = $3, cost_half_day = $4, place_to_rent_from = $5, updated_at = NOW()
+        WHERE id = $1 AND deleted_at IS NULL
+        RETURNING id, name, cost_per_day, cost_half_day, place_to_rent_from
+        """;
+    cmd.Parameters.AddWithValue(id);
+    cmd.Parameters.AddWithValue(body.Name);
+    cmd.Parameters.AddWithValue(body.CostPerDay);
+    cmd.Parameters.AddWithValue(body.CostHalfDay);
+    cmd.Parameters.AddWithValue(body.PlaceToRentFrom);
+
+    await using var reader = await cmd.ExecuteReaderAsync();
+    if (!await reader.ReadAsync()) return Results.NotFound();
+    return Results.Ok(new
+    {
+        id = reader.GetGuid(0),
+        name = reader.GetString(1),
+        costPerDay = reader.GetDecimal(2),
+        costHalfDay = reader.GetDecimal(3),
+        placeToRentFrom = reader.IsDBNull(4) ? "" : reader.GetString(4)
+    });
+}).RequireAuthorization();
+
+app.MapDelete("/equipment/{id:guid}", async (Guid id, NpgsqlDataSource db) =>
+{
+    await using var conn = await db.OpenConnectionAsync();
+    await using var cmd = conn.CreateCommand();
+    cmd.CommandText = "UPDATE equipment SET deleted_at = NOW() WHERE id = $1 AND deleted_at IS NULL";
+    cmd.Parameters.AddWithValue(id);
+    return await cmd.ExecuteNonQueryAsync() > 0 ? Results.NoContent() : Results.NotFound();
+}).RequireAuthorization();
+
+// ── Materials ────────────────────────────────────────────────────────────
+
+app.MapGet("/materials", async (NpgsqlDataSource db) =>
+{
+    await using var conn = await db.OpenConnectionAsync();
+    await using var cmd = conn.CreateCommand();
+    cmd.CommandText = """
+        SELECT m.id, m.product_name, s.name, m.unit, m.product_type, m.price_per_unit, m.currency
+        FROM material m
+        LEFT JOIN supplier s ON s.id = m.supplier_id
+        WHERE m.deleted_at IS NULL
+        ORDER BY m.product_name
+        """;
+
+    var list = new List<object>();
+    await using var reader = await cmd.ExecuteReaderAsync();
+    while (await reader.ReadAsync())
+    {
+        list.Add(new
+        {
+            id = reader.GetGuid(0),
+            productName = reader.GetString(1),
+            supplierName = reader.IsDBNull(2) ? "" : reader.GetString(2),
+            unit = reader.IsDBNull(3) ? "" : reader.GetString(3),
+            productType = reader.IsDBNull(4) ? "" : reader.GetString(4),
+            pricePerUnit = reader.IsDBNull(5) ? 0m : reader.GetDecimal(5),
+            currency = reader.IsDBNull(6) ? "USD" : reader.GetString(6)
+        });
+    }
+    return Results.Ok(list);
+}).RequireAuthorization();
+
+app.MapPost("/materials", async (MaterialBody body, NpgsqlDataSource db) =>
+{
+    await using var conn = await db.OpenConnectionAsync();
+
+    Guid? supplierId = await LookupSupplier(conn, body.SupplierName);
+
+    await using var cmd = conn.CreateCommand();
+    cmd.CommandText = """
+        INSERT INTO material (product_name, supplier_id, unit, product_type, price_per_unit, currency)
+        VALUES ($1, $2, $3, $4, $5, $6)
+        RETURNING id
+        """;
+    cmd.Parameters.AddWithValue(body.ProductName);
+    cmd.Parameters.AddWithValue((object?)supplierId ?? DBNull.Value);
+    cmd.Parameters.AddWithValue(body.Unit);
+    cmd.Parameters.AddWithValue(body.ProductType);
+    cmd.Parameters.AddWithValue(body.PricePerUnit);
+    cmd.Parameters.AddWithValue(body.Currency);
+
+    var id = (Guid)(await cmd.ExecuteScalarAsync())!;
+    return Results.Created($"/materials/{id}", new
+    {
+        id,
+        productName = body.ProductName,
+        supplierName = body.SupplierName,
+        unit = body.Unit,
+        productType = body.ProductType,
+        pricePerUnit = body.PricePerUnit,
+        currency = body.Currency
+    });
+}).RequireAuthorization();
+
+app.MapPut("/materials/{id:guid}", async (Guid id, MaterialBody body, NpgsqlDataSource db) =>
+{
+    await using var conn = await db.OpenConnectionAsync();
+
+    Guid? supplierId = await LookupSupplier(conn, body.SupplierName);
+
+    await using var cmd = conn.CreateCommand();
+    cmd.CommandText = """
+        UPDATE material SET product_name = $2, supplier_id = $3, unit = $4, product_type = $5, price_per_unit = $6, currency = $7, updated_at = NOW()
+        WHERE id = $1 AND deleted_at IS NULL
+        RETURNING id
+        """;
+    cmd.Parameters.AddWithValue(id);
+    cmd.Parameters.AddWithValue(body.ProductName);
+    cmd.Parameters.AddWithValue((object?)supplierId ?? DBNull.Value);
+    cmd.Parameters.AddWithValue(body.Unit);
+    cmd.Parameters.AddWithValue(body.ProductType);
+    cmd.Parameters.AddWithValue(body.PricePerUnit);
+    cmd.Parameters.AddWithValue(body.Currency);
+
+    if (await cmd.ExecuteScalarAsync() is null) return Results.NotFound();
+    return Results.Ok(new
+    {
+        id,
+        productName = body.ProductName,
+        supplierName = body.SupplierName,
+        unit = body.Unit,
+        productType = body.ProductType,
+        pricePerUnit = body.PricePerUnit,
+        currency = body.Currency
+    });
+}).RequireAuthorization();
+
+app.MapDelete("/materials/{id:guid}", async (Guid id, NpgsqlDataSource db) =>
+{
+    await using var conn = await db.OpenConnectionAsync();
+    await using var cmd = conn.CreateCommand();
+    cmd.CommandText = "UPDATE material SET deleted_at = NOW() WHERE id = $1 AND deleted_at IS NULL";
+    cmd.Parameters.AddWithValue(id);
+    return await cmd.ExecuteNonQueryAsync() > 0 ? Results.NoContent() : Results.NotFound();
+}).RequireAuthorization();
+
+// ── Projects ─────────────────────────────────────────────────────────────
+
 app.MapGet("/my/projects", async (ClaimsPrincipal user, NpgsqlDataSource db) =>
 {
     var sub = user.FindFirstValue("sub");
     if (sub is null) return Results.Unauthorized();
 
     await using var conn = await db.OpenConnectionAsync();
-
     await using var cmd = conn.CreateCommand();
     cmd.CommandText = """
         SELECT p.id, p.name, p.address, p.created_at, p.updated_at
         FROM project p
         JOIN "user" u ON u.company_id = p.company_id
-        WHERE u.keycloak_sub = $1
-          AND p.deleted_at IS NULL
+        WHERE u.keycloak_sub = $1 AND p.deleted_at IS NULL
         ORDER BY p.created_at
         """;
     cmd.Parameters.AddWithValue(sub);
@@ -255,46 +497,59 @@ app.MapGet("/my/projects", async (ClaimsPrincipal user, NpgsqlDataSource db) =>
             updatedAt = reader.GetDateTime(4)
         });
     }
-
     return Results.Ok(projects);
 }).RequireAuthorization();
 
-// ── Protected ───────────────────────────────────────────────────────────
-
-app.MapGet("/companies", async (NpgsqlDataSource db) =>
+app.MapPost("/my/projects", async (ClaimsPrincipal user, ProjectBody body, NpgsqlDataSource db) =>
 {
+    var sub = user.FindFirstValue("sub");
+    if (sub is null) return Results.Unauthorized();
+
     await using var conn = await db.OpenConnectionAsync();
+
+    await using var compCmd = conn.CreateCommand();
+    compCmd.CommandText = """SELECT company_id FROM "user" WHERE keycloak_sub = $1""";
+    compCmd.Parameters.AddWithValue(sub);
+    var companyId = await compCmd.ExecuteScalarAsync() as Guid?;
+    if (companyId is null) return Results.BadRequest(new { error = "No company assigned" });
+
     await using var cmd = conn.CreateCommand();
-    cmd.CommandText = "SELECT id, name, address, created_at, updated_at FROM company WHERE deleted_at IS NULL ORDER BY created_at";
+    cmd.CommandText = """
+        INSERT INTO project (company_id, name, address)
+        VALUES ($1, $2, $3)
+        RETURNING id, name, address, created_at, updated_at
+        """;
+    cmd.Parameters.AddWithValue(companyId.Value);
+    cmd.Parameters.AddWithValue(body.Name);
+    cmd.Parameters.AddWithValue(body.Address);
 
-    var companies = new List<object>();
     await using var reader = await cmd.ExecuteReaderAsync();
-    while (await reader.ReadAsync())
+    await reader.ReadAsync();
+    return Results.Created($"/projects/{reader.GetGuid(0)}", new
     {
-        companies.Add(new
-        {
-            id = reader.GetGuid(0),
-            name = reader.GetString(1),
-            address = reader.GetString(2),
-            createdAt = reader.GetDateTime(3),
-            updatedAt = reader.GetDateTime(4)
-        });
-    }
-
-    return Results.Ok(companies);
+        id = reader.GetGuid(0),
+        name = reader.GetString(1),
+        address = reader.GetString(2),
+        createdAt = reader.GetDateTime(3),
+        updatedAt = reader.GetDateTime(4)
+    });
 }).RequireAuthorization();
 
-app.MapGet("/companies/{id:guid}", async (Guid id, NpgsqlDataSource db) =>
+app.MapPut("/projects/{id:guid}", async (Guid id, ProjectBody body, NpgsqlDataSource db) =>
 {
     await using var conn = await db.OpenConnectionAsync();
     await using var cmd = conn.CreateCommand();
-    cmd.CommandText = "SELECT id, name, address, created_at, updated_at FROM company WHERE id = $1 AND deleted_at IS NULL";
+    cmd.CommandText = """
+        UPDATE project SET name = $2, address = $3, updated_at = NOW()
+        WHERE id = $1 AND deleted_at IS NULL
+        RETURNING id, name, address, created_at, updated_at
+        """;
     cmd.Parameters.AddWithValue(id);
+    cmd.Parameters.AddWithValue(body.Name);
+    cmd.Parameters.AddWithValue(body.Address);
 
     await using var reader = await cmd.ExecuteReaderAsync();
-    if (!await reader.ReadAsync())
-        return Results.NotFound();
-
+    if (!await reader.ReadAsync()) return Results.NotFound();
     return Results.Ok(new
     {
         id = reader.GetGuid(0),
@@ -305,35 +560,31 @@ app.MapGet("/companies/{id:guid}", async (Guid id, NpgsqlDataSource db) =>
     });
 }).RequireAuthorization();
 
-app.MapGet("/companies/{id:guid}/projects", async (Guid id, NpgsqlDataSource db) =>
+app.MapDelete("/projects/{id:guid}", async (Guid id, NpgsqlDataSource db) =>
 {
     await using var conn = await db.OpenConnectionAsync();
-
-    await using var check = conn.CreateCommand();
-    check.CommandText = "SELECT 1 FROM company WHERE id = $1 AND deleted_at IS NULL";
-    check.Parameters.AddWithValue(id);
-    if (await check.ExecuteScalarAsync() is null)
-        return Results.NotFound();
-
     await using var cmd = conn.CreateCommand();
-    cmd.CommandText = "SELECT id, name, address, created_at, updated_at FROM project WHERE company_id = $1 AND deleted_at IS NULL ORDER BY created_at";
+    cmd.CommandText = "UPDATE project SET deleted_at = NOW() WHERE id = $1 AND deleted_at IS NULL";
     cmd.Parameters.AddWithValue(id);
-
-    var projects = new List<object>();
-    await using var reader = await cmd.ExecuteReaderAsync();
-    while (await reader.ReadAsync())
-    {
-        projects.Add(new
-        {
-            id = reader.GetGuid(0),
-            name = reader.GetString(1),
-            address = reader.GetString(2),
-            createdAt = reader.GetDateTime(3),
-            updatedAt = reader.GetDateTime(4)
-        });
-    }
-
-    return Results.Ok(projects);
+    return await cmd.ExecuteNonQueryAsync() > 0 ? Results.NoContent() : Results.NotFound();
 }).RequireAuthorization();
 
 app.Run();
+
+// ── Helpers & DTOs ───────────────────────────────────────────────────────
+
+static async Task<Guid?> LookupSupplier(NpgsqlConnection conn, string? name)
+{
+    if (string.IsNullOrWhiteSpace(name)) return null;
+
+    await using var cmd = conn.CreateCommand();
+    cmd.CommandText = "SELECT id FROM supplier WHERE name = $1 AND deleted_at IS NULL LIMIT 1";
+    cmd.Parameters.AddWithValue(name);
+    var result = await cmd.ExecuteScalarAsync();
+    return result as Guid?;
+}
+
+record SupplierBody(string Name, string Address, string? Phone);
+record EquipmentBody(string Name, decimal CostPerDay, decimal CostHalfDay, string PlaceToRentFrom);
+record MaterialBody(string ProductName, string? SupplierName, string Unit, string ProductType, decimal PricePerUnit, string Currency);
+record ProjectBody(string Name, string Address);

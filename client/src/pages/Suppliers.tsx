@@ -1,6 +1,12 @@
 import { useState } from "react";
+import {
+  useSuspenseQuery,
+  useMutation,
+  useQueryClient,
+} from "@tanstack/react-query";
 import { DynamicForm } from "../components/DynamicForm";
 import { ResourceList } from "../components/ResourceList";
+import { api } from "../api";
 import type { FormFieldConfig, Supplier } from "../types";
 
 const SUPPLIER_FIELDS: FormFieldConfig[] = [
@@ -23,43 +29,42 @@ const SUPPLIER_FIELDS: FormFieldConfig[] = [
     label: "Phone Number",
     name: "phone",
     placeholder: "e.g. 555-1234",
-    required: true,
-  },
-];
-
-const INITIAL_SUPPLIERS: Supplier[] = [
-  {
-    id: "1",
-    name: "Acme Corp",
-    address: "123 Main St, Springfield",
-    phone: "555-1234",
-  },
-  {
-    id: "2",
-    name: "Global Industries",
-    address: "456 Oak Ave, Metropolis",
-    phone: "555-5678",
   },
 ];
 
 function emptyFormValues(): Record<string, string> {
-  return {
-    name: "",
-    address: "",
-    phone: "",
-  };
+  return { name: "", address: "", phone: "" };
 }
 
 function supplierToFormValues(s: Supplier): Record<string, string> {
-  return {
-    name: s.name,
-    address: s.address,
-    phone: s.phone,
-  };
+  return { name: s.name, address: s.address, phone: s.phone };
 }
 
 export default function Suppliers() {
-  const [suppliers, setSuppliers] = useState<Supplier[]>(INITIAL_SUPPLIERS);
+  const queryClient = useQueryClient();
+  const { data: suppliers } = useSuspenseQuery({
+    queryKey: ["suppliers"],
+    queryFn: api.getSuppliers,
+  });
+
+  const createMutation = useMutation({
+    mutationFn: (body: Omit<Supplier, "id">) => api.createSupplier(body),
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: ["suppliers"] }),
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: ({ id, ...body }: Supplier) => api.updateSupplier(id, body),
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: ["suppliers"] }),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => api.deleteSupplier(id),
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: ["suppliers"] }),
+  });
+
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formValues, setFormValues] = useState<Record<string, string>>(
@@ -85,27 +90,16 @@ export default function Suppliers() {
   };
 
   const handleSubmit = (values: Record<string, string>) => {
+    const body = {
+      name: values.name,
+      address: values.address,
+      phone: values.phone,
+    };
+
     if (editingId) {
-      setSuppliers((prev) =>
-        prev.map((s) =>
-          s.id === editingId
-            ? {
-                ...s,
-                name: values.name,
-                address: values.address,
-                phone: values.phone,
-              }
-            : s,
-        ),
-      );
+      updateMutation.mutate({ id: editingId, ...body });
     } else {
-      const newSupplier: Supplier = {
-        id: crypto.randomUUID(),
-        name: values.name,
-        address: values.address,
-        phone: values.phone,
-      };
-      setSuppliers((prev) => [newSupplier, ...prev]);
+      createMutation.mutate(body);
     }
     handleCancel();
   };
@@ -124,13 +118,10 @@ export default function Suppliers() {
       )}
 
       {showForm && (
-        <div className="mb-8 relative">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-lg font-semibold text-brick-200">
-              {editingId ? "Edit Supplier" : "New Supplier"}
-            </h2>
-            
-          </div>
+        <div className="mb-8">
+          <h2 className="text-lg font-semibold text-brick-200 mb-4">
+            {editingId ? "Edit Supplier" : "New Supplier"}
+          </h2>
           <DynamicForm
             fields={SUPPLIER_FIELDS}
             values={formValues}
@@ -148,13 +139,11 @@ export default function Suppliers() {
         items={suppliers}
         titleKey="name"
         columns={[
-          { label: "Phone", value: (s) => s.phone },
+          { label: "Phone", value: (s) => s.phone || "—" },
           { label: "Address", value: (s) => s.address },
         ]}
         onEdit={handleEdit}
-        onDelete={(id) =>
-          setSuppliers((prev) => prev.filter((s) => s.id !== id))
-        }
+        onDelete={(id) => deleteMutation.mutate(id)}
         emptyMessage="No suppliers yet. Add one above."
       />
     </div>
