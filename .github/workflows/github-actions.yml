@@ -15,7 +15,9 @@ jobs:
     runs-on: self-hosted
     steps:
       - name: Delete PR Namespace
-        run: kubectl delete namespace site-speak-pr-${{ github.event.pull_request.user.login }} --ignore-not-found
+        run: |
+          PR_USER=$(echo "${{ github.event.pull_request.user.login }}" | tr '[:upper:]' '[:lower:]')
+          kubectl delete namespace "site-speak-pr-${PR_USER}" --ignore-not-found
 
   site-speak-deploy:
     if: github.event_name != 'pull_request' || github.event.action != 'closed'
@@ -24,7 +26,8 @@ jobs:
       - name: Set target namespace
         run: |
           if [[ "${{ github.event_name }}" == "pull_request" ]]; then
-            echo "NAMESPACE=site-speak-pr-${{ github.event.pull_request.user.login }}" >> $GITHUB_ENV
+            PR_USER=$(echo "${{ github.event.pull_request.user.login }}" | tr '[:upper:]' '[:lower:]')
+            echo "NAMESPACE=site-speak-pr-${PR_USER}" >> $GITHUB_ENV
           else
             echo "NAMESPACE=site-speak-prod" >> $GITHUB_ENV
           fi
