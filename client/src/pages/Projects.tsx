@@ -19,15 +19,6 @@ export default function Projects() {
   return (
     <div className="max-w-4xl mx-auto p-6 md:p-12">
       <section>
-        <div className="flex items-center justify-between mb-6 pb-4 border-b border-brick-800">
-          <h2 className="text-2xl font-bold text-brick-100">
-            Projects{" "}
-            <span className="ml-2 bg-brick-800 text-brick-300 text-sm px-2.5 py-0.5 rounded-full">
-              {projects.length}
-            </span>
-          </h2>
-        </div>
-
         {projects.length === 0 ? (
           <p className="text-brick-400 italic bg-brick-900/50 p-6 rounded-lg border border-brick-800/50 text-center">
             No projects found for your company.
