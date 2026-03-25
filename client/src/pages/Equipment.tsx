@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { DynamicForm } from "../components/DynamicForm";
+import { ResourceList } from "../components/ResourceList";
 import type { Equipment, FormFieldConfig } from "../types";
 
 const EQUIPMENT_FIELDS: FormFieldConfig[] = [
@@ -119,7 +120,6 @@ export default function EquipmentPage() {
   const [formValues, setFormValues] = useState<Record<string, string>>(
     emptyFormValues(),
   );
-  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
   const handleAdd = () => {
     setEditingId(null);
@@ -167,33 +167,18 @@ export default function EquipmentPage() {
     handleCancel();
   };
 
-  const handleDelete = (id: string) => {
-    if (confirmDeleteId === id) {
-      setEquipment((prev) => prev.filter((e) => e.id !== id));
-      setConfirmDeleteId(null);
-    } else {
-      setConfirmDeleteId(id);
-    }
-  };
-
   return (
     <div className="max-w-5xl mx-auto p-6 md:p-12">
-      <div className="flex items-center justify-between mb-6 pb-4 border-b border-brick-800">
-        <h1 className="text-2xl font-bold text-brick-100">
-          Equipment{" "}
-          <span className="ml-2 bg-brick-800 text-brick-300 text-sm px-2.5 py-0.5 rounded-full">
-            {equipment.length}
-          </span>
-        </h1>
-        {!showForm && (
+      {!showForm && (
+        <div className="flex items-center justify-end mb-6 pb-4 border-b border-brick-800">
           <button
             onClick={handleAdd}
             className="bg-grass-700 text-grass-100 font-medium py-2 px-4 rounded-md hover:bg-grass-600 transition-colors cursor-pointer"
           >
             + Add Equipment
           </button>
-        )}
-      </div>
+        </div>
+      )}
 
       {showForm && (
         <div className="mb-8">
@@ -213,66 +198,34 @@ export default function EquipmentPage() {
         </div>
       )}
 
-      {equipment.length === 0 ? (
-        <p className="text-brick-400 italic bg-brick-900/50 p-6 rounded-lg border border-brick-800/50 text-center">
-          No equipment yet. Add one above.
-        </p>
-      ) : (
-        <div className="space-y-3">
-          {equipment.map((e) => (
-            <div
-              key={e.id}
-              className="bg-brick-900 border border-brick-800 rounded-lg p-5 hover:border-brick-700 transition-colors"
-            >
-              <div className="flex flex-col sm:flex-row sm:items-center gap-4">
-                <div className="flex-1 min-w-0">
-                  <h3 className="text-lg font-semibold text-brick-200 truncate mb-2">
-                    {e.name}
-                  </h3>
-                  <div className="flex flex-wrap gap-x-6 gap-y-1 text-sm text-brick-400">
-                    <span>
-                      <span className="text-brick-500">Full Day:</span>{" "}
-                      <span className="font-mono text-grass-400">
-                        ${e.costPerDay.toFixed(2)}
-                      </span>
-                    </span>
-                    <span>
-                      <span className="text-brick-500">Half Day:</span>{" "}
-                      <span className="font-mono text-grass-400">
-                        ${e.costHalfDay.toFixed(2)}
-                      </span>
-                    </span>
-                    <span>
-                      <span className="text-brick-500">Rental:</span>{" "}
-                      {e.placeToRentFrom}
-                    </span>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-2 shrink-0">
-                  <button
-                    onClick={() => handleEdit(e)}
-                    className="text-sm text-brick-300 hover:text-brick-100 px-3 py-1.5 border border-brick-700 rounded-md hover:bg-brick-800 transition-colors cursor-pointer"
-                  >
-                    Edit
-                  </button>
-                  <button
-                    onClick={() => handleDelete(e.id)}
-                    onBlur={() => setConfirmDeleteId(null)}
-                    className={`text-sm px-3 py-1.5 rounded-md transition-colors cursor-pointer ${
-                      confirmDeleteId === e.id
-                        ? "bg-radioactive-700 text-radioactive-100 border border-radioactive-600"
-                        : "text-brick-400 hover:text-radioactive-300 border border-brick-700 hover:border-radioactive-800"
-                    }`}
-                  >
-                    {confirmDeleteId === e.id ? "Confirm?" : "Delete"}
-                  </button>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
+      <ResourceList
+        items={equipment}
+        titleKey="name"
+        columns={[
+          {
+            label: "Full Day",
+            value: (e) => (
+              <span className="font-mono text-grass-500">
+                ${e.costPerDay.toFixed(2)}
+              </span>
+            ),
+          },
+          {
+            label: "Half Day",
+            value: (e) => (
+              <span className="font-mono text-grass-500">
+                ${e.costHalfDay.toFixed(2)}
+              </span>
+            ),
+          },
+          { label: "Rental", value: (e) => e.placeToRentFrom },
+        ]}
+        onEdit={handleEdit}
+        onDelete={(id) =>
+          setEquipment((prev) => prev.filter((e) => e.id !== id))
+        }
+        emptyMessage="No equipment yet. Add one above."
+      />
     </div>
   );
 }

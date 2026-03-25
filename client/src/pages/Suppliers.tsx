@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { DynamicForm } from "../components/DynamicForm";
+import { ResourceList } from "../components/ResourceList";
 import type { FormFieldConfig, Supplier } from "../types";
 
 const SUPPLIER_FIELDS: FormFieldConfig[] = [
@@ -64,7 +65,6 @@ export default function Suppliers() {
   const [formValues, setFormValues] = useState<Record<string, string>>(
     emptyFormValues(),
   );
-  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
   const handleAdd = () => {
     setEditingId(null);
@@ -110,33 +110,18 @@ export default function Suppliers() {
     handleCancel();
   };
 
-  const handleDelete = (id: string) => {
-    if (confirmDeleteId === id) {
-      setSuppliers((prev) => prev.filter((s) => s.id !== id));
-      setConfirmDeleteId(null);
-    } else {
-      setConfirmDeleteId(id);
-    }
-  };
-
   return (
     <div className="max-w-5xl mx-auto p-6 md:p-12">
-      <div className="flex items-center justify-between mb-6 pb-4 border-b border-brick-800">
-        <h1 className="text-2xl font-bold text-brick-100">
-          Suppliers{" "}
-          <span className="ml-2 bg-brick-800 text-brick-300 text-sm px-2.5 py-0.5 rounded-full">
-            {suppliers.length}
-          </span>
-        </h1>
-        {!showForm && (
+      {!showForm && (
+        <div className="flex items-center justify-end mb-6 pb-4 border-b border-brick-800">
           <button
             onClick={handleAdd}
             className="bg-grass-700 text-grass-100 font-medium py-2 px-4 rounded-md hover:bg-grass-600 transition-colors cursor-pointer"
           >
             + Add Supplier
           </button>
-        )}
-      </div>
+        </div>
+      )}
 
       {showForm && (
         <div className="mb-8 relative">
@@ -159,57 +144,19 @@ export default function Suppliers() {
         </div>
       )}
 
-      {suppliers.length === 0 ? (
-        <p className="text-brick-400 italic bg-brick-900/50 p-6 rounded-lg border border-brick-800/50 text-center">
-          No suppliers yet. Add one above.
-        </p>
-      ) : (
-        <div className="space-y-3">
-          {suppliers.map((s) => (
-            <div
-              key={s.id}
-              className="bg-brick-900 border border-brick-800 rounded-lg p-5 hover:border-brick-700 transition-colors"
-            >
-              <div className="flex flex-col sm:flex-row sm:items-center gap-4">
-                <div className="flex-1 min-w-0">
-                  <h3 className="text-lg font-semibold text-brick-200 truncate mb-2">
-                    {s.name}
-                  </h3>
-                  <div className="flex flex-wrap gap-x-6 gap-y-1 text-sm text-brick-400">
-                    <span>
-                      <span className="text-brick-500">Phone:</span> {s.phone}
-                    </span>
-                    <span>
-                      <span className="text-brick-500">Address:</span>{" "}
-                      {s.address}
-                    </span>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-2 shrink-0">
-                  <button
-                    onClick={() => handleEdit(s)}
-                    className="text-sm text-brick-300 hover:text-brick-100 px-3 py-1.5 border border-brick-700 rounded-md hover:bg-brick-800 transition-colors cursor-pointer"
-                  >
-                    Edit
-                  </button>
-                  <button
-                    onClick={() => handleDelete(s.id)}
-                    onBlur={() => setConfirmDeleteId(null)}
-                    className={`text-sm px-3 py-1.5 rounded-md transition-colors cursor-pointer ${
-                      confirmDeleteId === s.id
-                        ? "bg-radioactive-700 text-radioactive-100 border border-radioactive-600"
-                        : "text-brick-400 hover:text-radioactive-300 border border-brick-700 hover:border-radioactive-800"
-                    }`}
-                  >
-                    {confirmDeleteId === s.id ? "Confirm?" : "Delete"}
-                  </button>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
+      <ResourceList
+        items={suppliers}
+        titleKey="name"
+        columns={[
+          { label: "Phone", value: (s) => s.phone },
+          { label: "Address", value: (s) => s.address },
+        ]}
+        onEdit={handleEdit}
+        onDelete={(id) =>
+          setSuppliers((prev) => prev.filter((s) => s.id !== id))
+        }
+        emptyMessage="No suppliers yet. Add one above."
+      />
     </div>
   );
 }
