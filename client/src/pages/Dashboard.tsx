@@ -5,6 +5,7 @@ const STATS = [
   { label: "Projects", count: 3 },
   { label: "Materials", count: 8 },
   { label: "Equipment", count: 8 },
+  { label: "Suppliers", count: 5 },
 ];
 
 const NAV_TILES = [
@@ -26,6 +27,12 @@ const NAV_TILES = [
     description: "Track rental equipment and costs",
     accent: "text-grass-400",
   },
+  {
+    to: "/suppliers",
+    title: "Suppliers",
+    description: "Manage your supplier contacts and info",
+    accent: "text-grass-400",
+  }
 ];
 
 export default function Dashboard() {
