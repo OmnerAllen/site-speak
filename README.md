@@ -102,14 +102,14 @@ Features:
 #### Estimates:
 
 Rubric items:
-- [ ] authentication and user account support
-- [ ] authorized pages and public pages
-- [ ] 3+ generic form input components
+- [x] authentication and user account support
+- [x] authorized pages and public pages
+- [x] 3+ generic form input components
 
 Features:
-- [ ] Login Page
-- [ ] RBAC - Roles Based Access
-- [ ] Color Scheme
+- [x] Login Page
+- [x] RBAC - Roles Based Access
+- [x] Color Scheme - Design.md
 
 #### Delivered
 
@@ -130,10 +130,10 @@ Note: These will be throughout the project, this is initial setup
 
 Features:
 Note: Will create generic form for all of these
-- [ ] CRUD Suppliers
-- [ ] CRUD Materials
-- [ ] CRUD Equipment
-- [ ] Home / Dashboard
+- [x] CRUD Suppliers
+- [x] CRUD Materials
+- [x] CRUD Equipment
+- [x] Home / Dashboard
 
 #### Delivered
 
