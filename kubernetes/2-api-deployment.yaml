@@ -27,6 +27,8 @@ spec:
           value: http://+:5000
         - name: ConnectionStrings__DefaultConnection
           value: Host=postgres-service;Port=5432;Database=$(POSTGRES_DB);Username=$(POSTGRES_USER);Password=$(POSTGRES_PASSWORD)
+        - name: OTEL_EXPORTER_OTLP_ENDPOINT
+          value: http://otel-collector:4318
         envFrom:
         - secretRef:
             name: postgres-secret

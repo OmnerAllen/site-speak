@@ -28,8 +28,10 @@ jobs:
           if [[ "${{ github.event_name }}" == "pull_request" ]]; then
             PR_USER=$(echo "${{ github.event.pull_request.user.login }}" | tr '[:upper:]' '[:lower:]')
             echo "NAMESPACE=site-speak-pr-${PR_USER}" >> $GITHUB_ENV
+            echo "APP_HOST=${PR_USER}-pr.site-speak.duckdns.org" >> $GITHUB_ENV
           else
             echo "NAMESPACE=site-speak-prod" >> $GITHUB_ENV
+            echo "APP_HOST=site-speak.duckdns.org" >> $GITHUB_ENV
           fi
 
       - name: Check out repository code
@@ -64,6 +66,27 @@ jobs:
             --from-file=04-seed_material.sql=database/2-seed_material.sql \
             --from-file=05-seed_basic.sql=database/3-seed_basic.sql \
             --from-file=06-seed_auth.sql=database/4-seed_auth.sql \
+            --dry-run=client -o yaml | kubectl apply -f -
+
+      - name: Deploy Otel-Collector ConfigMap
+        run: |
+          kubectl delete -n $NAMESPACE configmap otel-config-configmap || true
+          kubectl create -n $NAMESPACE configmap otel-config-configmap \
+            --from-file=config/otel-config.yml \
+            --dry-run=client -o yaml | kubectl apply -f -
+
+      - name: Deploy Prometheus ConfigMap
+        run: |
+          kubectl delete -n $NAMESPACE configmap prometheus-config || true
+          kubectl create -n $NAMESPACE configmap prometheus-config \
+            --from-file=prometheus.yml=config/prometheus.yml \
+            --dry-run=client -o yaml | kubectl apply -f -
+
+      - name: Deploy Grafana ConfigMap
+        run: |
+          kubectl delete -n $NAMESPACE configmap grafana-config || true
+          kubectl create -n $NAMESPACE configmap grafana-config \
+            --from-file=config/grafana-datasources.yml \
             --dry-run=client -o yaml | kubectl apply -f -
 
       - name: Deploy Kubernetes manifests
