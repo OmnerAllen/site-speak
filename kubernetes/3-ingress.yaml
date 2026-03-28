@@ -16,3 +16,33 @@ spec:
             name: site-speak-service
             port:
               number: 80
+  - host: grafana.local-ktelop.duckdns.org
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: grafana
+            port:
+              number: 3000
+  - host: prometheus.local-ktelop.duckdns.org
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: prometheus
+            port:
+              number: 9090
+  - host: collector-demo.local-ktelop.duckdns.org
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: otel-collector
+            port:
+              number: 4318

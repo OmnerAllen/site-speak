@@ -2,8 +2,51 @@ using System.Security.Claims;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using Npgsql;
+using OpenTelemetry.Logs;
+using OpenTelemetry.Resources;
+using OpenTelemetry.Trace;
+using OpenTelemetry.Metrics;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// 1. Define the Base HTTP URL (Port 4318)
+const string serviceName = "SiteSpeak";
+const string otlpBaseUrl = "http://otel-collector:4318";
+
+builder.Logging.ClearProviders();
+builder.Logging.AddConsole();
+
+builder.Logging.AddOpenTelemetry(logging =>
+{
+    logging.IncludeScopes = true;
+    logging.IncludeFormattedMessage = true;
+    logging.SetResourceBuilder(ResourceBuilder.CreateDefault().AddService(serviceName));
+    logging.AddOtlpExporter(options =>
+    {
+        options.Endpoint = new Uri($"{otlpBaseUrl}/v1/logs");
+        options.Protocol = OpenTelemetry.Exporter.OtlpExportProtocol.HttpProtobuf;
+    });
+});
+
+builder.Services.AddOpenTelemetry()
+    .ConfigureResource(resource => resource.AddService(serviceName))
+    .WithTracing(tracing => tracing
+        .AddAspNetCoreInstrumentation()
+        .AddOtlpExporter(options =>
+        {
+            options.Endpoint = new Uri($"{otlpBaseUrl}/v1/traces");
+            options.Protocol = OpenTelemetry.Exporter.OtlpExportProtocol.HttpProtobuf;
+        })
+    )
+    .WithMetrics(metrics => metrics
+        .AddMeter(SiteSpeakMetrics.MeterName)
+        .AddAspNetCoreInstrumentation()
+        .AddOtlpExporter(options =>
+        {
+            options.Endpoint = new Uri($"{otlpBaseUrl}/v1/metrics");
+            options.Protocol = OpenTelemetry.Exporter.OtlpExportProtocol.HttpProtobuf;
+        })
+    );
 
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
     ?? throw new InvalidOperationException("Missing ConnectionStrings:DefaultConnection");

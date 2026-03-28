@@ -33,6 +33,7 @@ services:
     command: dotnet watch run --non-interactive --no-launch-profile
     depends_on:
       - db
+      - otel-collector
 
   client:
     image: node:20-alpine
@@ -50,5 +51,47 @@ services:
     depends_on:
       - db
 
+  otel-collector:
+    image: otel/opentelemetry-collector:0.146.1
+    volumes:
+      - ./config/otel-config.yml:/etc/otelcol/config.yaml
+    ports:
+      - 1777:1777 # pprof extension
+      - 8888:8888 # Prometheus metrics exposed by the Collector
+      - 8889:8889 # Prometheus exporter metrics
+      - 13133:13133 # health_check extension
+      - 4317:4317 # OTLP gRPC receiver
+      - 4318:4318 # OTLP http receiver
+      - 55679:55679 # zpages extension
+
+  prometheus:
+    image: prom/prometheus:v3
+    volumes:
+      - ./config/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    ports:
+      - "9090:9090"
+    depends_on:
+      - otel-collector
+
+  loki:
+    image: grafana/loki:3.5.11
+    ports:
+      - "3100:3100"
+    command: -config.file=/etc/loki/local-config.yaml
+
+  grafana:
+    environment:
+      - GF_PATHS_PROVISIONING=/etc/grafana/provisioning
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
+      - GF_FEATURE_TOGGLES_ENABLE=alertingSimplifiedRouting,alertingQueryAndExpressionsStepMode
+    image: grafana/grafana:12.3.4
+    volumes:
+      - ./config/grafana-datasources.yml:/etc/grafana/provisioning/datasources/ds.yaml
+    ports:
+      - "3000:3000"
+
 volumes:
   postgres_data:
+  prometheus_data:
