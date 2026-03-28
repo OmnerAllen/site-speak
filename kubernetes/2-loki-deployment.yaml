@@ -29,3 +29,10 @@ spec:
             port: 3100
           initialDelaySeconds: 10
           periodSeconds: 5
+        volumeMounts:
+        - name: data
+          mountPath: /loki
+      volumes:
+      - name: data
+        persistentVolumeClaim:
+          claimName: loki-pvc

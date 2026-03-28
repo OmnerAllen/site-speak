@@ -34,13 +34,7 @@ spec:
         - name: datasources
           mountPath: /etc/grafana/provisioning/datasources
           readOnly: true
-        - name: dashboards
-          mountPath: /etc/grafana/provisioning/dashboards
-          readOnly: true
       volumes:
       - name: datasources
         configMap:
           name: grafana-config
-      - name: dashboards
-        configMap:
-          name: grafana-dashboard-configmap
