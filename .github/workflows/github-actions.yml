@@ -22,6 +22,8 @@ jobs:
   site-speak-deploy:
     if: github.event_name != 'pull_request' || github.event.action != 'closed'
     runs-on: self-hosted
+    permissions:
+      pull-requests: write
     steps:
       - name: Set target namespace
         run: |
