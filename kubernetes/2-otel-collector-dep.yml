@@ -1,0 +1,35 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: ${NAMESPACE}
+  name: collector-deployment
+  labels:
+    app: collector
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: collector
+  template:
+    metadata:
+      labels:
+        app: collector
+    spec:
+      containers:
+      - name: collector
+        image: otel/opentelemetry-collector:0.146.1
+        args:
+          - --config=/etc/otelcol/otel-config.yml
+        ports:
+        - containerPort: 4317
+          name: otlp-grpc
+        - containerPort: 4318
+          name: otlp-http
+        volumeMounts:
+          - name: otel-config
+            mountPath: /etc/otelcol
+            readOnly: true
+      volumes:
+      - name: otel-config
+        configMap:
+          name: otel-config-configmap
