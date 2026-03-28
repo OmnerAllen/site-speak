@@ -16,7 +16,7 @@ spec:
             name: site-speak-service
             port:
               number: 80
-  - host: grafana.site-speak.duckdns.org
+  - host: grafana.${APP_HOST}
     http:
       paths:
       - path: /
@@ -26,7 +26,7 @@ spec:
             name: grafana
             port:
               number: 3000
-  - host: prometheus.site-speak.duckdns.org
+  - host: prometheus.${APP_HOST}
     http:
       paths:
       - path: /
@@ -36,7 +36,7 @@ spec:
             name: prometheus
             port:
               number: 9090
-  - host: collector-demo.site-speak.duckdns.org
+  - host: collector-demo.${APP_HOST}
     http:
       paths:
       - path: /
