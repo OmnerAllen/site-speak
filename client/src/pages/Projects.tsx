@@ -4,6 +4,7 @@ import {
   useMutation,
   useQueryClient,
 } from "@tanstack/react-query";
+import toast from "react-hot-toast";
 import { DynamicForm } from "../components/DynamicForm";
 import { ResourceList } from "../components/ResourceList";
 import { api } from "../api";
@@ -44,8 +45,10 @@ export default function Projects() {
   const createMutation = useMutation({
     mutationFn: (body: { name: string; address: string }) =>
       api.createProject(body),
-    onSuccess: () =>
-      queryClient.invalidateQueries({ queryKey: ["my-projects"] }),
+    onSuccess: () => {
+      toast.success("Project created successfully.");
+      queryClient.invalidateQueries({ queryKey: ["my-projects"] });
+    },
   });
 
   const updateMutation = useMutation({

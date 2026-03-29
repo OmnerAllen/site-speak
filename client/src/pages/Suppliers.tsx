@@ -4,6 +4,7 @@ import {
   useMutation,
   useQueryClient,
 } from "@tanstack/react-query";
+import toast from "react-hot-toast";
 import { DynamicForm } from "../components/DynamicForm";
 import { ResourceList } from "../components/ResourceList";
 import { api } from "../api";
@@ -49,8 +50,10 @@ export default function Suppliers() {
 
   const createMutation = useMutation({
     mutationFn: (body: Omit<Supplier, "id">) => api.createSupplier(body),
-    onSuccess: () =>
-      queryClient.invalidateQueries({ queryKey: ["suppliers"] }),
+    onSuccess: () => {
+      toast.success("Supplier created successfully.");
+      queryClient.invalidateQueries({ queryKey: ["suppliers"] });
+    },
   });
 
   const updateMutation = useMutation({

@@ -4,6 +4,7 @@ import {
   useMutation,
   useQueryClient,
 } from "@tanstack/react-query";
+import toast from "react-hot-toast";
 import { DynamicForm } from "../components/DynamicForm";
 import { ResourceList } from "../components/ResourceList";
 import { api } from "../api";
@@ -86,8 +87,10 @@ export default function Materials() {
 
   const createMutation = useMutation({
     mutationFn: (body: Omit<Material, "id">) => api.createMaterial(body),
-    onSuccess: () =>
-      queryClient.invalidateQueries({ queryKey: ["materials"] }),
+    onSuccess: () => {
+      toast.success("Material created successfully.");
+      queryClient.invalidateQueries({ queryKey: ["materials"] });
+    },
   });
 
   const updateMutation = useMutation({
