@@ -17,6 +17,7 @@ services:
       - ./database/2-seed_material.sql:/docker-entrypoint-initdb.d/04-seed_material.sql
       - ./database/3-seed_basic.sql:/docker-entrypoint-initdb.d/05-seed_basic.sql
       - ./database/4-seed_auth.sql:/docker-entrypoint-initdb.d/06-seed_auth.sql
+      - ./database/5-mvp_project_stage_details.sql:/docker-entrypoint-initdb.d/07-mvp_project_stage_details.sql
 
   api:
     image: mcr.microsoft.com/dotnet/sdk:10.0

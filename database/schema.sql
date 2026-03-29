@@ -42,6 +42,7 @@ CREATE TABLE project (
     company_id UUID NOT NULL REFERENCES company(id) ON DELETE CASCADE,
     name VARCHAR(255) NOT NULL,
     address VARCHAR(255) NOT NULL,
+    overview TEXT NOT NULL DEFAULT '',
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW(),
     deleted_at TIMESTAMPTZ
@@ -61,6 +62,8 @@ CREATE TABLE stage (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     project_id UUID NOT NULL REFERENCES project(id) ON DELETE CASCADE,
     name VARCHAR(255) NOT NULL CHECK (name IN ('demo', 'prep', 'build/install', 'qa')),
+    details TEXT NOT NULL DEFAULT '',
+    notes TEXT NOT NULL DEFAULT '',
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW(),
     deleted_at TIMESTAMPTZ
@@ -163,6 +166,7 @@ CREATE TABLE role_permission (
 CREATE INDEX idx_employee_company ON employee(company_id);
 CREATE INDEX idx_project_company ON project(company_id);
 CREATE INDEX idx_stage_project ON stage(project_id);
+CREATE UNIQUE INDEX uq_stage_project_name_active ON stage(project_id, name) WHERE deleted_at IS NULL;
 CREATE INDEX idx_stage_equipment_stage ON stage_equipment(stage_id);
 CREATE INDEX idx_stage_material_stage ON stage_material(stage_id);
 CREATE INDEX idx_work_log_employee ON work_log(employee_id);

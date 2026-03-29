@@ -517,15 +517,17 @@ app.MapGet("/my/projects", async (ClaimsPrincipal user, NpgsqlDataSource db) =>
     if (sub is null) return Results.Unauthorized();
 
     await using var conn = await db.OpenConnectionAsync();
+    var companyId = await GetCompanyIdFromSub(conn, sub);
+    if (companyId is null) return Results.BadRequest(new { error = "No company assigned" });
+
     await using var cmd = conn.CreateCommand();
     cmd.CommandText = """
-        SELECT p.id, p.name, p.address, p.created_at, p.updated_at
+        SELECT p.id, p.name, p.address, p.overview, p.created_at, p.updated_at
         FROM project p
-        JOIN "user" u ON u.company_id = p.company_id
-        WHERE u.keycloak_sub = $1 AND p.deleted_at IS NULL
+        WHERE p.company_id = $1 AND p.deleted_at IS NULL
         ORDER BY p.created_at
         """;
-    cmd.Parameters.AddWithValue(sub);
+    cmd.Parameters.AddWithValue(companyId.Value);
 
     var projects = new List<object>();
     await using var reader = await cmd.ExecuteReaderAsync();
@@ -536,8 +538,9 @@ app.MapGet("/my/projects", async (ClaimsPrincipal user, NpgsqlDataSource db) =>
             id = reader.GetGuid(0),
             name = reader.GetString(1),
             address = reader.GetString(2),
-            createdAt = reader.GetDateTime(3),
-            updatedAt = reader.GetDateTime(4)
+            overview = reader.GetString(3),
+            createdAt = reader.GetDateTime(4),
+            updatedAt = reader.GetDateTime(5)
         });
     }
     return Results.Ok(projects);
@@ -550,46 +553,68 @@ app.MapPost("/my/projects", async (ClaimsPrincipal user, ProjectBody body, Npgsq
 
     await using var conn = await db.OpenConnectionAsync();
 
-    await using var compCmd = conn.CreateCommand();
-    compCmd.CommandText = """SELECT company_id FROM "user" WHERE keycloak_sub = $1""";
-    compCmd.Parameters.AddWithValue(sub);
-    var companyId = await compCmd.ExecuteScalarAsync() as Guid?;
+    var companyId = await GetCompanyIdFromSub(conn, sub);
     if (companyId is null) return Results.BadRequest(new { error = "No company assigned" });
 
+    await using var tx = await conn.BeginTransactionAsync();
+
     await using var cmd = conn.CreateCommand();
+    cmd.Transaction = tx;
     cmd.CommandText = """
-        INSERT INTO project (company_id, name, address)
-        VALUES ($1, $2, $3)
-        RETURNING id, name, address, created_at, updated_at
+        INSERT INTO project (company_id, name, address, overview)
+        VALUES ($1, $2, $3, COALESCE($4, ''))
+        RETURNING id, name, address, overview, created_at, updated_at
         """;
     cmd.Parameters.AddWithValue(companyId.Value);
     cmd.Parameters.AddWithValue(body.Name);
     cmd.Parameters.AddWithValue(body.Address);
+    cmd.Parameters.AddWithValue((object?)body.Overview ?? DBNull.Value);
 
     await using var reader = await cmd.ExecuteReaderAsync();
     await reader.ReadAsync();
-    return Results.Created($"/projects/{reader.GetGuid(0)}", new
+    var projectId = reader.GetGuid(0);
+    var projectName = reader.GetString(1);
+    var projectAddress = reader.GetString(2);
+    var projectOverview = reader.GetString(3);
+    var createdAt = reader.GetDateTime(4);
+    var updatedAt = reader.GetDateTime(5);
+
+    await reader.CloseAsync();
+    await EnsureProjectStages(conn, projectId, tx);
+    await tx.CommitAsync();
+
+    return Results.Created($"/projects/{projectId}", new
     {
-        id = reader.GetGuid(0),
-        name = reader.GetString(1),
-        address = reader.GetString(2),
-        createdAt = reader.GetDateTime(3),
-        updatedAt = reader.GetDateTime(4)
+        id = projectId,
+        name = projectName,
+        address = projectAddress,
+        overview = projectOverview,
+        createdAt,
+        updatedAt
     });
 }).RequireAuthorization();
 
-app.MapPut("/projects/{id:guid}", async (Guid id, ProjectBody body, NpgsqlDataSource db) =>
+app.MapPut("/projects/{id:guid}", async (Guid id, ClaimsPrincipal user, ProjectBody body, NpgsqlDataSource db) =>
 {
+    var sub = user.FindFirstValue("sub");
+    if (sub is null) return Results.Unauthorized();
+
     await using var conn = await db.OpenConnectionAsync();
+    var companyId = await GetCompanyIdFromSub(conn, sub);
+    if (companyId is null) return Results.BadRequest(new { error = "No company assigned" });
+
     await using var cmd = conn.CreateCommand();
     cmd.CommandText = """
-        UPDATE project SET name = $2, address = $3, updated_at = NOW()
-        WHERE id = $1 AND deleted_at IS NULL
-        RETURNING id, name, address, created_at, updated_at
+        UPDATE project
+        SET name = $2, address = $3, overview = COALESCE($4, overview), updated_at = NOW()
+        WHERE id = $1 AND company_id = $5 AND deleted_at IS NULL
+        RETURNING id, name, address, overview, created_at, updated_at
         """;
     cmd.Parameters.AddWithValue(id);
     cmd.Parameters.AddWithValue(body.Name);
     cmd.Parameters.AddWithValue(body.Address);
+    cmd.Parameters.AddWithValue((object?)body.Overview ?? DBNull.Value);
+    cmd.Parameters.AddWithValue(companyId.Value);
 
     await using var reader = await cmd.ExecuteReaderAsync();
     if (!await reader.ReadAsync()) return Results.NotFound();
@@ -598,18 +623,171 @@ app.MapPut("/projects/{id:guid}", async (Guid id, ProjectBody body, NpgsqlDataSo
         id = reader.GetGuid(0),
         name = reader.GetString(1),
         address = reader.GetString(2),
-        createdAt = reader.GetDateTime(3),
-        updatedAt = reader.GetDateTime(4)
+        overview = reader.GetString(3),
+        createdAt = reader.GetDateTime(4),
+        updatedAt = reader.GetDateTime(5)
     });
 }).RequireAuthorization();
 
-app.MapDelete("/projects/{id:guid}", async (Guid id, NpgsqlDataSource db) =>
+app.MapDelete("/projects/{id:guid}", async (Guid id, ClaimsPrincipal user, NpgsqlDataSource db) =>
 {
+    var sub = user.FindFirstValue("sub");
+    if (sub is null) return Results.Unauthorized();
+
     await using var conn = await db.OpenConnectionAsync();
+    var companyId = await GetCompanyIdFromSub(conn, sub);
+    if (companyId is null) return Results.BadRequest(new { error = "No company assigned" });
+
     await using var cmd = conn.CreateCommand();
-    cmd.CommandText = "UPDATE project SET deleted_at = NOW() WHERE id = $1 AND deleted_at IS NULL";
+    cmd.CommandText = "UPDATE project SET deleted_at = NOW() WHERE id = $1 AND company_id = $2 AND deleted_at IS NULL";
     cmd.Parameters.AddWithValue(id);
+    cmd.Parameters.AddWithValue(companyId.Value);
     return await cmd.ExecuteNonQueryAsync() > 0 ? Results.NoContent() : Results.NotFound();
+}).RequireAuthorization();
+
+app.MapGet("/my/projects/{id:guid}/details", async (Guid id, ClaimsPrincipal user, NpgsqlDataSource db) =>
+{
+    var sub = user.FindFirstValue("sub");
+    if (sub is null) return Results.Unauthorized();
+
+    await using var conn = await db.OpenConnectionAsync();
+    var companyId = await GetCompanyIdFromSub(conn, sub);
+    if (companyId is null) return Results.BadRequest(new { error = "No company assigned" });
+
+    await using var projectCmd = conn.CreateCommand();
+    projectCmd.CommandText = """
+        SELECT id, name, address, overview, created_at, updated_at
+        FROM project
+        WHERE id = $1 AND company_id = $2 AND deleted_at IS NULL
+        """;
+    projectCmd.Parameters.AddWithValue(id);
+    projectCmd.Parameters.AddWithValue(companyId.Value);
+
+    await using var projectReader = await projectCmd.ExecuteReaderAsync();
+    if (!await projectReader.ReadAsync()) return Results.NotFound();
+
+    var project = new
+    {
+        id = projectReader.GetGuid(0),
+        name = projectReader.GetString(1),
+        address = projectReader.GetString(2),
+        overview = projectReader.GetString(3),
+        createdAt = projectReader.GetDateTime(4),
+        updatedAt = projectReader.GetDateTime(5)
+    };
+    await projectReader.CloseAsync();
+
+    await EnsureProjectStages(conn, id);
+
+    await using var stagesCmd = conn.CreateCommand();
+    stagesCmd.CommandText = """
+        SELECT id, name, details, notes, created_at, updated_at
+        FROM stage
+        WHERE project_id = $1 AND deleted_at IS NULL
+        ORDER BY CASE name
+            WHEN 'demo' THEN 1
+            WHEN 'prep' THEN 2
+            WHEN 'build/install' THEN 3
+            WHEN 'qa' THEN 4
+            ELSE 99
+        END,
+        created_at
+        """;
+    stagesCmd.Parameters.AddWithValue(id);
+
+    var stages = new List<object>();
+    await using var stageReader = await stagesCmd.ExecuteReaderAsync();
+    while (await stageReader.ReadAsync())
+    {
+        stages.Add(new
+        {
+            id = stageReader.GetGuid(0),
+            name = stageReader.GetString(1),
+            details = stageReader.GetString(2),
+            notes = stageReader.GetString(3),
+            createdAt = stageReader.GetDateTime(4),
+            updatedAt = stageReader.GetDateTime(5)
+        });
+    }
+
+    return Results.Ok(new
+    {
+        project.id,
+        project.name,
+        project.address,
+        project.overview,
+        project.createdAt,
+        project.updatedAt,
+        stages
+    });
+}).RequireAuthorization();
+
+app.MapPut("/my/projects/{id:guid}/details", async (Guid id, ClaimsPrincipal user, ProjectDetailsBody body, NpgsqlDataSource db) =>
+{
+    var sub = user.FindFirstValue("sub");
+    if (sub is null) return Results.Unauthorized();
+
+    await using var conn = await db.OpenConnectionAsync();
+    var companyId = await GetCompanyIdFromSub(conn, sub);
+    if (companyId is null) return Results.BadRequest(new { error = "No company assigned" });
+
+    var allowedStageNames = new HashSet<string>(StringComparer.Ordinal)
+    {
+        "demo",
+        "prep",
+        "build/install",
+        "qa"
+    };
+
+    if (body.Stages is null)
+        return Results.BadRequest(new { error = "Stages payload is required" });
+
+    if (body.Stages.Any(s => !allowedStageNames.Contains(s.Name)))
+        return Results.BadRequest(new { error = "Invalid stage name in payload" });
+
+    await using var tx = await conn.BeginTransactionAsync();
+
+    await using (var projectCmd = conn.CreateCommand())
+    {
+        projectCmd.Transaction = tx;
+        projectCmd.CommandText = """
+            UPDATE project
+            SET name = $2, address = $3, overview = COALESCE($4, ''), updated_at = NOW()
+            WHERE id = $1 AND company_id = $5 AND deleted_at IS NULL
+            """;
+        projectCmd.Parameters.AddWithValue(id);
+        projectCmd.Parameters.AddWithValue(body.Name);
+        projectCmd.Parameters.AddWithValue(body.Address);
+        projectCmd.Parameters.AddWithValue((object?)body.Overview ?? DBNull.Value);
+        projectCmd.Parameters.AddWithValue(companyId.Value);
+
+        if (await projectCmd.ExecuteNonQueryAsync() == 0)
+        {
+            await tx.RollbackAsync();
+            return Results.NotFound();
+        }
+    }
+
+    await EnsureProjectStages(conn, id, tx);
+
+    foreach (var stage in body.Stages.DistinctBy(s => s.Name))
+    {
+        await using var stageCmd = conn.CreateCommand();
+        stageCmd.Transaction = tx;
+        stageCmd.CommandText = """
+            UPDATE stage
+            SET details = $3, notes = $4, updated_at = NOW()
+            WHERE project_id = $1 AND name = $2 AND deleted_at IS NULL
+            """;
+        stageCmd.Parameters.AddWithValue(id);
+        stageCmd.Parameters.AddWithValue(stage.Name);
+        stageCmd.Parameters.AddWithValue((object?)stage.Details ?? string.Empty);
+        stageCmd.Parameters.AddWithValue((object?)stage.Notes ?? string.Empty);
+        await stageCmd.ExecuteNonQueryAsync();
+    }
+
+    await tx.CommitAsync();
+    return Results.NoContent();
 }).RequireAuthorization();
 
 app.Run();
@@ -627,7 +805,37 @@ static async Task<Guid?> LookupSupplier(NpgsqlConnection conn, string? name)
     return result as Guid?;
 }
 
+static async Task<Guid?> GetCompanyIdFromSub(NpgsqlConnection conn, string sub)
+{
+    await using var cmd = conn.CreateCommand();
+    cmd.CommandText = """SELECT company_id FROM "user" WHERE keycloak_sub = $1""";
+    cmd.Parameters.AddWithValue(sub);
+    return await cmd.ExecuteScalarAsync() as Guid?;
+}
+
+static async Task EnsureProjectStages(NpgsqlConnection conn, Guid projectId, NpgsqlTransaction? tx = null)
+{
+    await using var cmd = conn.CreateCommand();
+    cmd.Transaction = tx;
+    cmd.CommandText = """
+        INSERT INTO stage (project_id, name)
+        SELECT $1, required.name
+        FROM (VALUES ('demo'), ('prep'), ('build/install'), ('qa')) AS required(name)
+        WHERE NOT EXISTS (
+            SELECT 1
+            FROM stage s
+            WHERE s.project_id = $1
+              AND s.name = required.name
+              AND s.deleted_at IS NULL
+        )
+        """;
+    cmd.Parameters.AddWithValue(projectId);
+    await cmd.ExecuteNonQueryAsync();
+}
+
 record SupplierBody(string Name, string Address, string? Phone);
 record EquipmentBody(string Name, decimal CostPerDay, decimal CostHalfDay, string PlaceToRentFrom);
 record MaterialBody(string ProductName, string? SupplierName, string Unit, string ProductType, decimal PricePerUnit, string Currency);
-record ProjectBody(string Name, string Address);
+record ProjectBody(string Name, string Address, string? Overview = null);
+record StageDetailsBody(string Name, string? Details, string? Notes);
+record ProjectDetailsBody(string Name, string Address, string? Overview, List<StageDetailsBody> Stages);

@@ -1,4 +1,10 @@
-import type { Supplier, Equipment, Material, Project } from "./types";
+import type {
+  Supplier,
+  Equipment,
+  Material,
+  Project,
+  ProjectDetails,
+} from "./types";
 
 async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`/api${path}`, {
@@ -46,10 +52,25 @@ export const api = {
     apiFetch<void>(`/materials/${id}`, { method: "DELETE" }),
 
   getProjects: () => apiFetch<Project[]>("/my/projects"),
-  createProject: (body: { name: string; address: string }) =>
+  getProjectDetails: (id: string) =>
+    apiFetch<ProjectDetails>(`/my/projects/${id}/details`),
+  createProject: (body: { name: string; address: string; overview?: string }) =>
     apiFetch<Project>("/my/projects", { method: "POST", body: JSON.stringify(body) }),
-  updateProject: (id: string, body: { name: string; address: string }) =>
+  updateProject: (id: string, body: { name: string; address: string; overview?: string }) =>
     apiFetch<Project>(`/projects/${id}`, { method: "PUT", body: JSON.stringify(body) }),
+  updateProjectDetails: (
+    id: string,
+    body: {
+      name: string;
+      address: string;
+      overview: string;
+      stages: Array<{
+        name: "demo" | "prep" | "build/install" | "qa";
+        details: string;
+        notes: string;
+      }>;
+    },
+  ) => apiFetch<void>(`/my/projects/${id}/details`, { method: "PUT", body: JSON.stringify(body) }),
   deleteProject: (id: string) =>
     apiFetch<void>(`/projects/${id}`, { method: "DELETE" }),
 };

@@ -8,6 +8,7 @@ import Layout from "./components/Layout";
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import Projects from "./pages/Projects";
+import ProjectDetailsPage from "./pages/ProjectDetails";
 import Materials from "./pages/Materials";
 import EquipmentPage from "./pages/Equipment";
 import CustomForms from "./pages/CustomForms";
@@ -40,6 +41,22 @@ export default function App() {
               element={
                 <ProtectedRoute>
                   <Projects />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/projects/new"
+              element={
+                <ProtectedRoute>
+                  <ProjectDetailsPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/projects/:id"
+              element={
+                <ProtectedRoute>
+                  <ProjectDetailsPage />
                 </ProtectedRoute>
               }
             />
