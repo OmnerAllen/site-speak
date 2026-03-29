@@ -3,6 +3,7 @@ import { Routes, Route } from "react-router-dom";
 import { ErrorBoundary } from "react-error-boundary";
 import { ProtectedRoute } from "./auth/ProtectedRoute";
 import { ErrorFallback } from "./components/ErrorFallback";
+import {Toaster} from 'react-hot-toast';
 import Layout from "./components/Layout";
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
@@ -15,6 +16,7 @@ import Suppliers from "./pages/Suppliers";
 export default function App() {
   return (
     <Layout>
+      <Toaster />
       <ErrorBoundary FallbackComponent={ErrorFallback}>
         <Suspense
           fallback={
