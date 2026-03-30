@@ -51,7 +51,7 @@ const MATERIAL_FIELDS: FormFieldConfig[] = [
     type: "small-text",
     label: "Currency",
     name: "currency",
-    placeholder: "USD",
+    placeholder: "$",
     required: true,
   },
 ];
@@ -60,10 +60,9 @@ function emptyFormValues(): Record<string, string> {
   return {
     productName: "",
     supplierName: "",
-    unit: "",
     productType: "",
     pricePerUnit: "",
-    currency: "USD",
+    currency: "$",
   };
 }
 
@@ -184,7 +183,6 @@ export default function Materials() {
         badgeKey="productType"
         columns={[
           { label: "Supplier", value: (m) => m.supplierName || "—" },
-          { label: "Unit", value: (m) => m.unit },
           {
             label: "Price",
             value: (m) => (
