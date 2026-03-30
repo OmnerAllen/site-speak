@@ -10,6 +10,8 @@ import { ResourceList } from "../components/ResourceList";
 import { api } from "../api";
 import type { FormFieldConfig, Supplier } from "../types";
 
+const PHONE_DIGIT_LIMIT = 10;
+
 const SUPPLIER_FIELDS: FormFieldConfig[] = [
   {
     type: "small-text",
@@ -29,16 +31,37 @@ const SUPPLIER_FIELDS: FormFieldConfig[] = [
     type: "small-text",
     label: "Phone Number",
     name: "phone",
-    placeholder: "e.g. 555-1234",
+    placeholder: "e.g. (555) 123-4567",
   },
 ];
+
+function normalizePhone(value: string): string {
+  return value.replace(/\D/g, "").slice(0, PHONE_DIGIT_LIMIT);
+}
+
+function formatPhone(value: string): string {
+  const digits = normalizePhone(value);
+
+  if (!digits) return "";
+  if (digits.length < 4) return digits;
+  if (digits.length < 7) {
+    return `(${digits.slice(0, 3)}) ${digits.slice(3)}`;
+  }
+
+  return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`;
+}
+
+function displayPhone(value: string): string {
+  const formatted = formatPhone(value);
+  return formatted || value;
+}
 
 function emptyFormValues(): Record<string, string> {
   return { name: "", address: "", phone: "" };
 }
 
 function supplierToFormValues(s: Supplier): Record<string, string> {
-  return { name: s.name, address: s.address, phone: s.phone };
+  return { name: s.name, address: s.address, phone: formatPhone(s.phone) };
 }
 
 export default function Suppliers() {
@@ -96,7 +119,7 @@ export default function Suppliers() {
     const body = {
       name: values.name,
       address: values.address,
-      phone: values.phone,
+      phone: normalizePhone(values.phone),
     };
 
     if (editingId) {
@@ -128,9 +151,10 @@ export default function Suppliers() {
           <DynamicForm
             fields={SUPPLIER_FIELDS}
             values={formValues}
-            onChange={(name, value) =>
-              setFormValues((prev) => ({ ...prev, [name]: value }))
-            }
+            onChange={(name, value) => {
+              const nextValue = name === "phone" ? formatPhone(value) : value;
+              setFormValues((prev) => ({ ...prev, [name]: nextValue }));
+            }}
             onSubmit={handleSubmit}
             onCancel={handleCancel}
             submitLabel={editingId ? "Save Changes" : "Add Supplier"}
@@ -142,7 +166,7 @@ export default function Suppliers() {
         items={suppliers}
         titleKey="name"
         columns={[
-          { label: "Phone", value: (s) => s.phone || "—" },
+          { label: "Phone", value: (s) => (s.phone ? displayPhone(s.phone) : "—") },
           { label: "Address", value: (s) => s.address },
         ]}
         onEdit={handleEdit}
