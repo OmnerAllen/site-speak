@@ -149,11 +149,11 @@ Features:
 
 Rubric items:
 - [ ] 10+ pages or views
-- [ ] 4+ generic layout components
+- [x] 4+ generic layout components
 
 Features:
-- [ ] CRUD Projects
-- [ ] CRUD Stages
+- [x] CRUD Projects
+- [x] CRUD Stages
 - [ ] Rest of pages are created
 
 #### Delivered
