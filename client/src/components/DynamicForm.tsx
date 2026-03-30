@@ -4,6 +4,7 @@ import { SmallTextInput } from "./SmallTextInput";
 import { LargeTextInput } from "./LargeTextInput";
 import { TimeSelector } from "./TimeSelector";
 import { NumberInput } from "./NumberInput";
+import { PhoneInput } from "./PhoneInput";
 
 export interface DynamicFormProps {
   fields: FormFieldConfig[];
@@ -39,6 +40,18 @@ export const DynamicForm: React.FC<DynamicFormProps> = ({
             name={name}
             value={values[name] ?? ""}
             onChange={(e) => onChange(name, e.target.value)}
+            placeholder={placeholder}
+            required={required}
+          />
+        );
+      case "phone":
+        return (
+          <PhoneInput
+            key={name}
+            label={label}
+            name={name}
+            value={values[name] ?? ""}
+            onChange={(value) => onChange(name, value)}
             placeholder={placeholder}
             required={required}
           />

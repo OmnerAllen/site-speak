@@ -51,7 +51,7 @@ export interface Supplier {
   phone: string;
 }
 
-export type FormFieldType = "small-text" | "large-text" | "time" | "number";
+export type FormFieldType = "small-text" | "large-text" | "time" | "number" | "phone";
 
 export interface FormFieldConfig {
   type: FormFieldType;
