@@ -21,4 +21,23 @@ public record MaterialListItemDto(
     decimal PricePerUnit,
     string Currency);
 
-public record ProjectDto(Guid Id, string Name, string Address, DateTime CreatedAt, DateTime UpdatedAt);
+public record ProjectDto(Guid Id, string Name, string Address, string Overview, DateTime CreatedAt, DateTime UpdatedAt);
+
+public record StageDto(Guid Id, string Name, string Details, string Notes, DateTime CreatedAt, DateTime UpdatedAt);
+
+public record ProjectDetailsResponse(
+    Guid Id,
+    string Name,
+    string Address,
+    string Overview,
+    DateTime CreatedAt,
+    DateTime UpdatedAt,
+    IReadOnlyList<StageDto> Stages);
+
+public enum ProjectDetailsUpdateResult
+{
+    Ok,
+    NotFound,
+    StagesRequired,
+    InvalidStage
+}
