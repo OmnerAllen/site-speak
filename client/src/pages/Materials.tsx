@@ -73,8 +73,14 @@ function materialToFormValues(m: Material): Record<string, string> {
     unit: m.unit,
     productType: m.productType,
     pricePerUnit: String(m.pricePerUnit),
-    currency: m.currency,
+    currency: m.currency === "USD" ? "$" : m.currency,
   };
+}
+
+function formatMaterialUnitPrice(m: Material): string {
+  const price = m.pricePerUnit.toFixed(2);
+  if (m.currency === "USD" || m.currency === "$") return `$${price}`;
+  return `${m.currency} ${price}`;
 }
 
 export default function Materials() {
@@ -129,13 +135,19 @@ export default function Materials() {
   };
 
   const handleSubmit = (values: Record<string, string>) => {
+    const rawCurrency = values.currency.trim();
+    const currency =
+      rawCurrency === "$" || rawCurrency.toUpperCase() === "USD"
+        ? "USD"
+        : rawCurrency;
+
     const body = {
       productName: values.productName,
       supplierName: values.supplierName,
       unit: values.unit,
       productType: values.productType,
       pricePerUnit: parseFloat(values.pricePerUnit) || 0,
-      currency: values.currency,
+      currency,
     };
 
     if (editingId) {
@@ -187,7 +199,7 @@ export default function Materials() {
             label: "Price",
             value: (m) => (
               <span className="font-mono text-grass-500">
-                {m.currency} {m.pricePerUnit.toFixed(2)}
+                {formatMaterialUnitPrice(m)}
                 <span className="text-brick-600 font-sans">
                   /{m.unit.toLowerCase()}
                 </span>
