@@ -125,8 +125,8 @@ Features:
 Rubric items:
 Note: These will be throughout the project, this is initial setup
 - [ ] Client side state stores
-- [ ] Toasts / global notifications or alerts
-- [ ] Error handling
+- [x] Toasts / global notifications or alerts
+- [x] Error handling
 
 Features:
 Note: Will create generic form for all of these
