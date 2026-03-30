@@ -4,6 +4,7 @@ import {
   useMutation,
   useQueryClient,
 } from "@tanstack/react-query";
+import toast from "react-hot-toast";
 import { DynamicForm } from "../components/DynamicForm";
 import { ResourceList } from "../components/ResourceList";
 import { api } from "../api";
@@ -50,7 +51,7 @@ const MATERIAL_FIELDS: FormFieldConfig[] = [
     type: "small-text",
     label: "Currency",
     name: "currency",
-    placeholder: "USD",
+    placeholder: "$",
     required: true,
   },
 ];
@@ -59,10 +60,9 @@ function emptyFormValues(): Record<string, string> {
   return {
     productName: "",
     supplierName: "",
-    unit: "",
     productType: "",
     pricePerUnit: "",
-    currency: "USD",
+    currency: "$",
   };
 }
 
@@ -86,8 +86,10 @@ export default function Materials() {
 
   const createMutation = useMutation({
     mutationFn: (body: Omit<Material, "id">) => api.createMaterial(body),
-    onSuccess: () =>
-      queryClient.invalidateQueries({ queryKey: ["materials"] }),
+    onSuccess: () => {
+      toast.success("Material created successfully.");
+      queryClient.invalidateQueries({ queryKey: ["materials"] });
+    },
   });
 
   const updateMutation = useMutation({
@@ -181,7 +183,6 @@ export default function Materials() {
         badgeKey="productType"
         columns={[
           { label: "Supplier", value: (m) => m.supplierName || "—" },
-          { label: "Unit", value: (m) => m.unit },
           {
             label: "Price",
             value: (m) => (

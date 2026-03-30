@@ -4,7 +4,9 @@ import {
   useMutation,
   useQueryClient,
 } from "@tanstack/react-query";
+import toast from "react-hot-toast";
 import { DynamicForm } from "../components/DynamicForm";
+import { PhoneInput } from "../components/PhoneInput";
 import { ResourceList } from "../components/ResourceList";
 import { api } from "../api";
 import type { FormFieldConfig, Supplier } from "../types";
@@ -25,10 +27,10 @@ const SUPPLIER_FIELDS: FormFieldConfig[] = [
     required: true,
   },
   {
-    type: "small-text",
+    type: "phone",
     label: "Phone Number",
     name: "phone",
-    placeholder: "e.g. 555-1234",
+    placeholder: "e.g. (555) 123-4567",
   },
 ];
 
@@ -37,7 +39,7 @@ function emptyFormValues(): Record<string, string> {
 }
 
 function supplierToFormValues(s: Supplier): Record<string, string> {
-  return { name: s.name, address: s.address, phone: s.phone };
+  return { name: s.name, address: s.address, phone: PhoneInput.formatPhone(s.phone) };
 }
 
 export default function Suppliers() {
@@ -49,8 +51,10 @@ export default function Suppliers() {
 
   const createMutation = useMutation({
     mutationFn: (body: Omit<Supplier, "id">) => api.createSupplier(body),
-    onSuccess: () =>
-      queryClient.invalidateQueries({ queryKey: ["suppliers"] }),
+    onSuccess: () => {
+      toast.success("Supplier created successfully.");
+      queryClient.invalidateQueries({ queryKey: ["suppliers"] });
+    },
   });
 
   const updateMutation = useMutation({
@@ -93,7 +97,7 @@ export default function Suppliers() {
     const body = {
       name: values.name,
       address: values.address,
-      phone: values.phone,
+      phone: PhoneInput.normalizePhone(values.phone),
     };
 
     if (editingId) {
@@ -139,7 +143,10 @@ export default function Suppliers() {
         items={suppliers}
         titleKey="name"
         columns={[
-          { label: "Phone", value: (s) => s.phone || "—" },
+          {
+            label: "Phone",
+            value: (s) => (s.phone ? PhoneInput.formatPhoneForDisplay(s.phone) : "—"),
+          },
           { label: "Address", value: (s) => s.address },
         ]}
         onEdit={handleEdit}

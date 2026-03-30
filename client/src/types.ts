@@ -2,8 +2,28 @@ export interface Project {
   id: string;
   name: string;
   address: string;
+  overview: string;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface ProjectStage {
+  id: string;
+  name: "demo" | "prep" | "build/install" | "qa";
+  details: string;
+  notes: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ProjectDetails {
+  id: string;
+  name: string;
+  address: string;
+  overview: string;
+  createdAt: string;
+  updatedAt: string;
+  stages: ProjectStage[];
 }
 
 export interface Material {
@@ -31,7 +51,7 @@ export interface Supplier {
   phone: string;
 }
 
-export type FormFieldType = "small-text" | "large-text" | "time" | "number";
+export type FormFieldType = "small-text" | "large-text" | "time" | "number" | "phone";
 
 export interface FormFieldConfig {
   type: FormFieldType;
