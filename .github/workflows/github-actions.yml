@@ -91,6 +91,20 @@ jobs:
             --from-file=config/grafana-datasources.yml \
             --dry-run=client -o yaml | kubectl apply -f -
 
+      - name: Deploy Grafana Dashboard Provisioning ConfigMap
+        run: |
+          kubectl delete -n $NAMESPACE configmap grafana-dashboard-provisioning || true
+          kubectl create -n $NAMESPACE configmap grafana-dashboard-provisioning \
+            --from-file=config/grafana-dashboard-provisioning.yml \
+            --dry-run=client -o yaml | kubectl apply -f -
+
+      - name: Deploy Grafana Dashboards ConfigMap
+        run: |
+          kubectl delete -n $NAMESPACE configmap grafana-dashboards || true
+          kubectl create -n $NAMESPACE configmap grafana-dashboards \
+            --from-file=sitespeak-dashboard.json=config/grafana-dashboard.json \
+            --dry-run=client -o yaml | kubectl apply -f -
+
       - name: Deploy Kubernetes manifests
         run: |
           for f in kubernetes/*.y*ml; do

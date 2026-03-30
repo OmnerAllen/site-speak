@@ -13,10 +13,17 @@ import Materials from "./pages/Materials";
 import EquipmentPage from "./pages/Equipment";
 import CustomForms from "./pages/CustomForms";
 import Suppliers from "./pages/Suppliers";
+import { usePageTelemetry } from "./telemetry/usePageTelemetry";
+
+function PageTelemetry() {
+  usePageTelemetry();
+  return null;
+}
 
 export default function App() {
   return (
     <Layout>
+      <PageTelemetry />
       <Toaster />
       <ErrorBoundary FallbackComponent={ErrorFallback}>
         <Suspense

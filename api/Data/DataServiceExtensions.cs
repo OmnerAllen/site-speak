@@ -4,6 +4,8 @@ public static class DataServiceExtensions
     {
         builder.Services.AddSingleton<HealthRepository>();
         builder.Services.AddSingleton<UserRepository>();
+        builder.Services.AddSingleton<UsersPerCompanyMetricState>();
+        builder.Services.AddHostedService<UsersPerCompanyMetricsRefreshService>();
         builder.Services.AddSingleton<SupplierRepository>();
         builder.Services.AddSingleton<EquipmentRepository>();
         builder.Services.AddSingleton<MaterialRepository>();

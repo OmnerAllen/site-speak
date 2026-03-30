@@ -89,6 +89,8 @@ services:
     image: grafana/grafana:12.3.4
     volumes:
       - ./config/grafana-datasources.yml:/etc/grafana/provisioning/datasources/ds.yaml
+      - ./config/grafana-dashboard-provisioning.yml:/etc/grafana/provisioning/dashboards/dashboards.yaml
+      - ./config/grafana-dashboard.json:/var/lib/grafana/dashboards/sitespeak-dashboard.json
     ports:
       - "3000:3000"
 

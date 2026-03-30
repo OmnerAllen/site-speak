@@ -11,6 +11,7 @@ datasources:
     editable: false
   - name: Prometheus
     type: prometheus
+    uid: PBFA97CFB590B2093
     access: proxy
     orgId: 1
     url: http://prometheus:9090
