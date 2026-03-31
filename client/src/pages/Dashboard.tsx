@@ -1,12 +1,7 @@
 import { Link } from "react-router-dom";
 import { useUser } from "../auth/useUser";
-
-const STATS = [
-  { label: "Projects", count: 3 },
-  { label: "Materials", count: 8 },
-  { label: "Equipment", count: 8 },
-  { label: "Suppliers", count: 5 },
-];
+import { useSuspenseQueries } from "@tanstack/react-query";
+import { api } from "../api";
 
 const NAV_TILES = [
   {
@@ -37,6 +32,27 @@ const NAV_TILES = [
 
 export default function Dashboard() {
   const { profile } = useUser();
+
+  const [
+    { data: projects },
+    { data: materials },
+    { data: equipment },
+    { data: suppliers },
+  ] = useSuspenseQueries({
+    queries: [
+      { queryKey: ["my-projects"], queryFn: api.getProjects },
+      { queryKey: ["materials"], queryFn: api.getMaterials },
+      { queryKey: ["equipment"], queryFn: api.getEquipment },
+      { queryKey: ["suppliers"], queryFn: api.getSuppliers },
+    ],
+  });
+
+  const STATS = [
+    { label: "Projects", count: projects?.length || 0 },
+    { label: "Materials", count: materials?.length || 0 },
+    { label: "Equipment", count: equipment?.length || 0 },
+    { label: "Suppliers", count: suppliers?.length || 0 },
+  ];
 
   return (
     <div className="max-w-5xl mx-auto p-6 md:p-12">
