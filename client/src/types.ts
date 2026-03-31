@@ -97,7 +97,8 @@ export type FormFieldType =
   | "phone"
   | "select"
   | "date"
-  | "datetime-local";
+  | "datetime-local"
+  | "money";
 
 export interface FormFieldConfig {
   type: FormFieldType;

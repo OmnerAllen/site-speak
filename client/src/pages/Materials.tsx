@@ -40,12 +40,11 @@ const MATERIAL_FIELDS: FormFieldConfig[] = [
     required: true,
   },
   {
-    type: "number",
+    type: "money",
     label: "Price Per Unit",
     name: "pricePerUnit",
     placeholder: "0.00",
     required: true,
-    step: "0.01",
   },
   {
     type: "small-text",
