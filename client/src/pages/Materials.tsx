@@ -207,6 +207,7 @@ export default function Materials() {
             ),
           },
         ]}
+        onItemClick={handleEdit}
         onEdit={handleEdit}
         onDelete={(id) => deleteMutation.mutate(id)}
         emptyMessage="No materials yet. Add one above."
