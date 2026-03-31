@@ -8,11 +8,15 @@ function NavLink({ to, children }: { to: string; children: React.ReactNode }) {
   return (
     <Link
       to={to}
-      className={`px-3 py-1.5 rounded text-sm font-medium transition-colors ${
-        active
-          ? "bg-grass-800 text-grass-200"
-          : "text-brick-300 hover:text-brick-100 hover:bg-brick-800"
-      }`}
+      className={`relative px-3 py-1.5 rounded-sm text-sm font-medium transition-colors
+        after:content-[''] after:absolute after:left-0 after:-bottom-1
+        after:w-full after:h-1 after:bg-grass-400
+        after:origin-center after:transition-transform after:duration-300 after:ease-out
+        ${
+          active
+            ? "text-grass-400 after:scale-x-100"
+            : "text-brick-300 hover:text-brick-100 hover:bg-brick-800/50 after:scale-x-0"
+        }`}
     >
       {children}
     </Link>
