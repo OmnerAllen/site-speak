@@ -97,7 +97,8 @@ export type FormFieldType =
   | "select"
   | "date"
   | "datetime-local"
-  | "money";
+  | "money"
+  | "heading";
 
 export interface FormFieldConfig {
   type: FormFieldType;
@@ -107,6 +108,8 @@ export interface FormFieldConfig {
   required?: boolean;
   step?: string;
   options?: { value: string; label: string }[];
+  /** Shown under the label for `heading` fields. */
+  description?: string;
 }
 
 export interface UserProfile {

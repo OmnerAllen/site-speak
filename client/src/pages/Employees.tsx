@@ -143,6 +143,7 @@ export default function EmployeesPage() {
         titleKey="name"
         badgeKey="type"
         columns={[]}
+        onItemClick={handleEdit}
         onEdit={handleEdit}
         onDelete={(id) => deleteMutation.mutate(id)}
         emptyMessage="No employees yet. Add your team above."

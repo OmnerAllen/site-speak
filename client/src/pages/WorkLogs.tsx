@@ -221,8 +221,8 @@ export default function WorkLogsPage() {
       <ResourceList
         items={workLogs}
         titleKey="projectName"
+        badgeKey="employeeName"
         columns={[
-          { label: "Employee", value: (w) => w.employeeName },
           {
             label: "Started",
             value: (w) => (
@@ -242,6 +242,7 @@ export default function WorkLogsPage() {
             ),
           },
         ]}
+        onItemClick={handleEdit}
         onEdit={handleEdit}
         onDelete={(id) => deleteMutation.mutate(id)}
         emptyMessage="No work logs yet. Record a shift above."

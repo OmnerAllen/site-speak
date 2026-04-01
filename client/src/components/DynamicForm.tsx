@@ -18,6 +18,8 @@ export interface DynamicFormProps {
   onSubmit: (values: Record<string, string>) => void;
   submitLabel?: string;
   onCancel?: () => void;
+  submitDisabled?: boolean;
+  cancelDisabled?: boolean;
 }
 
 export const DynamicForm: React.FC<DynamicFormProps> = ({
@@ -27,6 +29,8 @@ export const DynamicForm: React.FC<DynamicFormProps> = ({
   onSubmit,
   submitLabel = "Submit",
   onCancel,
+  submitDisabled = false,
+  cancelDisabled = false,
 }) => {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -34,9 +38,24 @@ export const DynamicForm: React.FC<DynamicFormProps> = ({
   };
 
   const renderField = (field: FormFieldConfig) => {
-    const { type, label, name, placeholder, required, step, options } = field;
+    const { type, label, name, placeholder, required, step, options, description } =
+      field;
 
     switch (type) {
+      case "heading":
+        return (
+          <div
+            key={name}
+            className="mt-14 first:mt-0 pt-6 border-t border-brick-700 first:border-t-0 first:pt-0"
+          >
+            <h3 className="text-base md:text-lg font-semibold text-brick-200">
+              {label}
+            </h3>
+            {description ? (
+              <p className="text-xs text-brick-500 mt-1">{description}</p>
+            ) : null}
+          </div>
+        );
       case "small-text":
         return (
           <SmallTextInput
@@ -152,22 +171,26 @@ export const DynamicForm: React.FC<DynamicFormProps> = ({
       className="space-y-6 bg-brick-800 p-6 rounded-lg shadow-md border border-brick-700"
     >
       {fields.map(renderField)}
-      <div className="flex gap-3">
-        <button
-          type="submit"
-          className="flex-1 bg-grass-700 text-grass-100 font-medium py-2 px-4 rounded-md hover:bg-grass-600 focus:outline-none focus:ring-2 focus:ring-brick-500 focus:ring-offset-2 transition-colors cursor-pointer"
-        >
-          {submitLabel}
-        </button>
+      <div
+        className={`flex gap-3 items-center ${onCancel ? "justify-between" : "justify-end"}`}
+      >
         {onCancel && (
           <button
             type="button"
             onClick={onCancel}
-            className="px-4 py-2 text-brick-300 hover:text-brick-100 border border-brick-600 rounded-md hover:bg-brick-700 transition-colors cursor-pointer"
+            disabled={cancelDisabled}
+            className="px-4 py-2 text-brick-300 hover:text-brick-100 border border-brick-600 rounded-md hover:bg-brick-700 transition-colors cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
           >
             Cancel
           </button>
         )}
+        <button
+          type="submit"
+          disabled={submitDisabled}
+          className="bg-grass-700 text-grass-100 font-medium py-2 px-4 rounded-md hover:bg-grass-600 focus:outline-none focus:ring-2 focus:ring-brick-500 focus:ring-offset-2 transition-colors cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+        >
+          {submitLabel}
+        </button>
       </div>
     </form>
   );

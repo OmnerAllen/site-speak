@@ -2,8 +2,9 @@ import { useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
+import { DynamicForm } from "../components/DynamicForm";
 import { api } from "../api";
-import type { ProjectDetails, ProjectStage } from "../types";
+import type { FormFieldConfig, ProjectDetails, ProjectStage } from "../types";
 
 const STAGE_ORDER: ProjectStage["name"][] = ["demo", "prep", "build/install", "qa"];
 
@@ -21,6 +22,67 @@ function stageLabel(name: ProjectStage["name"]): string {
   if (name === "qa") return "QA (Quality Assurance)";
   return `${name.charAt(0).toUpperCase()}${name.slice(1)}`;
 }
+
+function stageFieldPrefix(name: ProjectStage["name"]): string {
+  return name === "build/install" ? "build_install" : name;
+}
+
+function buildProjectFormFields(): FormFieldConfig[] {
+  const fields: FormFieldConfig[] = [
+    { type: "heading", name: "h_project", label: "Project Info" },
+    {
+      type: "small-text",
+      name: "name",
+      label: "Project Name",
+      placeholder: "e.g. Riverside remodel",
+      required: true,
+    },
+    {
+      type: "small-text",
+      name: "address",
+      label: "Address",
+      placeholder: "Street, city, state",
+      required: true,
+    },
+    {
+      type: "large-text",
+      name: "overview",
+      label: "Project Overview",
+      placeholder: "Describe the project at a high level...",
+      required: false,
+    },
+  ];
+
+  for (const stage of STAGE_ORDER) {
+    const p = stageFieldPrefix(stage);
+    fields.push(
+      {
+        type: "heading",
+        name: `h_${p}`,
+        label: stageLabel(stage),
+        description: "Materials and equipment coming soon.",
+      },
+      {
+        type: "large-text",
+        name: `${p}_details`,
+        label: "Details",
+        placeholder: "What are we doing during this stage?",
+        required: false,
+      },
+      {
+        type: "large-text",
+        name: `${p}_notes`,
+        label: "Notes (optional)",
+        placeholder: "Secondary notes, reminders, or context...",
+        required: false,
+      },
+    );
+  }
+
+  return fields;
+}
+
+const PROJECT_FORM_FIELDS = buildProjectFormFields();
 
 function toEditorState(project: ProjectDetails): ProjectEditorState {
   const baseStages: StageFormState = {
@@ -42,6 +104,37 @@ function toEditorState(project: ProjectDetails): ProjectEditorState {
     address: project.address,
     overview: project.overview ?? "",
     stages: baseStages,
+  };
+}
+
+function editorStateToValues(s: ProjectEditorState): Record<string, string> {
+  const v: Record<string, string> = {
+    name: s.name,
+    address: s.address,
+    overview: s.overview,
+  };
+  for (const stage of STAGE_ORDER) {
+    const p = stageFieldPrefix(stage);
+    v[`${p}_details`] = s.stages[stage].details;
+    v[`${p}_notes`] = s.stages[stage].notes;
+  }
+  return v;
+}
+
+function valuesToEditorState(v: Record<string, string>): ProjectEditorState {
+  const stages = {} as StageFormState;
+  for (const stage of STAGE_ORDER) {
+    const p = stageFieldPrefix(stage);
+    stages[stage] = {
+      details: v[`${p}_details`] ?? "",
+      notes: v[`${p}_notes`] ?? "",
+    };
+  }
+  return {
+    name: v.name ?? "",
+    address: v.address ?? "",
+    overview: v.overview ?? "",
+    stages,
   };
 }
 
@@ -91,12 +184,14 @@ export default function ProjectDetailsPage() {
     return emptyEditorState();
   }, [isCreateMode, project]);
 
-  const [draft, setDraft] = useState<ProjectEditorState | null>(null);
-  const form = draft ?? baseState;
+  const baseValues = useMemo(() => editorStateToValues(baseState), [baseState]);
+
+  const [draftValues, setDraftValues] = useState<Record<string, string> | null>(null);
+  const formValues = draftValues ?? baseValues;
 
   const saveMutation = useMutation({
-    mutationFn: async () => {
-      const payload = editorPayload(form);
+    mutationFn: async (state: ProjectEditorState) => {
+      const payload = editorPayload(state);
 
       if (isCreateMode) {
         const created = await api.createProject({
@@ -115,7 +210,7 @@ export default function ProjectDetailsPage() {
     onSuccess: (savedProjectId) => {
       toast.success(isCreateMode ? "Project created." : "Project saved.");
       queryClient.invalidateQueries({ queryKey: ["my-projects"] });
-      setDraft(null);
+      setDraftValues(null);
 
       if (savedProjectId) {
         queryClient.invalidateQueries({ queryKey: ["project-details", savedProjectId] });
@@ -128,16 +223,23 @@ export default function ProjectDetailsPage() {
     },
   });
 
+  const currentState = useMemo(() => valuesToEditorState(formValues), [formValues]);
+
   const hasChanges = useMemo(() => {
-    return JSON.stringify(editorPayload(form)) !== JSON.stringify(editorPayload(baseState));
-  }, [form, baseState]);
+    return JSON.stringify(editorPayload(currentState)) !== JSON.stringify(editorPayload(baseState));
+  }, [currentState, baseState]);
 
   const handleCancel = () => {
     navigate("/projects");
   };
 
-  const updateForm = (updater: (current: ProjectEditorState) => ProjectEditorState) => {
-    setDraft((prev) => updater(prev ?? baseState));
+  const handleSubmit = (values: Record<string, string>) => {
+    const state = valuesToEditorState(values);
+    if (!state.name.trim() || !state.address.trim()) {
+      toast.error("Project name and address are required.");
+      return;
+    }
+    saveMutation.mutate(state);
   };
 
   if (!isCreateMode && isLoading) {
@@ -159,125 +261,38 @@ export default function ProjectDetailsPage() {
     );
   }
 
+  const submitLabel = saveMutation.isPending
+    ? "Saving..."
+    : isCreateMode
+      ? "Save Project"
+      : "Save Changes";
+
+  const submitDisabled =
+    saveMutation.isPending ||
+    !formValues.name?.trim() ||
+    !formValues.address?.trim() ||
+    (!isCreateMode && !hasChanges);
+
   return (
-    <div className="max-w-5xl mx-auto p-6 md:p-12 space-y-8 pb-24">
+    <div className="max-w-5xl mx-auto p-6 md:p-12 space-y-8">
       <div className="py-4">
         <h1 className="text-2xl md:text-3xl font-bold text-brick-100 mt-2">
           {isCreateMode ? "New Project" : "Project Details"}
         </h1>
       </div>
 
-      <section className="space-y-4 bg-brick-900 border border-brick-800 rounded-lg p-5 md:p-6">
-        <h2 className="text-lg font-semibold text-brick-200">Project Info</h2>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="flex flex-col gap-1">
-            <label className="text-sm font-medium text-brick-300">Project Name</label>
-            <input
-              value={form.name}
-              onChange={(e) =>
-                updateForm((current) => ({ ...current, name: e.target.value }))
-              }
-              className="px-3 py-2 bg-brick-100 text-brick-900 border border-brick-300 rounded-md focus:outline-none focus:ring-2 focus:ring-brick-500"
-            />
-          </div>
-
-          <div className="flex flex-col gap-1">
-            <label className="text-sm font-medium text-brick-300">Address</label>
-            <input
-              value={form.address}
-              onChange={(e) =>
-                updateForm((current) => ({ ...current, address: e.target.value }))
-              }
-              className="px-3 py-2 bg-brick-100 text-brick-900 border border-brick-300 rounded-md focus:outline-none focus:ring-2 focus:ring-brick-500"
-            />
-          </div>
-        </div>
-
-        <div className="flex flex-col gap-1">
-          <label className="text-sm font-medium text-brick-300">Project Overview</label>
-          <textarea
-            value={form.overview}
-            onChange={(e) =>
-              updateForm((current) => ({ ...current, overview: e.target.value }))
-            }
-            placeholder="Describe the project at a high level..."
-            className="px-3 py-2 bg-brick-100 text-brick-900 border border-brick-300 rounded-md focus:outline-none focus:ring-2 focus:ring-brick-500 min-h-35"
-          />
-        </div>
-      </section>
-
-      <section className="space-y-4">
-        <h2 className="text-lg font-semibold text-brick-200">Stages</h2>
-
-        {STAGE_ORDER.map((stageName) => (
-          <div key={stageName} className="bg-brick-900 border border-brick-800 rounded-lg p-5 md:p-6 space-y-4">
-            <div>
-              <h3 className="text-base md:text-lg font-semibold text-brick-200">{stageLabel(stageName)}</h3>
-              <p className="text-xs text-brick-500 mt-1">Materials and equipment coming soon.</p>
-            </div>
-
-            <div className="space-y-3">
-              <div className="flex flex-col gap-1">
-                <label className="text-sm font-medium text-brick-300">Details</label>
-                <textarea
-                  value={form.stages[stageName].details}
-                  onChange={(e) =>
-                    updateForm((current) => ({
-                      ...current,
-                      stages: {
-                        ...current.stages,
-                        [stageName]: { ...current.stages[stageName], details: e.target.value },
-                      },
-                    }))
-                  }
-                  placeholder="What are we doing during this stage?"
-                  className="px-3 py-2 bg-brick-100 text-brick-900 border border-brick-300 rounded-md focus:outline-none focus:ring-2 focus:ring-brick-500 min-h-30"
-                />
-              </div>
-
-              <div className="flex flex-col gap-1">
-                <label className="text-sm font-medium text-brick-400">Notes (optional)</label>
-                <textarea
-                  value={form.stages[stageName].notes}
-                  onChange={(e) =>
-                    updateForm((current) => ({
-                      ...current,
-                      stages: {
-                        ...current.stages,
-                        [stageName]: { ...current.stages[stageName], notes: e.target.value },
-                      },
-                    }))
-                  }
-                  placeholder="Secondary notes, reminders, or context..."
-                  className="px-3 py-2 bg-brick-100/90 text-brick-800 border border-brick-300 rounded-md focus:outline-none focus:ring-2 focus:ring-brick-500 min-h-23.75 text-sm"
-                />
-              </div>
-            </div>
-          </div>
-        ))}
-      </section>
-
-      <div className="fixed bottom-0 left-0 right-0 z-40 bg-brick-950/95 backdrop-blur border-t border-brick-800 p-4 shadow-lg shrink-0">
-        <div className="max-w-5xl mx-auto flex items-center justify-end gap-3 px-2 md:px-8">
-          <button
-            type="button"
-            onClick={handleCancel}
-            disabled={saveMutation.isPending}
-            className="px-4 py-2 text-brick-300 hover:text-brick-100 border border-brick-600 rounded-md hover:bg-brick-800 transition-colors cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
-          >
-            Cancel
-          </button>
-          <button
-            type="button"
-            disabled={saveMutation.isPending || !form.name.trim() || !form.address.trim() || (!isCreateMode && !hasChanges)}
-            onClick={() => saveMutation.mutate()}
-            className="bg-grass-700 text-grass-100 font-medium py-2 px-6 rounded-md hover:bg-grass-600 disabled:opacity-60 disabled:cursor-not-allowed transition-colors cursor-pointer"
-          >
-            {saveMutation.isPending ? "Saving..." : isCreateMode ? "Save Project" : "Save Changes"}
-          </button>
-        </div>
-      </div>
+      <DynamicForm
+        fields={PROJECT_FORM_FIELDS}
+        values={formValues}
+        onChange={(name, value) =>
+          setDraftValues((prev) => ({ ...(prev ?? baseValues), [name]: value }))
+        }
+        onSubmit={handleSubmit}
+        submitLabel={submitLabel}
+        onCancel={handleCancel}
+        submitDisabled={submitDisabled}
+        cancelDisabled={saveMutation.isPending}
+      />
     </div>
   );
 }

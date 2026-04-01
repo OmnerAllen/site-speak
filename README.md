@@ -170,14 +170,14 @@ Features:
 
 Rubric items:
 Note: We are just working more on these, can't really finish a singular one
-- [ ] Project scope is 2-3 times larger than Inventory Management (per group member)
-- [ ] Toasts / global notifications or alerts
+- [x] Project scope is 2-3 times larger than Inventory Management (per group member)
+- [x] Toasts / global notifications or alerts
 - [ ] Error handling (both on api requests and render errors)
 
 Features:
-- [ ] CRUD Employees
-- [ ] CRUD Worklog
-- [ ] Project Scheduling
+- [x] CRUD Employees
+- [x] CRUD Worklog
+- [x] Project Scheduling
 
 #### Delivered
 
