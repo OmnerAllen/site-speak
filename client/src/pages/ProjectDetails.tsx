@@ -160,36 +160,11 @@ export default function ProjectDetailsPage() {
   }
 
   return (
-    <div className="max-w-5xl mx-auto p-6 md:p-12 space-y-8">
-      <div className="sticky top-16 z-40 -mx-6 md:-mx-12 px-6 md:px-12 py-4 bg-brick-950/95 backdrop-blur border-b border-brick-800">
-        <div className="flex items-center justify-between gap-4">
-        <div>
-         
-          <h1 className="text-2xl md:text-3xl font-bold text-brick-100 mt-2">
-            {isCreateMode ? "New Project" : "Project Details"}
-          </h1>
-          
-        </div>
-
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={handleCancel}
-            disabled={saveMutation.isPending}
-            className="px-4 py-2 text-brick-300 hover:text-brick-100 border border-brick-600 rounded-md hover:bg-brick-800 transition-colors cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
-          >
-            Cancel
-          </button>
-          <button
-            type="button"
-            disabled={saveMutation.isPending || !form.name.trim() || !form.address.trim() || (!isCreateMode && !hasChanges)}
-            onClick={() => saveMutation.mutate()}
-            className="bg-grass-700 text-grass-100 font-medium py-2 px-4 rounded-md hover:bg-grass-600 disabled:opacity-60 disabled:cursor-not-allowed transition-colors cursor-pointer"
-          >
-            {saveMutation.isPending ? "Saving..." : isCreateMode ? "Save Project" : "Save Changes"}
-          </button>
-        </div>
-        </div>
+    <div className="max-w-5xl mx-auto p-6 md:p-12 space-y-8 pb-24">
+      <div className="-mx-6 md:-mx-12 px-6 md:px-12 py-4">
+        <h1 className="text-2xl md:text-3xl font-bold text-brick-100 mt-2">
+          {isCreateMode ? "New Project" : "Project Details"}
+        </h1>
       </div>
 
       <section className="space-y-4 bg-brick-900 border border-brick-800 rounded-lg p-5 md:p-6">
@@ -282,6 +257,27 @@ export default function ProjectDetailsPage() {
           </div>
         ))}
       </section>
+
+      <div className="fixed bottom-0 left-0 right-0 z-40 bg-brick-950/95 backdrop-blur border-t border-brick-800 p-4 shadow-lg shrink-0">
+        <div className="max-w-5xl mx-auto flex items-center justify-end gap-3 px-2 md:px-8">
+          <button
+            type="button"
+            onClick={handleCancel}
+            disabled={saveMutation.isPending}
+            className="px-4 py-2 text-brick-300 hover:text-brick-100 border border-brick-600 rounded-md hover:bg-brick-800 transition-colors cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            disabled={saveMutation.isPending || !form.name.trim() || !form.address.trim() || (!isCreateMode && !hasChanges)}
+            onClick={() => saveMutation.mutate()}
+            className="bg-grass-700 text-grass-100 font-medium py-2 px-6 rounded-md hover:bg-grass-600 disabled:opacity-60 disabled:cursor-not-allowed transition-colors cursor-pointer"
+          >
+            {saveMutation.isPending ? "Saving..." : isCreateMode ? "Save Project" : "Save Changes"}
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
