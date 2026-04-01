@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using Microsoft.Extensions.Logging;
 
 public static class ProjectEndpoints
 {
@@ -28,7 +29,7 @@ public static class ProjectEndpoints
             return Results.Ok(list);
         }).RequireAuthorization();
 
-        app.MapPost("/my/projects", async (ClaimsPrincipal user, ProjectBody body, ProjectRepository projects) =>
+        app.MapPost("/my/projects", async (ClaimsPrincipal user, ProjectBody body, ProjectRepository projects, ILogger<Program> logger) =>
         {
             var sub = user.FindFirstValue("sub");
             if (sub is null) return Results.Unauthorized();
@@ -38,6 +39,10 @@ public static class ProjectEndpoints
 
             var created = await projects.CreateAsync(companyId.Value, body);
             if (created is null) return Results.Problem("Failed to create project.");
+            
+            var email = user.FindFirstValue("email") ?? user.FindFirstValue("preferred_username") ?? "Unknown";
+            logger.LogInformation("User {Email} created project '{ProjectName}' (ID: {ProjectId})", email, created.Name, created.Id);
+            
             return Results.Created($"/projects/{created.Id}", created);
         }).RequireAuthorization();
 
@@ -54,7 +59,7 @@ public static class ProjectEndpoints
             return Results.Ok(updated);
         }).RequireAuthorization();
 
-        app.MapDelete("/projects/{id:guid}", async (Guid id, ClaimsPrincipal user, ProjectRepository projects) =>
+        app.MapDelete("/projects/{id:guid}", async (Guid id, ClaimsPrincipal user, ProjectRepository projects, ILogger<Program> logger) =>
         {
             var sub = user.FindFirstValue("sub");
             if (sub is null) return Results.Unauthorized();
@@ -62,7 +67,14 @@ public static class ProjectEndpoints
             var companyId = await projects.GetCompanyIdForKeycloakSubAsync(sub);
             if (companyId is null) return Results.BadRequest(new { error = "No company assigned" });
 
-            return await projects.SoftDeleteAsync(id, companyId.Value) ? Results.NoContent() : Results.NotFound();
+            var deleted = await projects.SoftDeleteAsync(id, companyId.Value);
+            if (deleted)
+            {
+                var email = user.FindFirstValue("email") ?? user.FindFirstValue("preferred_username") ?? "Unknown";
+                logger.LogInformation("User {Email} deleted project {ProjectId}", email, id);
+                return Results.NoContent();
+            }
+            return Results.NotFound();
         }).RequireAuthorization();
 
         app.MapGet("/my/projects/{id:guid}/details", async (Guid id, ClaimsPrincipal user, ProjectRepository projects) =>

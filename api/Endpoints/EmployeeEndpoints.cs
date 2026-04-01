@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using Microsoft.Extensions.Logging;
 
 public static class EmployeeEndpoints
 {
@@ -15,7 +16,7 @@ public static class EmployeeEndpoints
             return Results.Ok(await employees.ListForCompanyAsync(companyId.Value));
         }).RequireAuthorization();
 
-        app.MapPost("/my/employees", async (ClaimsPrincipal user, ProjectRepository projects, EmployeeRepository employees, EmployeeBody body) =>
+        app.MapPost("/my/employees", async (ClaimsPrincipal user, ProjectRepository projects, EmployeeRepository employees, EmployeeBody body, ILogger<Program> logger) =>
         {
             var sub = user.FindFirstValue("sub");
             if (sub is null) return Results.Unauthorized();
@@ -25,6 +26,10 @@ public static class EmployeeEndpoints
 
             var created = await employees.CreateAsync(companyId.Value, body);
             if (created is null) return Results.BadRequest(new { error = "Invalid employee data." });
+            
+            var email = user.FindFirstValue("email") ?? user.FindFirstValue("preferred_username") ?? "Unknown";
+            logger.LogInformation("User {Email} created employee {EmployeeName} (ID: {EmployeeId})", email, created.Name, created.Id);
+            
             return Results.Created($"/my/employees/{created.Id}", created);
         }).RequireAuthorization();
 
@@ -41,7 +46,7 @@ public static class EmployeeEndpoints
             return Results.Ok(updated);
         }).RequireAuthorization();
 
-        app.MapDelete("/my/employees/{id:guid}", async (Guid id, ClaimsPrincipal user, ProjectRepository projects, EmployeeRepository employees) =>
+        app.MapDelete("/my/employees/{id:guid}", async (Guid id, ClaimsPrincipal user, ProjectRepository projects, EmployeeRepository employees, ILogger<Program> logger) =>
         {
             var sub = user.FindFirstValue("sub");
             if (sub is null) return Results.Unauthorized();
@@ -49,7 +54,14 @@ public static class EmployeeEndpoints
             var companyId = await projects.GetCompanyIdForKeycloakSubAsync(sub);
             if (companyId is null) return Results.BadRequest(new { error = "No company assigned" });
 
-            return await employees.SoftDeleteAsync(id, companyId.Value) ? Results.NoContent() : Results.NotFound();
+            var deleted = await employees.SoftDeleteAsync(id, companyId.Value);
+            if (deleted)
+            {
+                var email = user.FindFirstValue("email") ?? user.FindFirstValue("preferred_username") ?? "Unknown";
+                logger.LogInformation("User {Email} deleted employee {EmployeeId}", email, id);
+                return Results.NoContent();
+            }
+            return Results.NotFound();
         }).RequireAuthorization();
 
         return app;
