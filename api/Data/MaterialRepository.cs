@@ -6,7 +6,7 @@ public class MaterialRepository(NpgsqlDataSource dataSource)
     {
         return dataSource.QueryAsync(
             """
-            SELECT m.id, m.product_name, s.name, m.unit, m.product_type, m.price_per_unit, m.currency
+            SELECT m.id, m.product_name, s.name, m.unit, m.product_type, m.price_per_unit
             FROM material m
             LEFT JOIN supplier s ON s.id = m.supplier_id
             WHERE m.deleted_at IS NULL
@@ -18,8 +18,7 @@ public class MaterialRepository(NpgsqlDataSource dataSource)
                 reader.IsDBNull(2) ? "" : reader.GetString(2),
                 reader.IsDBNull(3) ? "" : reader.GetString(3),
                 reader.IsDBNull(4) ? "" : reader.GetString(4),
-                reader.IsDBNull(5) ? 0m : reader.GetDecimal(5),
-                reader.IsDBNull(6) ? "USD" : reader.GetString(6)),
+                reader.IsDBNull(5) ? 0m : reader.GetDecimal(5)),
             cancellationToken: cancellationToken);
     }
 
@@ -32,7 +31,7 @@ public class MaterialRepository(NpgsqlDataSource dataSource)
         return await conn.ExecuteScalarAsync<Guid?>(
             """
             INSERT INTO material (product_name, supplier_id, unit, product_type, price_per_unit, currency)
-            VALUES ($1, $2, $3, $4, $5, $6)
+            VALUES ($1, $2, $3, $4, $5, 'USD')
             RETURNING id
             """,
             configureParameters: p =>
@@ -42,7 +41,6 @@ public class MaterialRepository(NpgsqlDataSource dataSource)
                 p.AddWithValue(body.Unit);
                 p.AddWithValue(body.ProductType);
                 p.AddWithValue(body.PricePerUnit);
-                p.AddWithValue(body.Currency);
             },
             isWrite: true,
             cancellationToken: cancellationToken);
@@ -56,7 +54,7 @@ public class MaterialRepository(NpgsqlDataSource dataSource)
 
         return await conn.ExecuteScalarAsync<Guid?>(
             """
-            UPDATE material SET product_name = $2, supplier_id = $3, unit = $4, product_type = $5, price_per_unit = $6, currency = $7, updated_at = NOW()
+            UPDATE material SET product_name = $2, supplier_id = $3, unit = $4, product_type = $5, price_per_unit = $6, updated_at = NOW()
             WHERE id = $1 AND deleted_at IS NULL
             RETURNING id
             """,
@@ -68,7 +66,6 @@ public class MaterialRepository(NpgsqlDataSource dataSource)
                 p.AddWithValue(body.Unit);
                 p.AddWithValue(body.ProductType);
                 p.AddWithValue(body.PricePerUnit);
-                p.AddWithValue(body.Currency);
             },
             isWrite: true,
             cancellationToken: cancellationToken) is not null;

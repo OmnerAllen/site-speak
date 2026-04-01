@@ -71,7 +71,6 @@ export interface Material {
   unit: string;
   productType: string;
   pricePerUnit: number;
-  currency: string;
 }
 
 export interface Equipment {
