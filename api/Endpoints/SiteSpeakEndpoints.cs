@@ -8,6 +8,8 @@ public static class SiteSpeakEndpoints
         app.MapEquipmentEndpoints();
         app.MapMaterialEndpoints();
         app.MapProjectEndpoints();
+        app.MapEmployeeEndpoints();
+        app.MapWorkLogEndpoints();
         app.MapTelemetryEndpoints();
         return app;
     }

@@ -4,6 +4,9 @@ import type {
   Material,
   Project,
   ProjectDetails,
+  ScheduleProject,
+  Employee,
+  WorkLog,
 } from "./types";
 
 async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
@@ -52,6 +55,7 @@ export const api = {
     apiFetch<void>(`/materials/${id}`, { method: "DELETE" }),
 
   getProjects: () => apiFetch<Project[]>("/my/projects"),
+  getSchedule: () => apiFetch<ScheduleProject[]>("/my/schedule"),
   getProjectDetails: (id: string) =>
     apiFetch<ProjectDetails>(`/my/projects/${id}/details`),
   createProject: (body: { name: string; address: string; overview?: string }) =>
@@ -73,4 +77,68 @@ export const api = {
   ) => apiFetch<void>(`/my/projects/${id}/details`, { method: "PUT", body: JSON.stringify(body) }),
   deleteProject: (id: string) =>
     apiFetch<void>(`/projects/${id}`, { method: "DELETE" }),
+
+  patchProjectSchedule: (
+    id: string,
+    body: {
+      stages: Array<{
+        stageId: string;
+        plannedStartDate: string | null;
+        plannedEndDate: string | null;
+      }>;
+    },
+  ) =>
+    apiFetch<Project>(`/my/projects/${id}/schedule`, {
+      method: "PATCH",
+      body: JSON.stringify(body),
+    }),
+
+  getEmployees: () => apiFetch<Employee[]>("/my/employees"),
+  createEmployee: (body: Omit<Employee, "id">) =>
+    apiFetch<Employee>("/my/employees", { method: "POST", body: JSON.stringify(body) }),
+  updateEmployee: (id: string, body: Omit<Employee, "id">) =>
+    apiFetch<Employee>(`/my/employees/${id}`, { method: "PUT", body: JSON.stringify(body) }),
+  deleteEmployee: (id: string) =>
+    apiFetch<void>(`/my/employees/${id}`, { method: "DELETE" }),
+
+  getWorkLogs: () => apiFetch<WorkLog[]>("/my/work-logs"),
+  createWorkLog: (body: {
+    employeeId: string;
+    projectId: string;
+    startedAt: string;
+    endedAt: string;
+    notes?: string | null;
+  }) =>
+    apiFetch<WorkLog>("/my/work-logs", {
+      method: "POST",
+      body: JSON.stringify({
+        employeeId: body.employeeId,
+        projectId: body.projectId,
+        startedAt: body.startedAt,
+        endedAt: body.endedAt,
+        notes: body.notes ?? null,
+      }),
+    }),
+  updateWorkLog: (
+    id: string,
+    body: {
+      employeeId: string;
+      projectId: string;
+      startedAt: string;
+      endedAt: string;
+      notes?: string | null;
+    },
+  ) =>
+    apiFetch<WorkLog>(`/my/work-logs/${id}`, {
+      method: "PUT",
+      body: JSON.stringify({
+        employeeId: body.employeeId,
+        projectId: body.projectId,
+        startedAt: body.startedAt,
+        endedAt: body.endedAt,
+        notes: body.notes ?? null,
+      }),
+    }),
+  deleteWorkLog: (id: string) =>
+    apiFetch<void>(`/my/work-logs/${id}`, { method: "DELETE" }),
 };

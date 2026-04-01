@@ -16,6 +16,18 @@ public static class ProjectEndpoints
             return Results.Ok(list);
         }).RequireAuthorization();
 
+        app.MapGet("/my/schedule", async (ClaimsPrincipal user, ProjectRepository projects) =>
+        {
+            var sub = user.FindFirstValue("sub");
+            if (sub is null) return Results.Unauthorized();
+
+            var companyId = await projects.GetCompanyIdForKeycloakSubAsync(sub);
+            if (companyId is null) return Results.BadRequest(new { error = "No company assigned" });
+
+            var list = await projects.ListScheduleForCompanyAsync(companyId.Value);
+            return Results.Ok(list);
+        }).RequireAuthorization();
+
         app.MapPost("/my/projects", async (ClaimsPrincipal user, ProjectBody body, ProjectRepository projects) =>
         {
             var sub = user.FindFirstValue("sub");
@@ -80,6 +92,36 @@ public static class ProjectEndpoints
                 ProjectDetailsUpdateResult.NotFound => Results.NotFound(),
                 ProjectDetailsUpdateResult.StagesRequired => Results.BadRequest(new { error = "Stages payload is required" }),
                 ProjectDetailsUpdateResult.InvalidStage => Results.BadRequest(new { error = "Invalid stage name in payload" }),
+                _ => Results.Problem("Unexpected result.")
+            };
+        }).RequireAuthorization();
+
+        app.MapPatch("/my/projects/{id:guid}/schedule", async (Guid id, ClaimsPrincipal user, ProjectScheduleBody body, ProjectRepository projects) =>
+        {
+            var sub = user.FindFirstValue("sub");
+            if (sub is null) return Results.Unauthorized();
+
+            var companyId = await projects.GetCompanyIdForKeycloakSubAsync(sub);
+            if (companyId is null) return Results.BadRequest(new { error = "No company assigned" });
+
+            var stages = body.Stages ?? Array.Empty<StageScheduleItem>();
+            foreach (var item in stages)
+            {
+                if (!string.IsNullOrWhiteSpace(item.PlannedStartDate) && !string.IsNullOrWhiteSpace(item.PlannedEndDate)
+                    && DateOnly.TryParse(item.PlannedStartDate, out var ds)
+                    && DateOnly.TryParse(item.PlannedEndDate, out var de)
+                    && ds > de)
+                {
+                    return Results.BadRequest(new { error = "Planned start must be on or before planned end for each stage." });
+                }
+            }
+
+            var (result, updated) = await projects.UpdateScheduleAsync(id, companyId.Value, new ProjectScheduleBody(stages));
+            return result switch
+            {
+                SchedulePatchResult.Ok when updated is not null => Results.Ok(updated),
+                SchedulePatchResult.ProjectNotFound => Results.NotFound(),
+                SchedulePatchResult.InvalidStage => Results.BadRequest(new { error = "One or more stages do not belong to this project." }),
                 _ => Results.Problem("Unexpected result.")
             };
         }).RequireAuthorization();

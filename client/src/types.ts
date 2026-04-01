@@ -5,6 +5,25 @@ export interface Project {
   overview: string;
   createdAt: string;
   updatedAt: string;
+  plannedStartDate: string | null;
+  plannedEndDate: string | null;
+}
+
+export interface Employee {
+  id: string;
+  name: string;
+  type: "admin" | "worker";
+}
+
+export interface WorkLog {
+  id: string;
+  employeeId: string;
+  projectId: string;
+  employeeName: string;
+  projectName: string;
+  startedAt: string;
+  endedAt: string;
+  notes: string | null;
 }
 
 export interface ProjectStage {
@@ -14,6 +33,25 @@ export interface ProjectStage {
   notes: string;
   createdAt: string;
   updatedAt: string;
+  plannedStartDate: string | null;
+  plannedEndDate: string | null;
+}
+
+/** Project + stages with planned dates for the schedule page (GET /my/schedule). */
+export interface ScheduleProject {
+  id: string;
+  name: string;
+  address: string;
+  plannedStartDate: string | null;
+  plannedEndDate: string | null;
+  stages: ScheduleStage[];
+}
+
+export interface ScheduleStage {
+  id: string;
+  name: ProjectStage["name"];
+  plannedStartDate: string | null;
+  plannedEndDate: string | null;
 }
 
 export interface ProjectDetails {
@@ -51,7 +89,15 @@ export interface Supplier {
   phone: string;
 }
 
-export type FormFieldType = "small-text" | "large-text" | "time" | "number" | "phone";
+export type FormFieldType =
+  | "small-text"
+  | "large-text"
+  | "time"
+  | "number"
+  | "phone"
+  | "select"
+  | "date"
+  | "datetime-local";
 
 export interface FormFieldConfig {
   type: FormFieldType;
@@ -60,6 +106,7 @@ export interface FormFieldConfig {
   placeholder?: string;
   required?: boolean;
   step?: string;
+  options?: { value: string; label: string }[];
 }
 
 export interface UserProfile {
