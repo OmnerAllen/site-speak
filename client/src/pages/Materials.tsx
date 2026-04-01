@@ -48,6 +48,7 @@ const MATERIAL_FIELDS: FormFieldConfig[] = [
   },
 ];
 
+
 function emptyFormValues(): Record<string, string> {
   return {
     productName: "",
