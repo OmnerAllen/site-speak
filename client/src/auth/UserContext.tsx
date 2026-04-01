@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { useAuth } from "react-oidc-context";
 import { useQuery } from "@tanstack/react-query";
 import { UserContext } from "./useUser";
@@ -8,10 +9,18 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   const token = auth.user?.id_token;
   const enabled = auth.isAuthenticated && !!token;
 
-  const { data: profile = null, isLoading } = useQuery({
-    queryKey: ["me", token],
-    queryFn: async (): Promise<UserProfile> => {
+  useEffect(() => {
+    if (token) {
       document.cookie = `id_token=${token}; path=/; SameSite=Strict`;
+    }
+  }, [token]);
+
+  const { data: profile = null, isLoading } = useQuery({
+    queryKey: ["me"],
+    queryFn: async (): Promise<UserProfile> => {
+      if (token) {
+        document.cookie = `id_token=${token}; path=/; SameSite=Strict`;
+      }
       const res = await fetch("/api/me");
       if (res.status === 401) {
         document.cookie = "id_token=; path=/; max-age=0";
