@@ -8,6 +8,8 @@ import { PhoneInput } from "./PhoneInput";
 import { SelectInput } from "./SelectInput";
 import { DateInput } from "./DateInput";
 import { DateTimeLocalInput } from "./DateTimeLocalInput";
+import { MoneyInput } from "./MoneyInput";
+
 
 export interface DynamicFormProps {
   fields: FormFieldConfig[];
@@ -126,6 +128,18 @@ export const DynamicForm: React.FC<DynamicFormProps> = ({
             name={name}
             value={values[name] ?? ""}
             onChange={(e) => onChange(name, e.target.value)}
+            required={required}
+          />
+        );
+      case "money":
+        return (
+          <MoneyInput
+            key={name}
+            label={label}
+            name={name}
+            value={values[name] ?? ""}
+            onChange={(value) => onChange(name, value)}
+            placeholder={placeholder}
             required={required}
           />
         );

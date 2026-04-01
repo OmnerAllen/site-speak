@@ -1,6 +1,6 @@
 public record SupplierBody(string Name, string Address, string? Phone);
 public record EquipmentBody(string Name, decimal CostPerDay, decimal CostHalfDay, string PlaceToRentFrom);
-public record MaterialBody(string ProductName, string? SupplierName, string Unit, string ProductType, decimal PricePerUnit, string Currency);
+public record MaterialBody(string ProductName, string? SupplierName, string Unit, string ProductType, decimal PricePerUnit);
 public record ProjectBody(string Name, string Address, string? Overview = null);
 
 /// <summary>Updates planned dates on stages. Project timeline is derived from MIN/MAX of stages.</summary>

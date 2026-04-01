@@ -149,6 +149,7 @@ export default function Suppliers() {
           },
           { label: "Address", value: (s) => s.address },
         ]}
+        onItemClick={handleEdit}
         onEdit={handleEdit}
         onDelete={(id) => deleteMutation.mutate(id)}
         emptyMessage="No suppliers yet. Add one above."

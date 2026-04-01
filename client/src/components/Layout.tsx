@@ -8,11 +8,15 @@ function NavLink({ to, children }: { to: string; children: React.ReactNode }) {
   return (
     <Link
       to={to}
-      className={`px-3 py-1.5 rounded text-sm font-medium transition-colors ${
-        active
-          ? "bg-grass-800 text-grass-200"
-          : "text-brick-300 hover:text-brick-100 hover:bg-brick-800"
-      }`}
+      className={`relative px-3 py-1.5 rounded-sm text-sm font-medium transition-colors
+        after:content-[''] after:absolute after:left-0 after:-bottom-1
+        after:w-full after:h-1 after:bg-grass-400
+        after:origin-center after:transition-transform after:duration-300 after:ease-out
+        ${
+          active
+            ? "text-grass-400 after:scale-x-100"
+            : "text-brick-300 hover:text-brick-100 hover:bg-brick-800/50 after:scale-x-0"
+        }`}
     >
       {children}
     </Link>
@@ -54,17 +58,19 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             )}
           </div>
 
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-4 shrink-0 min-w-0">
             {auth.isAuthenticated && profile ? (
               <>
-                <span className="hidden sm:inline text-xs text-brick-400 font-mono">
-                  {profile.email}
+                <div className="hidden sm:flex items-center text-xs text-brick-400 font-mono min-w-0">
+                  <span className="truncate max-w-[70px] lg:max-w-[200px]" title={profile.email}>
+                    {profile.email}
+                  </span>
                   {profile.roles.length > 0 && (
-                    <span className="ml-2 bg-grass-900 text-grass-300 px-2 py-0.5 rounded-full">
+                    <span className="ml-2 shrink-0 bg-grass-900 text-grass-300 px-2 py-0.5 rounded-full">
                       {profile.roles.join(", ")}
                     </span>
                   )}
-                </span>
+                </div>
                 <button
                   onClick={logout}
                   className="text-sm text-brick-400 hover:text-brick-200 transition-colors cursor-pointer"

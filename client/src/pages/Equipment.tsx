@@ -176,6 +176,7 @@ export default function EquipmentPage() {
           },
           { label: "Rental", value: (e) => e.placeToRentFrom },
         ]}
+        onItemClick={handleEdit}
         onEdit={handleEdit}
         onDelete={(id) => deleteMutation.mutate(id)}
         emptyMessage="No equipment yet. Add one above."

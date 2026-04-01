@@ -18,8 +18,7 @@ public record MaterialListItemDto(
     string SupplierName,
     string Unit,
     string ProductType,
-    decimal PricePerUnit,
-    string Currency);
+    decimal PricePerUnit);
 
 public record ProjectDto(
     Guid Id,

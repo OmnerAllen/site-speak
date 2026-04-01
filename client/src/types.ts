@@ -71,7 +71,6 @@ export interface Material {
   unit: string;
   productType: string;
   pricePerUnit: number;
-  currency: string;
 }
 
 export interface Equipment {
@@ -97,7 +96,8 @@ export type FormFieldType =
   | "phone"
   | "select"
   | "date"
-  | "datetime-local";
+  | "datetime-local"
+  | "money";
 
 export interface FormFieldConfig {
   type: FormFieldType;

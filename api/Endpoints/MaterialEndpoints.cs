@@ -16,8 +16,7 @@ public static class MaterialEndpoints
                 supplierName = body.SupplierName,
                 unit = body.Unit,
                 productType = body.ProductType,
-                pricePerUnit = body.PricePerUnit,
-                currency = body.Currency
+                pricePerUnit = body.PricePerUnit
             });
         }).RequireAuthorization();
 
@@ -31,8 +30,7 @@ public static class MaterialEndpoints
                 supplierName = body.SupplierName,
                 unit = body.Unit,
                 productType = body.ProductType,
-                pricePerUnit = body.PricePerUnit,
-                currency = body.Currency
+                pricePerUnit = body.PricePerUnit
             });
         }).RequireAuthorization();
 
