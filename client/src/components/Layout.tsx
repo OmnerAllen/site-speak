@@ -43,6 +43,9 @@ export default function Layout({ children }: { children: React.ReactNode }) {
               <div className="hidden sm:flex items-center gap-1">
                 <NavLink to="/">Dashboard</NavLink>
                 <NavLink to="/projects">Projects</NavLink>
+                <NavLink to="/schedule">Schedule</NavLink>
+                <NavLink to="/employees">Employees</NavLink>
+                <NavLink to="/work-logs">Work logs</NavLink>
                 <NavLink to="/materials">Materials</NavLink>
                 <NavLink to="/equipment">Equipment</NavLink>
                 <NavLink to="/suppliers">Suppliers</NavLink>

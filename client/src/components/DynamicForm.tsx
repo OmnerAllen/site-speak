@@ -5,6 +5,9 @@ import { LargeTextInput } from "./LargeTextInput";
 import { TimeSelector } from "./TimeSelector";
 import { NumberInput } from "./NumberInput";
 import { PhoneInput } from "./PhoneInput";
+import { SelectInput } from "./SelectInput";
+import { DateInput } from "./DateInput";
+import { DateTimeLocalInput } from "./DateTimeLocalInput";
 
 export interface DynamicFormProps {
   fields: FormFieldConfig[];
@@ -29,7 +32,7 @@ export const DynamicForm: React.FC<DynamicFormProps> = ({
   };
 
   const renderField = (field: FormFieldConfig) => {
-    const { type, label, name, placeholder, required, step } = field;
+    const { type, label, name, placeholder, required, step, options } = field;
 
     switch (type) {
       case "small-text":
@@ -90,6 +93,40 @@ export const DynamicForm: React.FC<DynamicFormProps> = ({
             placeholder={placeholder}
             required={required}
             step={step ?? "0.01"}
+          />
+        );
+      case "select":
+        return (
+          <SelectInput
+            key={name}
+            label={label}
+            name={name}
+            value={values[name] ?? ""}
+            onChange={(value) => onChange(name, value)}
+            options={options ?? []}
+            required={required}
+          />
+        );
+      case "date":
+        return (
+          <DateInput
+            key={name}
+            label={label}
+            name={name}
+            value={values[name] ?? ""}
+            onChange={(e) => onChange(name, e.target.value)}
+            required={required}
+          />
+        );
+      case "datetime-local":
+        return (
+          <DateTimeLocalInput
+            key={name}
+            label={label}
+            name={name}
+            value={values[name] ?? ""}
+            onChange={(e) => onChange(name, e.target.value)}
+            required={required}
           />
         );
     }

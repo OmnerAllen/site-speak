@@ -13,6 +13,9 @@ import Materials from "./pages/Materials";
 import EquipmentPage from "./pages/Equipment";
 import CustomForms from "./pages/CustomForms";
 import Suppliers from "./pages/Suppliers";
+import EmployeesPage from "./pages/Employees";
+import WorkLogsPage from "./pages/WorkLogs";
+import ProjectSchedulePage from "./pages/ProjectSchedule";
 import { usePageTelemetry } from "./telemetry/usePageTelemetry";
 
 function PageTelemetry() {
@@ -64,6 +67,30 @@ export default function App() {
               element={
                 <ProtectedRoute>
                   <ProjectDetailsPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/schedule"
+              element={
+                <ProtectedRoute>
+                  <ProjectSchedulePage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/employees"
+              element={
+                <ProtectedRoute>
+                  <EmployeesPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/work-logs"
+              element={
+                <ProtectedRoute>
+                  <WorkLogsPage />
                 </ProtectedRoute>
               }
             />

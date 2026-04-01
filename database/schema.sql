@@ -64,6 +64,11 @@ CREATE TABLE stage (
     name VARCHAR(255) NOT NULL CHECK (name IN ('demo', 'prep', 'build/install', 'qa')),
     details TEXT NOT NULL DEFAULT '',
     notes TEXT NOT NULL DEFAULT '',
+    planned_start DATE,
+    planned_end DATE,
+    CONSTRAINT chk_stage_planned_order CHECK (
+        planned_start IS NULL OR planned_end IS NULL OR planned_start <= planned_end
+    ),
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW(),
     deleted_at TIMESTAMPTZ

@@ -10,6 +10,8 @@ public static class DataServiceExtensions
         builder.Services.AddSingleton<EquipmentRepository>();
         builder.Services.AddSingleton<MaterialRepository>();
         builder.Services.AddSingleton<ProjectRepository>();
+        builder.Services.AddSingleton<EmployeeRepository>();
+        builder.Services.AddSingleton<WorkLogRepository>();
         return builder;
     }
 }
