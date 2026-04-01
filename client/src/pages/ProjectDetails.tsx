@@ -161,7 +161,7 @@ export default function ProjectDetailsPage() {
 
   return (
     <div className="max-w-5xl mx-auto p-6 md:p-12 space-y-8 pb-24">
-      <div className="-mx-6 md:-mx-12 px-6 md:px-12 py-4">
+      <div className="py-4">
         <h1 className="text-2xl md:text-3xl font-bold text-brick-100 mt-2">
           {isCreateMode ? "New Project" : "Project Details"}
         </h1>
