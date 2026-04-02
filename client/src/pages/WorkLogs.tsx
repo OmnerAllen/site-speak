@@ -201,7 +201,7 @@ export default function WorkLogsPage() {
       )}
 
       {!showForm && (
-        <div className="flex items-center justify-end gap-3 mb-6 pb-4 border-b border-brick-800">
+        <div className="flex items-center justify-between mb-6 pb-4 border-b border-brick-800">
           <button
             type="button"
             onClick={() => navigate("/employees")}
