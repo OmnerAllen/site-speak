@@ -124,17 +124,17 @@ export default function EmployeesPage() {
         </div>
       )}
 
-      {showForm && (
+      {showForm && !editingId && (
         <div className="mb-8">
           <h2 className="text-lg font-semibold text-brick-200 mb-4">
-            {editingId ? "Edit Employee" : "New Employee"}
+            New Employee
           </h2>
           <DynamicForm
             fields={EMPLOYEE_FIELDS}
             values={formValues}
             onChange={(name, value) => setFormValues((prev) => ({ ...prev, [name]: value }))}
             onSubmit={handleSubmit}
-            submitLabel={editingId ? "Save Changes" : "Add Employee"}
+            submitLabel="Add Employee"
             onCancel={handleCancel}
           />
         </div>
@@ -161,6 +161,20 @@ export default function EmployeesPage() {
         onEdit={handleEdit}
         onDelete={(id) => deleteMutation.mutate(id)}
         emptyMessage="No employees yet. Add your team above."
+        editingId={editingId || undefined}
+        renderEditForm={() => (
+          <div>
+            <h2 className="text-lg font-semibold text-brick-200 mb-4">Edit Employee</h2>
+            <DynamicForm
+              fields={EMPLOYEE_FIELDS}
+              values={formValues}
+              onChange={(name, value) => setFormValues((prev) => ({ ...prev, [name]: value }))}
+              onSubmit={handleSubmit}
+              submitLabel="Save Changes"
+              onCancel={handleCancel}
+            />
+          </div>
+        )}
       />
     </div>
   );

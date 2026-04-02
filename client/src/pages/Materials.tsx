@@ -157,11 +157,9 @@ export default function Materials() {
         </div>
       )}
 
-      {showForm && (
+      {showForm && !editingId && (
         <div className="mb-8">
-          <h2 className="text-lg font-semibold text-brick-200 mb-4">
-            {editingId ? "Edit Material" : "New Material"}
-          </h2>
+          <h2 className="text-lg font-semibold text-brick-200 mb-4">New Material</h2>
           <DynamicForm
             fields={MATERIAL_FIELDS}
             values={formValues}
@@ -169,7 +167,7 @@ export default function Materials() {
               setFormValues((prev) => ({ ...prev, [name]: value }))
             }
             onSubmit={handleSubmit}
-            submitLabel={editingId ? "Save Changes" : "Add Material"}
+            submitLabel="Add Material"
             onCancel={handleCancel}
           />
         </div>
@@ -196,6 +194,22 @@ export default function Materials() {
         onItemClick={handleEdit}
         onEdit={handleEdit}
         onDelete={(id) => deleteMutation.mutate(id)}
+        editingId={editingId || undefined}
+        renderEditForm={() => (
+          <div>
+            <h2 className="text-lg font-semibold text-brick-200 mb-4">Edit Material</h2>
+            <DynamicForm
+              fields={MATERIAL_FIELDS}
+              values={formValues}
+              onChange={(name, value) =>
+                setFormValues((prev) => ({ ...prev, [name]: value }))
+              }
+              onSubmit={handleSubmit}
+              submitLabel="Save Changes"
+              onCancel={handleCancel}
+            />
+          </div>
+        )}
         emptyMessage="No materials yet. Add one above."
       />
     </div>

@@ -123,11 +123,9 @@ export default function Suppliers() {
         </div>
       )}
 
-      {showForm && (
+      {showForm && !editingId && (
         <div className="mb-8">
-          <h2 className="text-lg font-semibold text-brick-200 mb-4">
-            {editingId ? "Edit Supplier" : "New Supplier"}
-          </h2>
+          <h2 className="text-lg font-semibold text-brick-200 mb-4">New Supplier</h2>
           <DynamicForm
             fields={SUPPLIER_FIELDS}
             values={formValues}
@@ -136,7 +134,7 @@ export default function Suppliers() {
             }
             onSubmit={handleSubmit}
             onCancel={handleCancel}
-            submitLabel={editingId ? "Save Changes" : "Add Supplier"}
+            submitLabel="Add Supplier"
           />
         </div>
       )}
@@ -154,6 +152,22 @@ export default function Suppliers() {
         onItemClick={handleEdit}
         onEdit={handleEdit}
         onDelete={(id) => deleteMutation.mutate(id)}
+        editingId={editingId || undefined}
+        renderEditForm={() => (
+          <div>
+            <h2 className="text-lg font-semibold text-brick-200 mb-4">Edit Supplier</h2>
+            <DynamicForm
+              fields={SUPPLIER_FIELDS}
+              values={formValues}
+              onChange={(name, value) =>
+                setFormValues((prev) => ({ ...prev, [name]: value }))
+              }
+              onSubmit={handleSubmit}
+              onCancel={handleCancel}
+              submitLabel="Save Changes"
+            />
+          </div>
+        )}
         emptyMessage="No suppliers yet. Add one above."
       />
     </div>

@@ -136,11 +136,9 @@ export default function EquipmentPage() {
         </div>
       )}
 
-      {showForm && (
+      {showForm && !editingId && (
         <div className="mb-8">
-          <h2 className="text-lg font-semibold text-brick-200 mb-4">
-            {editingId ? "Edit Equipment" : "New Equipment"}
-          </h2>
+          <h2 className="text-lg font-semibold text-brick-200 mb-4">New Equipment</h2>
           <DynamicForm
             fields={EQUIPMENT_FIELDS}
             values={formValues}
@@ -148,7 +146,7 @@ export default function EquipmentPage() {
               setFormValues((prev) => ({ ...prev, [name]: value }))
             }
             onSubmit={handleSubmit}
-            submitLabel={editingId ? "Save Changes" : "Add Equipment"}
+            submitLabel="Add Equipment"
             onCancel={handleCancel}
           />
         </div>
@@ -179,6 +177,22 @@ export default function EquipmentPage() {
         onItemClick={handleEdit}
         onEdit={handleEdit}
         onDelete={(id) => deleteMutation.mutate(id)}
+        editingId={editingId || undefined}
+        renderEditForm={() => (
+          <div>
+            <h2 className="text-lg font-semibold text-brick-200 mb-4">Edit Equipment</h2>
+            <DynamicForm
+              fields={EQUIPMENT_FIELDS}
+              values={formValues}
+              onChange={(name, value) =>
+                setFormValues((prev) => ({ ...prev, [name]: value }))
+              }
+              onSubmit={handleSubmit}
+              submitLabel="Save Changes"
+              onCancel={handleCancel}
+            />
+          </div>
+        )}
         emptyMessage="No equipment yet. Add one above."
       />
     </div>
