@@ -1,43 +1,43 @@
 @import "tailwindcss";
 
 @theme {
-  /* Brick (Primary Red - Base: 350, 75%, 35%) */
-  --color-brick-50: hsl(350, 75%, 95%);
-  --color-brick-100: hsl(350, 75%, 83%);
-  --color-brick-200: hsl(350, 75%, 71%);
-  --color-brick-300: hsl(350, 75%, 59%);
-  --color-brick-400: hsl(350, 75%, 47%);
-  --color-brick-500: hsl(350, 75%, 35%);
-  --color-brick-600: hsl(350, 75%, 29%);
-  --color-brick-700: hsl(350, 75%, 23%);
-  --color-brick-800: hsl(350, 75%, 17%);
-  --color-brick-900: hsl(350, 75%, 11%);
-  --color-brick-950: hsl(350, 75%, 5%);
+  /* Brick (Primary Red - Medium contrast) */
+  --color-brick-50: hsl(350, 88%, 95%);
+  --color-brick-100: hsl(350, 86%, 86%);
+  --color-brick-200: hsl(350, 86%, 73%);
+  --color-brick-300: hsl(350, 86%, 60%);
+  --color-brick-400: hsl(350, 86%, 50%);
+  --color-brick-500: hsl(350, 88%, 38%);
+  --color-brick-600: hsl(350, 90%, 32%);
+  --color-brick-700: hsl(350, 90%, 26%);
+  --color-brick-800: hsl(350, 90%, 18%);
+  --color-brick-900: hsl(350, 90%, 12%);
+  --color-brick-950: hsl(350, 90%, 6%);
 
-  /* Grass (Accent Green - Base: 169, 75%, 35%) */
-  --color-grass-50: hsl(169, 75%, 95%);
-  --color-grass-100: hsl(169, 75%, 83%);
-  --color-grass-200: hsl(169, 75%, 71%);
-  --color-grass-300: hsl(169, 75%, 59%);
-  --color-grass-400: hsl(169, 75%, 47%);
-  --color-grass-500: hsl(169, 75%, 35%);
-  --color-grass-600: hsl(169, 75%, 29%);
-  --color-grass-700: hsl(169, 75%, 23%);
-  --color-grass-800: hsl(169, 75%, 17%);
-  --color-grass-900: hsl(169, 75%, 11%);
-  --color-grass-950: hsl(169, 75%, 5%);
+  /* Grass (Accent Green - Medium contrast) */
+  --color-grass-50: hsl(165, 90%, 95%);
+  --color-grass-100: hsl(165, 88%, 86%);
+  --color-grass-200: hsl(165, 88%, 75%);
+  --color-grass-300: hsl(165, 88%, 62%);
+  --color-grass-400: hsl(165, 88%, 50%);
+  --color-grass-500: hsl(165, 90%, 38%);
+  --color-grass-600: hsl(165, 90%, 32%);
+  --color-grass-700: hsl(165, 90%, 26%);
+  --color-grass-800: hsl(165, 90%, 18%);
+  --color-grass-900: hsl(165, 90%, 12%);
+  --color-grass-950: hsl(165, 90%, 5%);
 
-  /* Radioactive (Delete Button Yellow - Base: 63, 71%, 52%) */
-  --color-radioactive-50: hsl(63, 71%, 96%);
-  --color-radioactive-100: hsl(63, 71%, 88%);
-  --color-radioactive-200: hsl(63, 71%, 79%);
-  --color-radioactive-300: hsl(63, 71%, 70%);
-  --color-radioactive-400: hsl(63, 71%, 61%);
-  --color-radioactive-500: hsl(63, 71%, 52%);
-  --color-radioactive-600: hsl(63, 71%, 43%);
-  --color-radioactive-700: hsl(63, 71%, 33%);
-  --color-radioactive-800: hsl(63, 71%, 24%);
-  --color-radioactive-900: hsl(63, 71%, 14%);
-  --color-radioactive-950: hsl(63, 71%, 5%);
+  /* Radioactive (Delete Button Yellow - Medium contrast) */
+  --color-radioactive-50: hsl(42, 95%, 96%);
+  --color-radioactive-100: hsl(42, 95%, 88%);
+  --color-radioactive-200: hsl(42, 95%, 80%);
+  --color-radioactive-300: hsl(42, 95%, 70%);
+  --color-radioactive-400: hsl(42, 95%, 62%);
+  --color-radioactive-500: hsl(42, 95%, 50%);
+  --color-radioactive-600: hsl(42, 95%, 43%);
+  --color-radioactive-700: hsl(42, 95%, 34%);
+  --color-radioactive-800: hsl(42, 95%, 26%);
+  --color-radioactive-900: hsl(42, 95%, 19%);
+  --color-radioactive-950: hsl(42, 95%, 6%);
 }
 
