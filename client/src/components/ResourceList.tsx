@@ -14,6 +14,7 @@ export interface ResourceListProps<T extends { id: string }> {
   onEdit?: (item: T) => void;
   onDelete?: (id: string) => void;
   onItemClick?: (item: T) => void;
+  renderRowActions?: (item: T) => React.ReactNode;
   editLabel?: string;
   emptyMessage?: string;
   editingId?: string;
@@ -26,6 +27,7 @@ export function ResourceList<T extends { id: string }>({
   badgeKey,
   columns,
   renderHeaderSuffix,
+  renderRowActions,
   onEdit,
   onDelete,
   onItemClick,
@@ -111,8 +113,9 @@ export function ResourceList<T extends { id: string }>({
                 </div>
               </div>
 
-              {(onEdit || onDelete) && (
+              {(onEdit || onDelete || renderRowActions) && (
                 <div className="flex items-center gap-2 shrink-0">
+                  {renderRowActions && renderRowActions(item)}
                   {onEdit && (
                     <button
                       onClick={(e) => {

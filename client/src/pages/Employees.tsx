@@ -145,7 +145,7 @@ export default function EmployeesPage() {
         titleKey="name"
         badgeKey="type"
         columns={[]}
-        renderHeaderSuffix={(item) => (
+        renderRowActions={(item) => (
           <button
             type="button"
             className="shrink-0 bg-grass-700 text-grass-100 font-medium py-1 px-3 rounded-md text-sm hover:bg-grass-600 transition-colors cursor-pointer"
