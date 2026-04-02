@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { useSearchParams, useNavigate } from "react-router-dom";
 import {
   useSuspenseQuery,
   useMutation,
@@ -79,11 +80,21 @@ function buildFields(
 }
 
 export default function WorkLogsPage() {
+  const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
+  const employeeIdQuery = searchParams.get("employeeId");
+
   const queryClient = useQueryClient();
   const { data: workLogs } = useSuspenseQuery({
     queryKey: ["work-logs"],
     queryFn: api.getWorkLogs,
   });
+
+  const filteredWorkLogs = useMemo(() => {
+    if (!employeeIdQuery) return workLogs;
+    return workLogs.filter((w) => w.employeeId === employeeIdQuery);
+  }, [workLogs, employeeIdQuery]);
+
   const { data: employees } = useSuspenseQuery({
     queryKey: ["employees"],
     queryFn: api.getEmployees,
@@ -190,7 +201,14 @@ export default function WorkLogsPage() {
       )}
 
       {!showForm && (
-        <div className="flex items-center justify-end mb-6 pb-4 border-b border-brick-800">
+        <div className="flex items-center justify-end gap-3 mb-6 pb-4 border-b border-brick-800">
+          <button
+            type="button"
+            onClick={() => navigate("/employees")}
+            className="bg-brick-800 text-brick-300 font-medium py-2 px-4 rounded-md hover:bg-brick-700 transition-colors cursor-pointer"
+          >
+            Back to Employee
+          </button>
           <button
             type="button"
             onClick={handleAdd}
@@ -219,7 +237,7 @@ export default function WorkLogsPage() {
       )}
 
       <ResourceList
-        items={workLogs}
+        items={filteredWorkLogs}
         titleKey="projectName"
         badgeKey="employeeName"
         columns={[

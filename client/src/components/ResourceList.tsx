@@ -10,6 +10,7 @@ export interface ResourceListProps<T extends { id: string }> {
   titleKey: keyof T & string;
   badgeKey?: keyof T & string;
   columns: ResourceColumnConfig<T>[];
+  renderHeaderSuffix?: (item: T) => React.ReactNode;
   onEdit?: (item: T) => void;
   onDelete?: (id: string) => void;
   onItemClick?: (item: T) => void;
@@ -22,6 +23,7 @@ export function ResourceList<T extends { id: string }>({
   titleKey,
   badgeKey,
   columns,
+  renderHeaderSuffix,
   onEdit,
   onDelete,
   onItemClick,
@@ -82,6 +84,7 @@ export function ResourceList<T extends { id: string }>({
                     {String(item[badgeKey])}
                   </span>
                 )}
+                {renderHeaderSuffix && renderHeaderSuffix(item)}
               </div>
               <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm">
                 {columns.map((col) => (
