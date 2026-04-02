@@ -63,7 +63,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                 
                 <button
                   onClick={logout}
-                  className="text-sm text-brick-400 hover:text-brick-200 transition-colors cursor-pointer"
+                  className="px-4 py-2 text-brick-300 hover:text-brick-100 border border-brick-600 rounded-md hover:bg-brick-700 transition-colors cursor-pointer"
                 >
                   Log out
                 </button>
