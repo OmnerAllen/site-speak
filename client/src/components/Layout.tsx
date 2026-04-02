@@ -53,7 +53,6 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                 <NavLink to="/materials">Materials</NavLink>
                 <NavLink to="/equipment">Equipment</NavLink>
                 <NavLink to="/suppliers">Suppliers</NavLink>
-                <NavLink to="/custom-forms">Forms</NavLink>
               </div>
             )}
           </div>
@@ -61,16 +60,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           <div className="flex items-center gap-4 shrink-0 min-w-0">
             {auth.isAuthenticated && profile ? (
               <>
-                {/* <div className="hidden sm:flex items-center text-xs text-brick-400 font-mono min-w-0">
-                  <span className="truncate max-w-[70px] lg:max-w-[200px]" title={profile.email}>
-                    {profile.email}
-                  </span>
-                  {profile.roles.length > 0 && (
-                    <span className="ml-2 shrink-0 bg-grass-900 text-grass-300 px-2 py-0.5 rounded-full">
-                      {profile.roles.join(", ")}
-                    </span>
-                  )}
-                </div> */}
+                
                 <button
                   onClick={logout}
                   className="text-sm text-brick-400 hover:text-brick-200 transition-colors cursor-pointer"
