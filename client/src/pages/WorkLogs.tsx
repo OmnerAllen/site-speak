@@ -41,15 +41,21 @@ function workLogToFormValues(w: WorkLog): Record<string, string> {
 function buildFields(
   employees: Employee[],
   projects: Project[],
+  defaultEmployeeId?: string,
 ): FormFieldConfig[] {
-  return [
-    {
+  const fields: FormFieldConfig[] = [];
+
+  if (!defaultEmployeeId) {
+    fields.push({
       type: "select",
       label: "Employee",
       name: "employeeId",
       required: true,
       options: employees.map((e) => ({ value: e.id, label: `${e.name} (${e.type})` })),
-    },
+    });
+  }
+
+  fields.push(
     {
       type: "select",
       label: "Project",
@@ -76,7 +82,9 @@ function buildFields(
       placeholder: "Optional details about this shift…",
       required: false,
     },
-  ];
+  );
+
+  return fields;
 }
 
 export default function WorkLogsPage() {
@@ -105,9 +113,13 @@ export default function WorkLogsPage() {
   });
 
   const fields = useMemo(
-    () => buildFields(employees, projects),
-    [employees, projects],
+    () => buildFields(employees, projects, employeeIdQuery ?? undefined),
+    [employees, projects, employeeIdQuery],
   );
+
+  const selectedEmployee = employeeIdQuery
+    ? employees.find((e) => e.id === employeeIdQuery)
+    : undefined;
 
   const createMutation = useMutation({
     mutationFn: (body: Parameters<typeof api.createWorkLog>[0]) => api.createWorkLog(body),
@@ -149,7 +161,10 @@ export default function WorkLogsPage() {
       return;
     }
     setEditingId(null);
-    setFormValues(emptyFormValues());
+    setFormValues({
+      ...emptyFormValues(),
+      employeeId: employeeIdQuery ?? "",
+    });
     setShowForm(true);
   };
 
@@ -177,7 +192,7 @@ export default function WorkLogsPage() {
       return;
     }
     const body = {
-      employeeId: values.employeeId,
+      employeeId: employeeIdQuery ?? values.employeeId,
       projectId: values.projectId,
       startedAt: started.toISOString(),
       endedAt: ended.toISOString(),
@@ -197,6 +212,12 @@ export default function WorkLogsPage() {
         <p className="mb-6 text-sm text-brick-400 bg-brick-900/60 border border-brick-800 rounded-lg p-4">
           Create employees and projects before logging time. Empty selects mean there is no data to
           attach this entry to.
+        </p>
+      )}
+
+      {employeeIdQuery && selectedEmployee && (
+        <p className="mb-6 text-sm text-brick-300 bg-brick-900/60 border border-brick-800 rounded-lg p-4">
+          Logging for <strong>{selectedEmployee.name}</strong>
         </p>
       )}
 
