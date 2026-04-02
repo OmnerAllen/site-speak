@@ -8,6 +8,7 @@ import toast from "react-hot-toast";
 import { DynamicForm } from "../components/DynamicForm";
 import { PhoneInput } from "../components/PhoneInput";
 import { ResourceList } from "../components/ResourceList";
+import { ResourceNav } from "../components/ResourceNav";
 import { api } from "../api";
 import type { FormFieldConfig, Supplier } from "../types";
 
@@ -110,6 +111,7 @@ export default function Suppliers() {
 
   return (
     <div className="max-w-5xl mx-auto p-6 md:p-12">
+      <ResourceNav />
       {!showForm && (
         <div className="flex items-center justify-end mb-6 pb-4 border-b border-brick-800">
           <button
