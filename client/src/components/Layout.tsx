@@ -61,7 +61,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           <div className="flex items-center gap-4 shrink-0 min-w-0">
             {auth.isAuthenticated && profile ? (
               <>
-                <div className="hidden sm:flex items-center text-xs text-brick-400 font-mono min-w-0">
+                {/* <div className="hidden sm:flex items-center text-xs text-brick-400 font-mono min-w-0">
                   <span className="truncate max-w-[70px] lg:max-w-[200px]" title={profile.email}>
                     {profile.email}
                   </span>
@@ -70,7 +70,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                       {profile.roles.join(", ")}
                     </span>
                   )}
-                </div>
+                </div> */}
                 <button
                   onClick={logout}
                   className="text-sm text-brick-400 hover:text-brick-200 transition-colors cursor-pointer"
