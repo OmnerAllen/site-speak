@@ -196,19 +196,16 @@ export default function Materials() {
         onDelete={(id) => deleteMutation.mutate(id)}
         editingId={editingId || undefined}
         renderEditForm={() => (
-          <div>
-            <h2 className="text-lg font-semibold text-brick-200 mb-4">Edit Material</h2>
-            <DynamicForm
-              fields={MATERIAL_FIELDS}
-              values={formValues}
-              onChange={(name, value) =>
-                setFormValues((prev) => ({ ...prev, [name]: value }))
-              }
-              onSubmit={handleSubmit}
-              submitLabel="Save Changes"
-              onCancel={handleCancel}
-            />
-          </div>
+          <DynamicForm
+            fields={MATERIAL_FIELDS}
+            values={formValues}
+            onChange={(name, value) =>
+              setFormValues((prev) => ({ ...prev, [name]: value }))
+            }
+            onSubmit={handleSubmit}
+            submitLabel="Save Changes"
+            onCancel={handleCancel}
+          />
         )}
         emptyMessage="No materials yet. Add one above."
       />

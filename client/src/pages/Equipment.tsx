@@ -179,19 +179,16 @@ export default function EquipmentPage() {
         onDelete={(id) => deleteMutation.mutate(id)}
         editingId={editingId || undefined}
         renderEditForm={() => (
-          <div>
-            <h2 className="text-lg font-semibold text-brick-200 mb-4">Edit Equipment</h2>
-            <DynamicForm
-              fields={EQUIPMENT_FIELDS}
-              values={formValues}
-              onChange={(name, value) =>
-                setFormValues((prev) => ({ ...prev, [name]: value }))
-              }
-              onSubmit={handleSubmit}
-              submitLabel="Save Changes"
-              onCancel={handleCancel}
-            />
-          </div>
+          <DynamicForm
+            fields={EQUIPMENT_FIELDS}
+            values={formValues}
+            onChange={(name, value) =>
+              setFormValues((prev) => ({ ...prev, [name]: value }))
+            }
+            onSubmit={handleSubmit}
+            submitLabel="Save Changes"
+            onCancel={handleCancel}
+          />
         )}
         emptyMessage="No equipment yet. Add one above."
       />

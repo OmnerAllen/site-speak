@@ -163,17 +163,14 @@ export default function EmployeesPage() {
         emptyMessage="No employees yet. Add your team above."
         editingId={editingId || undefined}
         renderEditForm={() => (
-          <div>
-            <h2 className="text-lg font-semibold text-brick-200 mb-4">Edit Employee</h2>
-            <DynamicForm
-              fields={EMPLOYEE_FIELDS}
-              values={formValues}
-              onChange={(name, value) => setFormValues((prev) => ({ ...prev, [name]: value }))}
-              onSubmit={handleSubmit}
-              submitLabel="Save Changes"
-              onCancel={handleCancel}
-            />
-          </div>
+          <DynamicForm
+            fields={EMPLOYEE_FIELDS}
+            values={formValues}
+            onChange={(name, value) => setFormValues((prev) => ({ ...prev, [name]: value }))}
+            onSubmit={handleSubmit}
+            submitLabel="Save Changes"
+            onCancel={handleCancel}
+          />
         )}
       />
     </div>

@@ -154,19 +154,16 @@ export default function Suppliers() {
         onDelete={(id) => deleteMutation.mutate(id)}
         editingId={editingId || undefined}
         renderEditForm={() => (
-          <div>
-            <h2 className="text-lg font-semibold text-brick-200 mb-4">Edit Supplier</h2>
-            <DynamicForm
-              fields={SUPPLIER_FIELDS}
-              values={formValues}
-              onChange={(name, value) =>
-                setFormValues((prev) => ({ ...prev, [name]: value }))
-              }
-              onSubmit={handleSubmit}
-              onCancel={handleCancel}
-              submitLabel="Save Changes"
-            />
-          </div>
+          <DynamicForm
+            fields={SUPPLIER_FIELDS}
+            values={formValues}
+            onChange={(name, value) =>
+              setFormValues((prev) => ({ ...prev, [name]: value }))
+            }
+            onSubmit={handleSubmit}
+            onCancel={handleCancel}
+            submitLabel="Save Changes"
+          />
         )}
         emptyMessage="No suppliers yet. Add one above."
       />
