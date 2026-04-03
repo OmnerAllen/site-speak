@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   useSuspenseQuery,
   useMutation,
@@ -39,6 +40,7 @@ function employeeToFormValues(e: Employee): Record<string, string> {
 }
 
 export default function EmployeesPage() {
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { data: employees } = useSuspenseQuery({
     queryKey: ["employees"],
@@ -122,17 +124,17 @@ export default function EmployeesPage() {
         </div>
       )}
 
-      {showForm && (
+      {showForm && !editingId && (
         <div className="mb-8">
           <h2 className="text-lg font-semibold text-brick-200 mb-4">
-            {editingId ? "Edit Employee" : "New Employee"}
+            New Employee
           </h2>
           <DynamicForm
             fields={EMPLOYEE_FIELDS}
             values={formValues}
             onChange={(name, value) => setFormValues((prev) => ({ ...prev, [name]: value }))}
             onSubmit={handleSubmit}
-            submitLabel={editingId ? "Save Changes" : "Add Employee"}
+            submitLabel="Add Employee"
             onCancel={handleCancel}
           />
         </div>
@@ -143,10 +145,33 @@ export default function EmployeesPage() {
         titleKey="name"
         badgeKey="type"
         columns={[]}
+        renderRowActions={(item) => (
+          <button
+            type="button"
+            className="shrink-0 bg-grass-700 text-grass-100 font-medium py-1 px-3 rounded-md text-sm hover:bg-grass-600 transition-colors cursor-pointer"
+            onClick={(e) => {
+              e.stopPropagation();
+              navigate(`/work-logs?employeeId=${item.id}`);
+            }}
+          >
+            Work Logs
+          </button>
+        )}
         onItemClick={handleEdit}
         onEdit={handleEdit}
         onDelete={(id) => deleteMutation.mutate(id)}
         emptyMessage="No employees yet. Add your team above."
+        editingId={editingId || undefined}
+        renderEditForm={() => (
+          <DynamicForm
+            fields={EMPLOYEE_FIELDS}
+            values={formValues}
+            onChange={(name, value) => setFormValues((prev) => ({ ...prev, [name]: value }))}
+            onSubmit={handleSubmit}
+            submitLabel="Save Changes"
+            onCancel={handleCancel}
+          />
+        )}
       />
     </div>
   );

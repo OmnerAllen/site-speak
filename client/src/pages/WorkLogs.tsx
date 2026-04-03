@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { useSearchParams, useNavigate } from "react-router-dom";
 import {
   useSuspenseQuery,
   useMutation,
@@ -40,15 +41,21 @@ function workLogToFormValues(w: WorkLog): Record<string, string> {
 function buildFields(
   employees: Employee[],
   projects: Project[],
+  defaultEmployeeId?: string,
 ): FormFieldConfig[] {
-  return [
-    {
+  const fields: FormFieldConfig[] = [];
+
+  if (!defaultEmployeeId) {
+    fields.push({
       type: "select",
       label: "Employee",
       name: "employeeId",
       required: true,
       options: employees.map((e) => ({ value: e.id, label: `${e.name} (${e.type})` })),
-    },
+    });
+  }
+
+  fields.push(
     {
       type: "select",
       label: "Project",
@@ -75,15 +82,27 @@ function buildFields(
       placeholder: "Optional details about this shift…",
       required: false,
     },
-  ];
+  );
+
+  return fields;
 }
 
 export default function WorkLogsPage() {
+  const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
+  const employeeIdQuery = searchParams.get("employeeId");
+
   const queryClient = useQueryClient();
   const { data: workLogs } = useSuspenseQuery({
     queryKey: ["work-logs"],
     queryFn: api.getWorkLogs,
   });
+
+  const filteredWorkLogs = useMemo(() => {
+    if (!employeeIdQuery) return workLogs;
+    return workLogs.filter((w) => w.employeeId === employeeIdQuery);
+  }, [workLogs, employeeIdQuery]);
+
   const { data: employees } = useSuspenseQuery({
     queryKey: ["employees"],
     queryFn: api.getEmployees,
@@ -94,9 +113,13 @@ export default function WorkLogsPage() {
   });
 
   const fields = useMemo(
-    () => buildFields(employees, projects),
-    [employees, projects],
+    () => buildFields(employees, projects, employeeIdQuery ?? undefined),
+    [employees, projects, employeeIdQuery],
   );
+
+  const selectedEmployee = employeeIdQuery
+    ? employees.find((e) => e.id === employeeIdQuery)
+    : undefined;
 
   const createMutation = useMutation({
     mutationFn: (body: Parameters<typeof api.createWorkLog>[0]) => api.createWorkLog(body),
@@ -138,7 +161,10 @@ export default function WorkLogsPage() {
       return;
     }
     setEditingId(null);
-    setFormValues(emptyFormValues());
+    setFormValues({
+      ...emptyFormValues(),
+      employeeId: employeeIdQuery ?? "",
+    });
     setShowForm(true);
   };
 
@@ -166,7 +192,7 @@ export default function WorkLogsPage() {
       return;
     }
     const body = {
-      employeeId: values.employeeId,
+      employeeId: employeeIdQuery ?? values.employeeId,
       projectId: values.projectId,
       startedAt: started.toISOString(),
       endedAt: ended.toISOString(),
@@ -189,8 +215,21 @@ export default function WorkLogsPage() {
         </p>
       )}
 
+      {employeeIdQuery && selectedEmployee && (
+        <p className="mb-6 text-sm text-brick-300 bg-brick-900/60 border border-brick-800 rounded-lg p-4">
+          Logging for <strong>{selectedEmployee.name}</strong>
+        </p>
+      )}
+
       {!showForm && (
-        <div className="flex items-center justify-end mb-6 pb-4 border-b border-brick-800">
+        <div className="flex items-center justify-between mb-6 pb-4 border-b border-brick-800">
+          <button
+            type="button"
+            onClick={() => navigate("/employees")}
+            className="bg-brick-800 text-brick-300 font-medium py-2 px-4 rounded-md hover:bg-brick-700 transition-colors cursor-pointer"
+          >
+            Back to Employee
+          </button>
           <button
             type="button"
             onClick={handleAdd}
@@ -219,7 +258,7 @@ export default function WorkLogsPage() {
       )}
 
       <ResourceList
-        items={workLogs}
+        items={filteredWorkLogs}
         titleKey="projectName"
         badgeKey="employeeName"
         columns={[
