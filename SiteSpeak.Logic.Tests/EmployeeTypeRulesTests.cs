@@ -8,6 +8,7 @@ public class EmployeeTypeRulesTests
     public void IsAllowed_true_for_known_types(string type)
     {
         Assert.True(EmployeeTypeRules.IsAllowed(type));
+        Assert.Fail();
     }
 
     [Theory]
