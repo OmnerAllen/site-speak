@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using Microsoft.Extensions.Logging;
+using SiteSpeak.Logic;
 
 public static class ProjectEndpoints
 {
@@ -119,13 +120,8 @@ public static class ProjectEndpoints
             var stages = body.Stages ?? Array.Empty<StageScheduleItem>();
             foreach (var item in stages)
             {
-                if (!string.IsNullOrWhiteSpace(item.PlannedStartDate) && !string.IsNullOrWhiteSpace(item.PlannedEndDate)
-                    && DateOnly.TryParse(item.PlannedStartDate, out var ds)
-                    && DateOnly.TryParse(item.PlannedEndDate, out var de)
-                    && ds > de)
-                {
+                if (ScheduleStageValidation.IsPlannedRangeInvalid(item.PlannedStartDate, item.PlannedEndDate))
                     return Results.BadRequest(new { error = "Planned start must be on or before planned end for each stage." });
-                }
             }
 
             var (result, updated) = await projects.UpdateScheduleAsync(id, companyId.Value, new ProjectScheduleBody(stages));

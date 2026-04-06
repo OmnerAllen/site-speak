@@ -1,5 +1,6 @@
 using System.Text.Json.Serialization;
 using Microsoft.Extensions.Logging;
+using SiteSpeak.Logic;
 
 public static class TelemetryEndpoints
 {
@@ -7,7 +8,7 @@ public static class TelemetryEndpoints
     {
         app.MapPost("/telemetry/page-view", (PageViewBody body) =>
         {
-            if (!TryNormalizePage(body.Page, out var page))
+            if (!TelemetryPagePath.TryNormalize(body.Page, out var page))
                 return Results.BadRequest();
 
             if (string.Equals(body.Kind, "first_load", StringComparison.OrdinalIgnoreCase))
@@ -50,22 +51,6 @@ public static class TelemetryEndpoints
         }).RequireAuthorization();
 
         return app;
-    }
-
-    private static bool TryNormalizePage(string? path, out string normalized)
-    {
-        normalized = "";
-        if (string.IsNullOrWhiteSpace(path))
-            return false;
-
-        path = path.Trim();
-        if (path.Length > 256 || !path.StartsWith('/'))
-            return false;
-        if (path.Contains("..", StringComparison.Ordinal))
-            return false;
-
-        normalized = path;
-        return true;
     }
 }
 
