@@ -7,6 +7,7 @@ import {
 import toast from "react-hot-toast";
 import { DynamicForm } from "../components/DynamicForm";
 import { ResourceList } from "../components/ResourceList";
+import { ResourceNav } from "../components/ResourceNav";
 import { api } from "../api";
 import type { FormFieldConfig, Material } from "../types";
 
@@ -144,6 +145,7 @@ export default function Materials() {
 
   return (
     <div className="max-w-5xl mx-auto p-6 md:p-12">
+      <ResourceNav />
       {!showForm && (
         <div className="flex items-center justify-end mb-6 pb-4 border-b border-brick-800">
           <button
@@ -155,11 +157,9 @@ export default function Materials() {
         </div>
       )}
 
-      {showForm && (
+      {showForm && !editingId && (
         <div className="mb-8">
-          <h2 className="text-lg font-semibold text-brick-200 mb-4">
-            {editingId ? "Edit Material" : "New Material"}
-          </h2>
+          <h2 className="text-lg font-semibold text-brick-200 mb-4">New Material</h2>
           <DynamicForm
             fields={MATERIAL_FIELDS}
             values={formValues}
@@ -167,7 +167,7 @@ export default function Materials() {
               setFormValues((prev) => ({ ...prev, [name]: value }))
             }
             onSubmit={handleSubmit}
-            submitLabel={editingId ? "Save Changes" : "Add Material"}
+            submitLabel="Add Material"
             onCancel={handleCancel}
           />
         </div>
@@ -194,6 +194,19 @@ export default function Materials() {
         onItemClick={handleEdit}
         onEdit={handleEdit}
         onDelete={(id) => deleteMutation.mutate(id)}
+        editingId={editingId || undefined}
+        renderEditForm={() => (
+          <DynamicForm
+            fields={MATERIAL_FIELDS}
+            values={formValues}
+            onChange={(name, value) =>
+              setFormValues((prev) => ({ ...prev, [name]: value }))
+            }
+            onSubmit={handleSubmit}
+            submitLabel="Save Changes"
+            onCancel={handleCancel}
+          />
+        )}
         emptyMessage="No materials yet. Add one above."
       />
     </div>

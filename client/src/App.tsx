@@ -11,7 +11,6 @@ import Projects from "./pages/Projects";
 import ProjectDetailsPage from "./pages/ProjectDetails";
 import Materials from "./pages/Materials";
 import EquipmentPage from "./pages/Equipment";
-import CustomForms from "./pages/CustomForms";
 import Suppliers from "./pages/Suppliers";
 import EmployeesPage from "./pages/Employees";
 import WorkLogsPage from "./pages/WorkLogs";
@@ -110,14 +109,7 @@ export default function App() {
                 </ProtectedRoute>
               }
             />
-            <Route
-              path="/custom-forms"
-              element={
-                <ProtectedRoute>
-                  <CustomForms />
-                </ProtectedRoute>
-              }
-            />
+            
             <Route
               path="/suppliers"
               element={
