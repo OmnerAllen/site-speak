@@ -71,16 +71,16 @@ Login Page
 #### Estimates:
 
 Rubric items:
-- [ ] 5 pts Technology: Network Calls that read and write data
-- [ ] 5 pts Technology: CI/CD pipeline
-- [ ] 5 pts Technology: tests run in pipeline, pipeline aborts if they fail
-- [ ] 5 pts Technology: linting in pipeline
+- [x] 5 pts Technology: Network Calls that read and write data
+- [x] 5 pts Technology: CI/CD pipeline
+- [x] 5 pts Technology: tests run in pipeline, pipeline aborts if they fail
+- [x] 5 pts Technology: linting in pipeline
 
 
 Features:
-- [ ] Deployed App that runs
-- [ ] Have Data in DB
-- [ ] Minimal Backend to talk to DB
+- [x] Deployed App that runs
+- [x] Have Data in DB
+- [x] Minimal Backend to talk to DB
 
 
 #### Delivered
@@ -199,6 +199,8 @@ Note: We are just working more on these, can't really finish a singular one
 Features:
 - [ ] Voice-To-Text for worklogs
 - [ ] AI material estimates
+- Will read from the Project Overview (user needs to type everything in here) and find materials/equipment based on project address and supplier address (Omner's genius idea: filter based on address before AI and let user choose how far {make sure AI knows it can return nothing if outside of the area})for each stage of the project. Then go ahead and return a json object that is a project and inside of the project the number of stages with the materials/equipment for that stage. Use a form to show the materials and allow the user to edit them. 
+- [ ] Split edit schedule into separate page
 
 #### Delivered
 
