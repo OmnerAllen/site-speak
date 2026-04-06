@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 
 export interface MoneyInputProps
   extends Omit<React.InputHTMLAttributes<HTMLInputElement>, "onChange"> {
@@ -28,12 +28,12 @@ export const MoneyInput: React.FC<MoneyInputProps> = ({
   const cleanValue = (val: string) => val.replace(/,/g, "");
 
   const [internalValue, setInternalValue] = useState(() => formatWithCommas(value));
+  const [prevValue, setPrevValue] = useState(value);
 
-  useEffect(() => {
-    if (value !== cleanValue(internalValue)) {
-      setInternalValue(formatWithCommas(value));
-    }
-  }, [value, internalValue]);
+  if (value !== prevValue) {
+    setPrevValue(value);
+    setInternalValue(formatWithCommas(value));
+  }
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value;

@@ -30,6 +30,8 @@ services:
       - ConnectionStrings__DefaultConnection=Host=db;Port=5432;Database=sitespeak;Username=postgres;Password=postgres
     volumes:
       - ./api:/app
+      # api.csproj references ../SiteSpeak.Logic — must exist beside /app in the container
+      - ./SiteSpeak.Logic:/SiteSpeak.Logic
     command: dotnet watch run --non-interactive --no-launch-profile
     depends_on:
       - db

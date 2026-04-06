@@ -1,4 +1,5 @@
 using Npgsql;
+using SiteSpeak.Logic;
 
 public class WorkLogRepository(NpgsqlDataSource dataSource)
 {
@@ -28,7 +29,7 @@ public class WorkLogRepository(NpgsqlDataSource dataSource)
 
     public async Task<WorkLogListItemDto?> CreateAsync(Guid companyId, WorkLogBody body, CancellationToken cancellationToken = default)
     {
-        if (body.StartedAt >= body.EndedAt)
+        if (!WorkLogTimeRange.IsValid(body.StartedAt, body.EndedAt))
             return null;
 
         var valid = await dataSource.ExecuteScalarAsync<bool>(
@@ -72,7 +73,7 @@ public class WorkLogRepository(NpgsqlDataSource dataSource)
 
     public async Task<WorkLogListItemDto?> UpdateAsync(Guid id, Guid companyId, WorkLogBody body, CancellationToken cancellationToken = default)
     {
-        if (body.StartedAt >= body.EndedAt)
+        if (!WorkLogTimeRange.IsValid(body.StartedAt, body.EndedAt))
             return null;
 
         var valid = await dataSource.ExecuteScalarAsync<bool>(

@@ -1,8 +1,8 @@
 using Npgsql;
+using SiteSpeak.Logic;
 
 public class EmployeeRepository(NpgsqlDataSource dataSource)
 {
-    private static bool IsAllowedType(string type) => type is "admin" or "worker";
 
     public Task<IReadOnlyList<EmployeeDto>> ListForCompanyAsync(Guid companyId, CancellationToken cancellationToken = default)
     {
@@ -22,7 +22,7 @@ public class EmployeeRepository(NpgsqlDataSource dataSource)
 
     public Task<EmployeeDto?> CreateAsync(Guid companyId, EmployeeBody body, CancellationToken cancellationToken = default)
     {
-        if (!IsAllowedType(body.Type))
+        if (!EmployeeTypeRules.IsAllowed(body.Type))
             return Task.FromResult<EmployeeDto?>(null);
 
         return dataSource.QuerySingleOrDefaultAsync(
@@ -47,7 +47,7 @@ public class EmployeeRepository(NpgsqlDataSource dataSource)
 
     public Task<EmployeeDto?> UpdateAsync(Guid id, Guid companyId, EmployeeBody body, CancellationToken cancellationToken = default)
     {
-        if (!IsAllowedType(body.Type))
+        if (!EmployeeTypeRules.IsAllowed(body.Type))
             return Task.FromResult<EmployeeDto?>(null);
 
         return dataSource.QuerySingleOrDefaultAsync(
