@@ -28,7 +28,7 @@ public static class TelemetryEndpoints
 
         app.MapPost("/telemetry/client-error", (ClientErrorBody body, ILogger<Program> logger) =>
         {
-            logger.LogError("Client UI Error: {Message}. URL: {Url}. StackTrace: {StackTrace}", 
+            logger.LogError("Client UI Error: {Message}. URL: {Url}. StackTrace: {StackTrace}",
                 body.Message, body.Url, body.StackTrace);
             return Results.NoContent();
         }).AllowAnonymous();
@@ -36,15 +36,15 @@ public static class TelemetryEndpoints
         app.MapPost("/telemetry/client-toast", (ClientToastBody body, ILogger<Program> logger, System.Security.Claims.ClaimsPrincipal user) =>
         {
             var email = user?.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value ?? "Anonymous";
-            logger.LogWarning("Client UI Toast displayed for user {User}: [{Type}] {Message}", 
+            logger.LogWarning("Client UI Toast displayed for user {User}: [{Type}] {Message}",
                 email, body.Type ?? "Info", body.Message);
             return Results.NoContent();
         }).AllowAnonymous();
 
         app.MapPost("/telemetry/client-login", (ILogger<Program> logger, System.Security.Claims.ClaimsPrincipal user) =>
         {
-            var email = user?.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value 
-                        ?? user?.FindFirst("preferred_username")?.Value 
+            var email = user?.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value
+                        ?? user?.FindFirst("preferred_username")?.Value
                         ?? "Unknown user";
             logger.LogInformation("User logged in explicitly from client: {User}", email);
             return Results.NoContent();

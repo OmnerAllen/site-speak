@@ -40,10 +40,10 @@ public static class ProjectEndpoints
 
             var created = await projects.CreateAsync(companyId.Value, body);
             if (created is null) return Results.Problem("Failed to create project.");
-            
+
             var email = user.FindFirstValue("email") ?? user.FindFirstValue("preferred_username") ?? "Unknown";
             logger.LogInformation("User {Email} created project '{ProjectName}' (ID: {ProjectId})", email, created.Name, created.Id);
-            
+
             return Results.Created($"/projects/{created.Id}", created);
         }).RequireAuthorization();
 
