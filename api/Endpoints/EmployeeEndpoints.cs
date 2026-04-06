@@ -26,10 +26,10 @@ public static class EmployeeEndpoints
 
             var created = await employees.CreateAsync(companyId.Value, body);
             if (created is null) return Results.BadRequest(new { error = "Invalid employee data." });
-            
+
             var email = user.FindFirstValue("email") ?? user.FindFirstValue("preferred_username") ?? "Unknown";
             logger.LogInformation("User {Email} created employee {EmployeeName} (ID: {EmployeeId})", email, created.Name, created.Id);
-            
+
             return Results.Created($"/my/employees/{created.Id}", created);
         }).RequireAuthorization();
 

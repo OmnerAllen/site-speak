@@ -17,7 +17,7 @@ export function ProtectedRoute({ children, roles }: Props) {
       redirecting.current = true;
       auth.signinRedirect();
     }
-  }, [auth.isLoading, auth.isAuthenticated]);
+  }, [auth]);
 
   if (auth.isLoading || loading) {
     return (

@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using Microsoft.Extensions.Logging;
+using SiteSpeak.Logic;
 
 public static class ProjectEndpoints
 {
@@ -39,10 +40,10 @@ public static class ProjectEndpoints
 
             var created = await projects.CreateAsync(companyId.Value, body);
             if (created is null) return Results.Problem("Failed to create project.");
-            
+
             var email = user.FindFirstValue("email") ?? user.FindFirstValue("preferred_username") ?? "Unknown";
             logger.LogInformation("User {Email} created project '{ProjectName}' (ID: {ProjectId})", email, created.Name, created.Id);
-            
+
             return Results.Created($"/projects/{created.Id}", created);
         }).RequireAuthorization();
 
@@ -119,13 +120,8 @@ public static class ProjectEndpoints
             var stages = body.Stages ?? Array.Empty<StageScheduleItem>();
             foreach (var item in stages)
             {
-                if (!string.IsNullOrWhiteSpace(item.PlannedStartDate) && !string.IsNullOrWhiteSpace(item.PlannedEndDate)
-                    && DateOnly.TryParse(item.PlannedStartDate, out var ds)
-                    && DateOnly.TryParse(item.PlannedEndDate, out var de)
-                    && ds > de)
-                {
+                if (ScheduleStageValidation.IsPlannedRangeInvalid(item.PlannedStartDate, item.PlannedEndDate))
                     return Results.BadRequest(new { error = "Planned start must be on or before planned end for each stage." });
-                }
             }
 
             var (result, updated) = await projects.UpdateScheduleAsync(id, companyId.Value, new ProjectScheduleBody(stages));

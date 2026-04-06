@@ -25,7 +25,6 @@ dist-ssr
 *.suo
 *.ntvs*
 *.njsproj
-*.sln
 *.sw?
 
 # Vite/Client specific (if built at root or nested)
