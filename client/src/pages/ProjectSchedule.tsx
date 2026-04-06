@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import {
   useSuspenseQuery,
   useMutation,
@@ -229,7 +229,9 @@ export default function ProjectSchedulePage() {
   const todayKey = dateOnlyKey(new Date());
 
   /** When the visible week changes, keep the selected day on-screen (prefer today if it falls in the week). */
-  useEffect(() => {
+  const [prevWeekStart, setPrevWeekStart] = useState(weekStart);
+  if (weekStart.getTime() !== prevWeekStart.getTime()) {
+    setPrevWeekStart(weekStart);
     const keys = weekDays.map((d) => dateOnlyKey(d));
     setSelectedDayKey((prev) => {
       if (keys.includes(prev)) return prev;
@@ -237,7 +239,7 @@ export default function ProjectSchedulePage() {
       if (keys.includes(todayK)) return todayK;
       return keys[0];
     });
-  }, [weekStart]);
+  }
 
   const selectedSummaryDay = useMemo(() => parseDayKey(selectedDayKey), [selectedDayKey]);
 
