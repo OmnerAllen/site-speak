@@ -506,27 +506,49 @@
           },
           "mappings": [
             {
+              "type": "special",
+              "options": {
+                "match": "null+nan",
+                "result": {
+                  "color": "transparent",
+                  "index": 0,
+                  "text": "No data"
+                }
+              }
+            },
+            {
               "type": "value",
               "options": {
                 "0": {
                   "color": "red",
-                  "index": 0,
+                  "index": 1,
                   "text": "Down"
                 },
                 "1": {
                   "color": "green",
-                  "index": 1,
+                  "index": 2,
                   "text": "Up"
                 }
               }
             }
           ],
+          "max": 1,
+          "min": 0,
+          "noValue": "No data",
           "thresholds": {
             "mode": "absolute",
             "steps": [
               {
-                "color": "text",
+                "color": "rgba(128, 128, 128, 0.35)",
                 "value": null
+              },
+              {
+                "color": "red",
+                "value": 0
+              },
+              {
+                "color": "green",
+                "value": 1
               }
             ]
           }
@@ -688,5 +710,5 @@
   "timezone": "browser",
   "title": "Dev",
   "uid": "gf8cxh",
-  "version": 3
+  "version": 4
 }
