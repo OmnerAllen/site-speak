@@ -15,8 +15,8 @@ scrape_configs:
       module: [http_2xx]
     static_configs:
       - targets:
-          - http://api:5000/
-          - http://client:5173/
+          - http://api-service:5000/
+          - http://site-speak-service:80/
     relabel_configs:
       - source_labels: [__address__]
         target_label: __param_target
