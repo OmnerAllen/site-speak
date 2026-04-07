@@ -20,6 +20,17 @@ public record MaterialListItemDto(
     string ProductType,
     decimal PricePerUnit);
 
+/// <summary>Material row with supplier address for geo filtering and LLM catalog.</summary>
+public record MaterialCatalogItemDto(
+    Guid Id,
+    string ProductName,
+    Guid? SupplierId,
+    string SupplierName,
+    string SupplierAddress,
+    string Unit,
+    string ProductType,
+    decimal PricePerUnit);
+
 public record ProjectDto(
     Guid Id,
     string Name,
@@ -90,4 +101,53 @@ public enum ProjectDetailsUpdateResult
     NotFound,
     StagesRequired,
     InvalidStage
+}
+
+public record StageMaterialResourceDto(
+    Guid MaterialId,
+    string ProductName,
+    decimal Quantity);
+
+public record StageEquipmentResourceDto(
+    Guid EquipmentId,
+    string Name,
+    bool HalfDay,
+    string DateOfUse);
+
+public record StageResourcesStageDto(
+    string Name,
+    IReadOnlyList<StageMaterialResourceDto> Materials,
+    IReadOnlyList<StageEquipmentResourceDto> Equipment);
+
+public record ProjectStageResourcesResponse(IReadOnlyList<StageResourcesStageDto> Stages);
+
+/// <summary>API response for POST material-estimate (enriched for UI).</summary>
+public record MaterialEstimateApiResponse(
+    IReadOnlyList<MaterialEstimateStageApiDto> Stages,
+    IReadOnlyList<string> Warnings);
+
+public record MaterialEstimateStageApiDto(
+    string Name,
+    IReadOnlyList<MaterialEstimateMaterialLineApiDto> Materials,
+    IReadOnlyList<MaterialEstimateEquipmentLineApiDto> Equipment);
+
+public record MaterialEstimateMaterialLineApiDto(
+    Guid MaterialId,
+    string ProductName,
+    decimal Quantity,
+    string? Note);
+
+public record MaterialEstimateEquipmentLineApiDto(
+    Guid EquipmentId,
+    string Name,
+    bool HalfDay,
+    string? Note);
+
+public enum StageResourcesReplaceResult
+{
+    Ok,
+    ProjectNotFound,
+    InvalidStage,
+    InvalidMaterial,
+    InvalidEquipment
 }

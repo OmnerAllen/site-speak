@@ -4,9 +4,14 @@ import type {
   Material,
   Project,
   ProjectDetails,
+  ProjectStageResourcesResponse,
   ScheduleProject,
   Employee,
   WorkLog,
+  MaterialEstimateRequestBody,
+  MaterialEstimateResponse,
+  StageResourcesPutBody,
+  AiChatMessage,
 } from "./types";
 import { ApiError } from "./error/ApiError";
 
@@ -88,6 +93,46 @@ export const api = {
   ) => apiFetch<void>(`/my/projects/${id}/details`, { method: "PUT", body: JSON.stringify(body) }),
   deleteProject: (id: string) =>
     apiFetch<void>(`/projects/${id}`, { method: "DELETE" }),
+
+  getStageResources: (projectId: string) =>
+    apiFetch<ProjectStageResourcesResponse>(`/my/projects/${projectId}/stage-resources`),
+
+  putStageResources: (projectId: string, body: StageResourcesPutBody) =>
+    apiFetch<void>(`/my/projects/${projectId}/stage-resources`, {
+      method: "PUT",
+      body: JSON.stringify(body),
+    }),
+
+  postMaterialEstimate: (projectId: string, body: MaterialEstimateRequestBody) =>
+    apiFetch<MaterialEstimateResponse>(`/my/projects/${projectId}/material-estimate`, {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
+
+  /** Lightweight chat to the configured LLM (no full material/equipment catalogs). */
+  postAiChat: async (body: { messages: AiChatMessage[] }) => {
+    const res = await fetch(`/api/my/ai/chat`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    if (res.status === 401) {
+      document.cookie = "id_token=; path=/; max-age=0";
+      window.location.href = "/";
+      throw new Error("Session expired");
+    }
+    if (!res.ok) {
+      let msg = `Request failed: ${res.status}`;
+      try {
+        const j = (await res.json()) as { error?: string };
+        if (j?.error) msg = j.error;
+      } catch {
+        /* ignore */
+      }
+      throw new Error(msg);
+    }
+    return res.json() as Promise<{ reply: string }>;
+  },
 
   patchProjectSchedule: (
     id: string,
