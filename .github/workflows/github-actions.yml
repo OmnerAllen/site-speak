@@ -31,9 +31,15 @@ jobs:
             PR_USER=$(echo "${{ github.event.pull_request.user.login }}" | tr '[:upper:]' '[:lower:]')
             echo "NAMESPACE=site-speak-pr-${PR_USER}" >> $GITHUB_ENV
             echo "APP_HOST=${PR_USER}-pr.site-speak.duckdns.org" >> $GITHUB_ENV
+            echo "GRAFANA_HOST=grafana-${PR_USER}-pr.site-speak.duckdns.org" >> $GITHUB_ENV
+            echo "PROMETHEUS_HOST=prometheus-${PR_USER}-pr.site-speak.duckdns.org" >> $GITHUB_ENV
+            echo "COLLECTOR_HOST=collector-demo-${PR_USER}-pr.site-speak.duckdns.org" >> $GITHUB_ENV
           else
             echo "NAMESPACE=site-speak-prod" >> $GITHUB_ENV
             echo "APP_HOST=site-speak.duckdns.org" >> $GITHUB_ENV
+            echo "GRAFANA_HOST=grafana.site-speak.duckdns.org" >> $GITHUB_ENV
+            echo "PROMETHEUS_HOST=prometheus.site-speak.duckdns.org" >> $GITHUB_ENV
+            echo "COLLECTOR_HOST=collector-demo.site-speak.duckdns.org" >> $GITHUB_ENV
           fi
 
       - name: Check out repository code

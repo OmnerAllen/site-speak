@@ -6,7 +6,7 @@ on:
       letsencrypt_environment:
         description: "Let's Encrypt environment"
         required: true
-        default: staging
+        default: production
         type: choice
         options:
           - staging
