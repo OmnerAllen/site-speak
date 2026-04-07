@@ -8,7 +8,7 @@ scrape_configs:
       - targets: ["otel-collector:8889"]
 
   - job_name: "blackbox"
-    scrape_interval: 500ms
+    scrape_interval: 15ms
     scrape_timeout: 10ms
     metrics_path: /probe
     params:
