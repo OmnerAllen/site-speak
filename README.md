@@ -320,3 +320,14 @@ Backlog Features:
 - Error in estimates (waste factor and markup)
 - Real Material usage
 
+## AI material estimates (API configuration)
+
+Estimates send the **full materials and equipment catalogs** to the language model (no server-side geocoding). The client sends **`radiusMiles`**; the system prompt asks the model to prefer items whose supplier or rental location text plausibly fits within that distance of the job address. Configure the `MaterialEstimate` section in `api/appsettings.json`, or override with environment variables such as `MaterialEstimate__ChatCompletionsUrl` (double underscore nests into the section).
+
+Default URL is **`https://ai-snow.reindeer-pinecone.ts.net:9292/v1/chat/completions`** (model `gpt-oss-120b`). The listener on that port must use TLS; **`http://` there often yields HTTP 400** (“Client sent an HTTP request to an HTTPS server”). Outbound LLM requests send **`Content-Type: application/json` only** (no `Authorization` header), same as rag’s chat `fetch`. If the API runs in **Docker**, avoid `localhost` for the LLM URL unless the model listens there from the container’s network namespace.
+
+- **ChatCompletionsUrl** — Full URL to an OpenAI-compatible `POST .../v1/chat/completions` endpoint (same general wiring as rag-kadebaxter).
+- **Model** — Model name sent to that endpoint.
+
+Very large catalogs may hit LLM context limits; if that happens, trim the catalog in code or add a cap later.
+

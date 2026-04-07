@@ -112,6 +112,59 @@ export interface FormFieldConfig {
   description?: string;
 }
 
+export type StageName = "demo" | "prep" | "build/install" | "qa";
+
+export interface ProjectStageResourcesResponse {
+  stages: Array<{
+    name: StageName;
+    materials: Array<{ materialId: string; productName: string; quantity: number }>;
+    equipment: Array<{ equipmentId: string; name: string; halfDay: boolean; dateOfUse: string }>;
+  }>;
+}
+
+export interface StageResourcesPutBody {
+  stages: Array<{
+    name: StageName;
+    materials: Array<{ materialId: string; quantity: number }>;
+    equipment: Array<{ equipmentId: string; halfDay: boolean }>;
+  }>;
+}
+
+/** Body for POST /material-estimate (optional text overrides unsaved editor content). */
+export interface MaterialEstimateRequestBody {
+  /** Soft distance hint for the model (miles); not computed server-side. Default 50. */
+  radiusMiles?: number;
+  overview?: string;
+  stages?: Array<{ name: string; details?: string; notes?: string }>;
+}
+
+/** POST /my/ai/chat — small payload; same LLM config as material estimates. */
+export type AiChatRole = "system" | "user" | "assistant";
+
+export interface AiChatMessage {
+  role: AiChatRole;
+  content: string;
+}
+
+export interface MaterialEstimateResponse {
+  stages: Array<{
+    name: StageName;
+    materials: Array<{
+      materialId: string;
+      productName: string;
+      quantity: number;
+      note: string | null;
+    }>;
+    equipment: Array<{
+      equipmentId: string;
+      name: string;
+      halfDay: boolean;
+      note: string | null;
+    }>;
+  }>;
+  warnings: string[];
+}
+
 export interface UserProfile {
   id: string;
   keycloakSub: string;

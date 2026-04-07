@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using Microsoft.Extensions.Logging;
+using SiteSpeak.Estimates;
 using SiteSpeak.Logic;
 
 public static class ProjectEndpoints
@@ -130,6 +131,70 @@ public static class ProjectEndpoints
                 SchedulePatchResult.Ok when updated is not null => Results.Ok(updated),
                 SchedulePatchResult.ProjectNotFound => Results.NotFound(),
                 SchedulePatchResult.InvalidStage => Results.BadRequest(new { error = "One or more stages do not belong to this project." }),
+                _ => Results.Problem("Unexpected result.")
+            };
+        }).RequireAuthorization();
+
+        app.MapPost("/my/projects/{id:guid}/material-estimate", async (
+            Guid id,
+            ClaimsPrincipal user,
+            MaterialEstimateRequestBody? body,
+            MaterialEstimateService estimates,
+            ProjectRepository projects,
+            CancellationToken cancellationToken) =>
+        {
+            var sub = user.FindFirstValue("sub");
+            if (sub is null) return Results.Unauthorized();
+
+            var companyId = await projects.GetCompanyIdForKeycloakSubAsync(sub);
+            if (companyId is null) return Results.BadRequest(new { error = "No company assigned" });
+
+            try
+            {
+                var result = await estimates.RunEstimateAsync(id, companyId.Value, body, cancellationToken);
+                return result is null ? Results.NotFound() : Results.Ok(result);
+            }
+            catch (ArgumentOutOfRangeException ex)
+            {
+                return Results.BadRequest(new { error = ex.Message });
+            }
+        }).RequireAuthorization();
+
+        app.MapGet("/my/projects/{id:guid}/stage-resources", async (
+            Guid id,
+            ClaimsPrincipal user,
+            ProjectRepository projects) =>
+        {
+            var sub = user.FindFirstValue("sub");
+            if (sub is null) return Results.Unauthorized();
+
+            var companyId = await projects.GetCompanyIdForKeycloakSubAsync(sub);
+            if (companyId is null) return Results.BadRequest(new { error = "No company assigned" });
+
+            var result = await projects.GetStageResourcesAsync(id, companyId.Value);
+            return result is null ? Results.NotFound() : Results.Ok(result);
+        }).RequireAuthorization();
+
+        app.MapPut("/my/projects/{id:guid}/stage-resources", async (
+            Guid id,
+            ClaimsPrincipal user,
+            StageResourcesPutBody body,
+            ProjectRepository projects) =>
+        {
+            var sub = user.FindFirstValue("sub");
+            if (sub is null) return Results.Unauthorized();
+
+            var companyId = await projects.GetCompanyIdForKeycloakSubAsync(sub);
+            if (companyId is null) return Results.BadRequest(new { error = "No company assigned" });
+
+            var result = await projects.ReplaceStageResourcesAsync(id, companyId.Value, body);
+            return result switch
+            {
+                StageResourcesReplaceResult.Ok => Results.NoContent(),
+                StageResourcesReplaceResult.ProjectNotFound => Results.NotFound(),
+                StageResourcesReplaceResult.InvalidStage => Results.BadRequest(new { error = "Invalid stage payload" }),
+                StageResourcesReplaceResult.InvalidMaterial => Results.BadRequest(new { error = "Unknown material or invalid quantity" }),
+                StageResourcesReplaceResult.InvalidEquipment => Results.BadRequest(new { error = "Unknown equipment" }),
                 _ => Results.Problem("Unexpected result.")
             };
         }).RequireAuthorization();

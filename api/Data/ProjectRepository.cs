@@ -1,3 +1,4 @@
+using System.Linq;
 using Npgsql;
 
 public class ProjectRepository(NpgsqlDataSource dataSource)
@@ -449,5 +450,300 @@ public class ProjectRepository(NpgsqlDataSource dataSource)
             tx,
             p => p.AddWithValue(projectId),
             cancellationToken: cancellationToken);
+    }
+
+    public async Task<ProjectStageResourcesResponse?> GetStageResourcesAsync(
+        Guid projectId,
+        Guid companyId,
+        CancellationToken cancellationToken = default)
+    {
+        await using var conn = await dataSource.OpenConnectionAsync(cancellationToken);
+
+        var ok = await conn.ExecuteScalarAsync<Guid?>(
+            """
+            SELECT id FROM project
+            WHERE id = $1 AND company_id = $2 AND deleted_at IS NULL
+            """,
+            null,
+            p =>
+            {
+                p.AddWithValue(projectId);
+                p.AddWithValue(companyId);
+            },
+            cancellationToken: cancellationToken);
+
+        if (ok is null) return null;
+
+        await EnsureProjectStagesAsync(conn, projectId, null, cancellationToken);
+
+        var stages = await conn.QueryAsync(
+            """
+            SELECT id, name, planned_start
+            FROM stage
+            WHERE project_id = $1 AND deleted_at IS NULL
+            ORDER BY CASE name
+                WHEN 'demo' THEN 1
+                WHEN 'prep' THEN 2
+                WHEN 'build/install' THEN 3
+                WHEN 'qa' THEN 4
+                ELSE 99
+            END
+            """,
+            reader => new
+            {
+                Id = reader.GetGuid(0),
+                Name = reader.GetString(1),
+                PlannedStart = ReadDateColumn(reader, 2),
+            },
+            transaction: null,
+            configureParameters: p => p.AddWithValue(projectId),
+            cancellationToken: cancellationToken);
+
+        var stageList = stages.ToList();
+        if (stageList.Count == 0)
+            return new ProjectStageResourcesResponse(Array.Empty<StageResourcesStageDto>());
+
+        var materials = await conn.QueryAsync(
+            """
+            SELECT s.id AS stage_id, m.id, m.product_name, sm.quantity
+            FROM stage s
+            INNER JOIN stage_material sm ON sm.stage_id = s.id AND sm.deleted_at IS NULL
+            INNER JOIN material m ON m.id = sm.material_id AND m.deleted_at IS NULL
+            WHERE s.project_id = $1 AND s.deleted_at IS NULL
+            ORDER BY s.name, m.product_name
+            """,
+            reader => new
+            {
+                StageId = reader.GetGuid(0),
+                MaterialId = reader.GetGuid(1),
+                ProductName = reader.GetString(2),
+                Quantity = reader.GetDecimal(3),
+            },
+            transaction: null,
+            configureParameters: p => p.AddWithValue(projectId),
+            cancellationToken: cancellationToken);
+
+        var equipment = await conn.QueryAsync(
+            """
+            SELECT s.id AS stage_id, e.id, e.name, se.half_day_bool, se.date_of_use
+            FROM stage s
+            INNER JOIN stage_equipment se ON se.stage_id = s.id AND se.deleted_at IS NULL
+            INNER JOIN equipment e ON e.id = se.equipment_id AND e.deleted_at IS NULL
+            WHERE s.project_id = $1 AND s.deleted_at IS NULL
+            ORDER BY s.name, e.name
+            """,
+            reader => new
+            {
+                StageId = reader.GetGuid(0),
+                EquipmentId = reader.GetGuid(1),
+                Name = reader.GetString(2),
+                HalfDay = reader.GetBoolean(3),
+                DateOfUse = reader.GetDateTime(4).ToString("yyyy-MM-dd"),
+            },
+            transaction: null,
+            configureParameters: p => p.AddWithValue(projectId),
+            cancellationToken: cancellationToken);
+
+        var matByStage = materials.GroupBy(m => m.StageId).ToDictionary(g => g.Key, g => g.ToList());
+        var eqByStage = equipment.GroupBy(e => e.StageId).ToDictionary(g => g.Key, g => g.ToList());
+
+        var dtos = stageList.Select(s =>
+        {
+            var mats = matByStage.TryGetValue(s.Id, out var ml)
+                ? ml.Select(x => new StageMaterialResourceDto(x.MaterialId, x.ProductName, x.Quantity)).ToList()
+                : (IReadOnlyList<StageMaterialResourceDto>)Array.Empty<StageMaterialResourceDto>();
+            var eqs = eqByStage.TryGetValue(s.Id, out var el)
+                ? el.Select(x => new StageEquipmentResourceDto(x.EquipmentId, x.Name, x.HalfDay, x.DateOfUse)).ToList()
+                : (IReadOnlyList<StageEquipmentResourceDto>)Array.Empty<StageEquipmentResourceDto>();
+            return new StageResourcesStageDto(s.Name, mats, eqs);
+        }).ToList();
+
+        return new ProjectStageResourcesResponse(dtos);
+    }
+
+    public async Task<StageResourcesReplaceResult> ReplaceStageResourcesAsync(
+        Guid projectId,
+        Guid companyId,
+        StageResourcesPutBody body,
+        CancellationToken cancellationToken = default)
+    {
+        var allowed = new HashSet<string>(StringComparer.Ordinal)
+        {
+            "demo",
+            "prep",
+            "build/install",
+            "qa",
+        };
+
+        if (body.Stages is null || body.Stages.Count == 0)
+            return StageResourcesReplaceResult.InvalidStage;
+
+        foreach (var s in body.Stages)
+        {
+            if (!allowed.Contains(s.Name))
+                return StageResourcesReplaceResult.InvalidStage;
+        }
+
+        await using var conn = await dataSource.OpenConnectionAsync(cancellationToken);
+        await using var tx = await conn.BeginTransactionAsync(cancellationToken);
+
+        var projectOk = await conn.ExecuteScalarAsync<Guid?>(
+            """
+            SELECT id FROM project
+            WHERE id = $1 AND company_id = $2 AND deleted_at IS NULL
+            FOR UPDATE
+            """,
+            tx,
+            p =>
+            {
+                p.AddWithValue(projectId);
+                p.AddWithValue(companyId);
+            },
+            cancellationToken: cancellationToken);
+
+        if (projectOk is null)
+        {
+            await tx.RollbackAsync(cancellationToken);
+            return StageResourcesReplaceResult.ProjectNotFound;
+        }
+
+        await EnsureProjectStagesAsync(conn, projectId, tx, cancellationToken);
+
+        var stageRows = await conn.QueryAsync(
+            """
+            SELECT id, name, planned_start
+            FROM stage
+            WHERE project_id = $1 AND deleted_at IS NULL
+            """,
+            reader => new
+            {
+                Id = reader.GetGuid(0),
+                Name = reader.GetString(1),
+                PlannedStart = ReadDateColumn(reader, 2),
+            },
+            tx,
+            p => p.AddWithValue(projectId),
+            cancellationToken: cancellationToken);
+
+        var stageByName = stageRows.ToDictionary(s => s.Name, s => s, StringComparer.Ordinal);
+
+        foreach (var incoming in body.Stages)
+        {
+            if (!stageByName.TryGetValue(incoming.Name, out _))
+            {
+                await tx.RollbackAsync(cancellationToken);
+                return StageResourcesReplaceResult.InvalidStage;
+            }
+        }
+
+        foreach (var incoming in body.Stages)
+        {
+            var stage = stageByName[incoming.Name];
+            foreach (var m in incoming.Materials ?? Enumerable.Empty<StageResourceMaterialBody>())
+            {
+                var exists = await conn.ExecuteScalarAsync<Guid?>(
+                    "SELECT id FROM material WHERE id = $1 AND deleted_at IS NULL",
+                    tx,
+                    p => p.AddWithValue(m.MaterialId),
+                    cancellationToken: cancellationToken);
+                if (exists is null)
+                {
+                    await tx.RollbackAsync(cancellationToken);
+                    return StageResourcesReplaceResult.InvalidMaterial;
+                }
+
+                if (m.Quantity <= 0)
+                {
+                    await tx.RollbackAsync(cancellationToken);
+                    return StageResourcesReplaceResult.InvalidMaterial;
+                }
+            }
+
+            foreach (var e in incoming.Equipment ?? Enumerable.Empty<StageResourceEquipmentBody>())
+            {
+                var exists = await conn.ExecuteScalarAsync<Guid?>(
+                    "SELECT id FROM equipment WHERE id = $1 AND deleted_at IS NULL",
+                    tx,
+                    p => p.AddWithValue(e.EquipmentId),
+                    cancellationToken: cancellationToken);
+                if (exists is null)
+                {
+                    await tx.RollbackAsync(cancellationToken);
+                    return StageResourcesReplaceResult.InvalidEquipment;
+                }
+            }
+        }
+
+        await conn.ExecuteNonQueryAsync(
+            """
+            DELETE FROM stage_material
+            WHERE stage_id IN (SELECT id FROM stage WHERE project_id = $1 AND deleted_at IS NULL)
+            """,
+            tx,
+            p => p.AddWithValue(projectId),
+            cancellationToken: cancellationToken);
+
+        await conn.ExecuteNonQueryAsync(
+            """
+            DELETE FROM stage_equipment
+            WHERE stage_id IN (SELECT id FROM stage WHERE project_id = $1 AND deleted_at IS NULL)
+            """,
+            tx,
+            p => p.AddWithValue(projectId),
+            cancellationToken: cancellationToken);
+
+        foreach (var incoming in body.Stages)
+        {
+            var stage = stageByName[incoming.Name];
+            var dateOfUse = ResolveEquipmentDateOfUse(stage.PlannedStart);
+
+            foreach (var m in incoming.Materials ?? Enumerable.Empty<StageResourceMaterialBody>())
+            {
+                await conn.ExecuteNonQueryAsync(
+                    """
+                    INSERT INTO stage_material (stage_id, material_id, quantity)
+                    VALUES ($1, $2, $3)
+                    """,
+                    tx,
+                    p =>
+                    {
+                        p.AddWithValue(stage.Id);
+                        p.AddWithValue(m.MaterialId);
+                        p.AddWithValue(m.Quantity);
+                    },
+                    cancellationToken: cancellationToken);
+            }
+
+            foreach (var e in incoming.Equipment ?? Enumerable.Empty<StageResourceEquipmentBody>())
+            {
+                await conn.ExecuteNonQueryAsync(
+                    """
+                    INSERT INTO stage_equipment (stage_id, equipment_id, half_day_bool, date_of_use)
+                    VALUES ($1, $2, $3, $4)
+                    """,
+                    tx,
+                    p =>
+                    {
+                        p.AddWithValue(stage.Id);
+                        p.AddWithValue(e.EquipmentId);
+                        p.AddWithValue(e.HalfDay);
+                        p.AddWithValue(dateOfUse);
+                    },
+                    cancellationToken: cancellationToken);
+            }
+        }
+
+        await tx.CommitAsync(cancellationToken);
+        return StageResourcesReplaceResult.Ok;
+    }
+
+    /// <summary>Equipment date_of_use: stage planned_start if set, else UTC today.</summary>
+    private static DateTime ResolveEquipmentDateOfUse(string? plannedStartIso)
+    {
+        if (!string.IsNullOrWhiteSpace(plannedStartIso)
+            && DateOnly.TryParse(plannedStartIso, out var d))
+            return d.ToDateTime(TimeOnly.MinValue) + TimeSpan.FromHours(12);
+
+        return DateTime.UtcNow.Date;
     }
 }
