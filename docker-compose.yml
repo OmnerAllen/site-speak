@@ -82,6 +82,14 @@ services:
       - "9090:9090"
     depends_on:
       - otel-collector
+      - blackbox-exporter
+
+  blackbox-exporter:
+    image: prom/blackbox-exporter:v0.28.0
+    container_name: sitespeak-blackbox-exporter
+    restart: unless-stopped
+    ports:
+      - "9115:9115"
 
   loki:
     image: grafana/loki:3.5.11
