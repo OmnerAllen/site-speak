@@ -10,7 +10,7 @@ import { PhoneInput } from "../components/PhoneInput";
 import { ResourceList } from "../components/ResourceList";
 import { ResourceNav } from "../components/ResourceNav";
 import { api } from "../api";
-import type { FormFieldConfig, Supplier } from "../types";
+import type { FormFieldConfig, Supplier, SupplierUpsertBody } from "../types";
 
 const SUPPLIER_FIELDS: FormFieldConfig[] = [
   {
@@ -51,7 +51,7 @@ export default function Suppliers() {
   });
 
   const createMutation = useMutation({
-    mutationFn: (body: Omit<Supplier, "id">) => api.createSupplier(body),
+    mutationFn: (body: SupplierUpsertBody) => api.createSupplier(body),
     onSuccess: () => {
       toast.success("Supplier created successfully.");
       queryClient.invalidateQueries({ queryKey: ["suppliers"] });
@@ -59,7 +59,8 @@ export default function Suppliers() {
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, ...body }: Supplier) => api.updateSupplier(id, body),
+    mutationFn: ({ id, ...body }: SupplierUpsertBody & { id: string }) =>
+      api.updateSupplier(id, body),
     onSuccess: () =>
       queryClient.invalidateQueries({ queryKey: ["suppliers"] }),
   });

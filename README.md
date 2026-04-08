@@ -333,12 +333,12 @@ Configure the **`Geocoding`** section in `api/appsettings.json` (`BaseUrl`, `Use
 
 Material estimates **pre-filter** the materials and equipment catalogs by **Haversine distance** from the project job site to each row’s supplier (or equipment’s rental supplier), using **`radiusMiles`** from the request (default **50**, max **500**). Only the reduced catalog is sent to the LLM, which avoids huge prompts when the inventory is large. If the project has no coordinates, the server skips filtering and adds a warning.
 
-Configure the `MaterialEstimate` section in `api/appsettings.json`, or override with environment variables such as `MaterialEstimate__ChatCompletionsUrl` (double underscore nests into the section).
+Configure the **`Llm`** section in `api/appsettings.json`, or override with environment variables such as `Llm__ChatCompletionsUrl` (double underscore nests into the section). Material-estimate debug echo of raw model output is controlled separately under **`MaterialEstimate`** (`IncludeLlmRawContentInResponse`, Development only).
 
-Default URL is **`https://ai-snow.reindeer-pinecone.ts.net:9292/v1/chat/completions`**. Default model id is **`gemma4-31b`** (matches the `id` from that host’s **`GET /v1/models`** — llama.cpp `--alias` for the Gemma 4 31B IT GGUF). Override with `MaterialEstimate__Model` or `MATERIAL_ESTIMATE_MODEL` if you point at another server.
+Default URL is **`https://ai-snow.reindeer-pinecone.ts.net:9292/v1/chat/completions`**. Default model id is **`gemma4-31b`** (matches the `id` from that host’s **`GET /v1/models`** — llama.cpp `--alias` for the Gemma 4 31B IT GGUF). Override with `Llm__Model` or `LLM_MODEL` if you point at another server.
 
 **Finding the exact `model` string:** many OpenAI-compatible servers list ids at **`GET …/v1/models`** (same host/base as chat, path `/v1/models`). Example: `curl -sS https://your-host:9292/v1/models | jq` and use the `id` field from the response. **Ollama** often uses ids like `gemma4`, `gemma4:31b`, or `gemma4:26b` instead of the Hugging Face path. The listener on that port must use TLS; **`http://` there often yields HTTP 400** (“Client sent an HTTP request to an HTTPS server”). Outbound LLM requests send **`Content-Type: application/json` only** (no `Authorization` header). If the API runs in **Docker**, avoid `localhost` for the LLM URL unless the model listens there from the container’s network namespace.
 
-- **ChatCompletionsUrl** — Full URL to an OpenAI-compatible `POST .../v1/chat/completions` endpoint.
-- **Model** — Model name sent to that endpoint.
+- **`Llm:ChatCompletionsUrl`** — Full URL to an OpenAI-compatible `POST .../v1/chat/completions` endpoint.
+- **`Llm:Model`** — Model name sent to that endpoint.
 

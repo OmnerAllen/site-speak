@@ -1,5 +1,6 @@
 import type {
   Supplier,
+  SupplierUpsertBody,
   Equipment,
   Material,
   Project,
@@ -47,9 +48,9 @@ async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
 
 export const api = {
   getSuppliers: () => apiFetch<Supplier[]>("/suppliers"),
-  createSupplier: (body: Omit<Supplier, "id">) =>
+  createSupplier: (body: SupplierUpsertBody) =>
     apiFetch<Supplier>("/suppliers", { method: "POST", body: JSON.stringify(body) }),
-  updateSupplier: (id: string, body: Omit<Supplier, "id">) =>
+  updateSupplier: (id: string, body: SupplierUpsertBody) =>
     apiFetch<Supplier>(`/suppliers/${id}`, { method: "PUT", body: JSON.stringify(body) }),
   deleteSupplier: (id: string) =>
     apiFetch<void>(`/suppliers/${id}`, { method: "DELETE" }),

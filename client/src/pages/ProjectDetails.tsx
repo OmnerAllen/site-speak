@@ -10,6 +10,7 @@ import {
   type ProjectMaterialEstimateHandle,
 } from "../components/ProjectMaterialEstimateSection";
 import { api } from "../api";
+import { isAiChatEnabled } from "../features";
 import type { FormFieldConfig, ProjectDetails, ProjectStage } from "../types";
 
 const STAGE_ORDER: ProjectStage["name"][] = ["demo", "prep", "build/install", "qa"];
@@ -331,9 +332,11 @@ export default function ProjectDetailsPage() {
               cancelDisabled={saveMutation.isPending}
             />
           </div>
-          <aside className="w-full lg:w-[min(22rem,100%)] lg:shrink-0 order-3">
-            <ProjectAiChatPanel projectName={project?.name} />
-          </aside>
+          {isAiChatEnabled ? (
+            <aside className="w-full lg:w-[min(22rem,100%)] lg:shrink-0 order-3">
+              <ProjectAiChatPanel projectName={project?.name} />
+            </aside>
+          ) : null}
         </div>
       ) : (
         <DynamicForm

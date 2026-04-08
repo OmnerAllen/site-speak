@@ -97,6 +97,9 @@ export interface Supplier {
   longitude: number | null;
 }
 
+/** POST/PUT /suppliers; server geocodes address and sets latitude/longitude. */
+export type SupplierUpsertBody = Pick<Supplier, "name" | "address" | "phone">;
+
 export type FormFieldType =
   | "small-text"
   | "large-text"
@@ -147,7 +150,7 @@ export interface MaterialEstimateRequestBody {
   stages?: Array<{ name: string; details?: string; notes?: string }>;
 }
 
-/** POST /my/ai/chat — small payload; same LLM config as material estimates. */
+/** POST /my/ai/chat — small payload; uses the API `Llm` config. */
 export type AiChatRole = "system" | "user" | "assistant";
 
 export interface AiChatMessage {
