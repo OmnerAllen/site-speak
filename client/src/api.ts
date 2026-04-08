@@ -8,6 +8,7 @@ import type {
   Employee,
   WorkLog,
 } from "./types";
+import { ApiError } from "./error/ApiError";
 
 async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`/api${path}`, {
@@ -21,10 +22,20 @@ async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
   if (res.status === 401) {
     document.cookie = "id_token=; path=/; max-age=0";
     window.location.href = "/";
-    throw new Error("Session expired");
+    throw new ApiError("Session expired", 401);
   }
 
-  if (!res.ok) throw new Error(`Request failed: ${res.status}`);
+  if (!res.ok) {
+    let errorDetails;
+    try {
+      errorDetails = await res.json();
+    } catch {
+      // Not JSON
+    }
+    const message = errorDetails?.title || errorDetails?.detail || errorDetails?.message || `Request failed: ${res.status}`;
+    throw new ApiError(message, res.status, errorDetails);
+  }
+
   if (res.status === 204) return undefined as T;
   return res.json();
 }
