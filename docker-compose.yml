@@ -32,7 +32,7 @@ services:
       - ConnectionStrings__DefaultConnection=Host=db;Port=5432;Database=sitespeak;Username=postgres;Password=postgres
       # LLM must be reachable from this container (localhost:9292 is wrong unless the model runs inside the same container)
       - MaterialEstimate__ChatCompletionsUrl=${MATERIAL_ESTIMATE_CHAT_COMPLETIONS_URL:-https://ai-snow.reindeer-pinecone.ts.net:9292/v1/chat/completions}
-      - MaterialEstimate__Model=${MATERIAL_ESTIMATE_MODEL:-gpt-oss-120b}
+      - MaterialEstimate__Model=${MATERIAL_ESTIMATE_MODEL:-gemma4-31b}
     volumes:
       - ./api:/app
       # api.csproj references ../SiteSpeak.Logic — must exist beside /app in the container

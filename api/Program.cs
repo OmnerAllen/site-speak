@@ -1,6 +1,8 @@
 using System.Text.Json;
+using Microsoft.Extensions.Options;
 using SiteSpeak.Chat;
 using SiteSpeak.Estimates;
+using SiteSpeak.Geo;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -11,6 +13,14 @@ builder.Services.ConfigureHttpJsonOptions(o =>
 
 builder.Services.Configure<MaterialEstimateOptions>(
     builder.Configuration.GetSection(MaterialEstimateOptions.SectionName));
+builder.Services.Configure<GeocodingOptions>(
+    builder.Configuration.GetSection(GeocodingOptions.SectionName));
+builder.Services.AddHttpClient<IGeocoder, NominatimGeocoder>((sp, client) =>
+{
+    var o = sp.GetRequiredService<IOptions<GeocodingOptions>>().Value;
+    client.BaseAddress = new Uri(o.BaseUrl.TrimEnd('/') + "/");
+    client.Timeout = TimeSpan.FromSeconds(90);
+});
 builder.Services.AddHttpClient();
 builder.Services.AddHttpClient("MaterialEstimateLlm", client =>
 {

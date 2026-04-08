@@ -55,9 +55,22 @@ export const api = {
     apiFetch<void>(`/suppliers/${id}`, { method: "DELETE" }),
 
   getEquipment: () => apiFetch<Equipment[]>("/equipment"),
-  createEquipment: (body: Omit<Equipment, "id">) =>
+  createEquipment: (body: {
+    name: string;
+    costPerDay: number;
+    costHalfDay: number;
+    rentalSupplierId: string;
+  }) =>
     apiFetch<Equipment>("/equipment", { method: "POST", body: JSON.stringify(body) }),
-  updateEquipment: (id: string, body: Omit<Equipment, "id">) =>
+  updateEquipment: (
+    id: string,
+    body: {
+      name: string;
+      costPerDay: number;
+      costHalfDay: number;
+      rentalSupplierId: string;
+    },
+  ) =>
     apiFetch<Equipment>(`/equipment/${id}`, { method: "PUT", body: JSON.stringify(body) }),
   deleteEquipment: (id: string) =>
     apiFetch<void>(`/equipment/${id}`, { method: "DELETE" }),

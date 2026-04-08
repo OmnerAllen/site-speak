@@ -149,6 +149,10 @@ export const ProjectMaterialEstimateSection = forwardRef<ProjectMaterialEstimate
       onSuccess: (data) => {
         setDraft(estimateToDraft(data));
         setWarnings(data.warnings ?? []);
+        if (data.llmRawContent) {
+          // Dev-only echo from API; use to fix prompts or parser when estimates fail.
+          console.info("[material-estimate] LLM message content:\n", data.llmRawContent);
+        }
         toast.success("Estimate generated. Review and apply when ready.");
       },
       onError: () => {

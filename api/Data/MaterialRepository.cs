@@ -8,7 +8,8 @@ public class MaterialRepository(NpgsqlDataSource dataSource)
     {
         return dataSource.QueryAsync(
             """
-            SELECT m.id, m.product_name, s.id, s.name, COALESCE(s.address, ''), m.unit, m.product_type, m.price_per_unit
+            SELECT m.id, m.product_name, s.id, s.name, COALESCE(s.address, ''),
+                   s.latitude, s.longitude, m.unit, m.product_type, m.price_per_unit
             FROM material m
             LEFT JOIN supplier s ON s.id = m.supplier_id AND s.deleted_at IS NULL
             WHERE m.deleted_at IS NULL
@@ -23,9 +24,11 @@ public class MaterialRepository(NpgsqlDataSource dataSource)
                     supplierId,
                     reader.IsDBNull(3) ? "" : reader.GetString(3),
                     reader.GetString(4),
-                    reader.IsDBNull(5) ? "" : reader.GetString(5),
-                    reader.IsDBNull(6) ? "" : reader.GetString(6),
-                    reader.IsDBNull(7) ? 0m : reader.GetDecimal(7));
+                    reader.IsDBNull(5) ? null : reader.GetDouble(5),
+                    reader.IsDBNull(6) ? null : reader.GetDouble(6),
+                    reader.IsDBNull(7) ? "" : reader.GetString(7),
+                    reader.IsDBNull(8) ? "" : reader.GetString(8),
+                    reader.IsDBNull(9) ? 0m : reader.GetDecimal(9));
             },
             cancellationToken: cancellationToken);
     }

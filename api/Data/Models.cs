@@ -8,9 +8,17 @@ public record UserMeResponse(
     IReadOnlyList<string> Roles,
     IReadOnlyList<string> Permissions);
 
-public record SupplierDto(Guid Id, string Name, string Address, string Phone);
+public record SupplierDto(Guid Id, string Name, string Address, string Phone, double? Latitude, double? Longitude);
 
-public record EquipmentDto(Guid Id, string Name, decimal CostPerDay, decimal CostHalfDay, string PlaceToRentFrom);
+public record EquipmentDto(
+    Guid Id,
+    string Name,
+    decimal CostPerDay,
+    decimal CostHalfDay,
+    Guid? RentalSupplierId,
+    string RentalSupplierName,
+    double? RentalSupplierLatitude,
+    double? RentalSupplierLongitude);
 
 public record MaterialListItemDto(
     Guid Id,
@@ -27,6 +35,8 @@ public record MaterialCatalogItemDto(
     Guid? SupplierId,
     string SupplierName,
     string SupplierAddress,
+    double? SupplierLatitude,
+    double? SupplierLongitude,
     string Unit,
     string ProductType,
     decimal PricePerUnit);
@@ -36,6 +46,8 @@ public record ProjectDto(
     string Name,
     string Address,
     string Overview,
+    double? Latitude,
+    double? Longitude,
     DateTime CreatedAt,
     DateTime UpdatedAt,
     string? PlannedStartDate,
@@ -91,6 +103,8 @@ public record ProjectDetailsResponse(
     string Name,
     string Address,
     string Overview,
+    double? Latitude,
+    double? Longitude,
     DateTime CreatedAt,
     DateTime UpdatedAt,
     IReadOnlyList<StageDto> Stages);
@@ -124,7 +138,8 @@ public record ProjectStageResourcesResponse(IReadOnlyList<StageResourcesStageDto
 /// <summary>API response for POST material-estimate (enriched for UI).</summary>
 public record MaterialEstimateApiResponse(
     IReadOnlyList<MaterialEstimateStageApiDto> Stages,
-    IReadOnlyList<string> Warnings);
+    IReadOnlyList<string> Warnings,
+    string? LlmRawContent = null);
 
 public record MaterialEstimateStageApiDto(
     string Name,
