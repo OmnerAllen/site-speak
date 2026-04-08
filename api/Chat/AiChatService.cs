@@ -1,21 +1,11 @@
-using System.Net.Http.Json;
-using System.Text.Json;
-using System.Text.Json.Serialization;
-using Microsoft.Extensions.Options;
-using SiteSpeak.Estimates;
+using SiteSpeak.Llm;
 
 namespace SiteSpeak.Chat;
 
-public sealed class AiChatService(
-    IHttpClientFactory httpClientFactory,
-    IOptions<MaterialEstimateOptions> options)
+public sealed class AiChatService(ILlmChatClient llm)
 {
     private const int MaxMessages = 40;
     private const int MaxCharsPerMessage = 32_000;
-
-    private readonly MaterialEstimateOptions _options = options.Value;
-
-    private HttpClient Http => httpClientFactory.CreateClient("MaterialEstimateLlm");
 
     /// <summary>Plain chat completions (small JSON body — no material/equipment catalogs).</summary>
     public async Task<(string? Reply, string? Error)> ChatAsync(
@@ -28,7 +18,7 @@ public sealed class AiChatService(
         if (messages.Count > MaxMessages)
             return (null, $"At most {MaxMessages} messages are allowed.");
 
-        var normalized = new List<object>(messages.Count);
+        var normalized = new List<LlmChatMessage>(messages.Count);
         foreach (var m in messages)
         {
             var role = NormalizeRole(m.Role);
@@ -39,70 +29,10 @@ public sealed class AiChatService(
             if (content.Length > MaxCharsPerMessage)
                 return (null, $"Each message must be at most {MaxCharsPerMessage} characters.");
 
-            normalized.Add(new { role, content });
+            normalized.Add(new LlmChatMessage(role, content));
         }
 
-        var url = _options.ChatCompletionsUrl.Trim();
-        var payload = new
-        {
-            model = _options.Model,
-            messages = normalized,
-        };
-
-        using var req = new HttpRequestMessage(HttpMethod.Post, url);
-        req.Content = JsonContent.Create(payload, options: new JsonSerializerOptions
-        {
-            DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
-        });
-
-        HttpResponseMessage res;
-        try
-        {
-            res = await Http.SendAsync(req, cancellationToken);
-        }
-        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or IOException)
-        {
-            var detail = ex.InnerException?.Message is { } inner ? $"{ex.Message} ({inner})" : ex.Message;
-            return (null, $"Could not reach the language model: {detail}");
-        }
-
-        var body = await res.Content.ReadAsStringAsync(cancellationToken);
-        if (!res.IsSuccessStatusCode)
-        {
-            var snippet = body.Length > 400 ? body[..400] + "…" : body;
-            return (null, $"Language model returned HTTP {(int)res.StatusCode}. {snippet}");
-        }
-
-        JsonDocument doc;
-        try
-        {
-            doc = JsonDocument.Parse(body);
-        }
-        catch (JsonException ex)
-        {
-            return (null, $"Language model response was not valid JSON: {ex.Message}");
-        }
-
-        using (doc)
-        {
-            if (!doc.RootElement.TryGetProperty("choices", out var choices) || choices.GetArrayLength() == 0)
-            {
-                var snippet = body.Length > 400 ? body[..400] + "…" : body;
-                return (null, $"Unexpected response (no choices). Snippet: {snippet}");
-            }
-
-            var first = choices[0];
-            if (!first.TryGetProperty("message", out var message))
-                return (null, "Response missing message.");
-
-            if (message.TryGetProperty("content", out var contentEl))
-            {
-                var text = contentEl.GetString();
-                return (text ?? "", null);
-            }
-
-            return (null, "Response message missing content.");
-        }
+        return await llm.CompleteAsync(normalized, jsonObjectResponse: false, cancellationToken);
     }
 
     private static string? NormalizeRole(string? role)

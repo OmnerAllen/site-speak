@@ -1,16 +1,15 @@
 using System.Linq;
-using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
-using System.Text.Json.Serialization;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using SiteSpeak.Logic;
+using SiteSpeak.Llm;
 
 namespace SiteSpeak.Estimates;
 
 public sealed class MaterialEstimateService(
-    IHttpClientFactory httpClientFactory,
+    ILlmChatClient llm,
     IOptions<MaterialEstimateOptions> options,
     MaterialRepository materials,
     EquipmentRepository equipment,
@@ -19,8 +18,6 @@ public sealed class MaterialEstimateService(
 {
     private readonly MaterialEstimateOptions _options = options.Value;
     private static readonly string[] StageOrder = ["demo", "prep", "build/install", "qa"];
-
-    private HttpClient LlmHttp => httpClientFactory.CreateClient("MaterialEstimateLlm");
 
     public async Task<MaterialEstimateApiResponse?> RunEstimateAsync(
         Guid projectId,
@@ -114,7 +111,13 @@ public sealed class MaterialEstimateService(
         var systemPrompt = BuildSystemPrompt(radiusMiles);
         var userPrompt = BuildUserPrompt(details, catalog, allEquipment, request, radiusMiles);
 
-        var (json, llmError) = await CallLlmJsonAsync(systemPrompt, userPrompt, cancellationToken);
+        var messages = new[]
+        {
+            new LlmChatMessage("system", systemPrompt),
+            new LlmChatMessage("user", userPrompt),
+        };
+        var (json, rawLlmError) = await llm.CompleteAsync(messages, jsonObjectResponse: true, cancellationToken);
+        var llmError = rawLlmError is not null ? AppendCatalogHintIfReachability(rawLlmError) : null;
         if (json is null)
         {
             warnings.Add(llmError ?? "Language model did not return usable JSON.");
@@ -310,83 +313,8 @@ public sealed class MaterialEstimateService(
         _ => 99,
     };
 
-    private async Task<(string? Content, string? ErrorHint)> CallLlmJsonAsync(
-        string systemPrompt,
-        string userPrompt,
-        CancellationToken cancellationToken)
-    {
-        var url = _options.ChatCompletionsUrl.Trim();
-        var payload = new
-        {
-            model = _options.Model,
-            messages = new object[]
-            {
-                new { role = "system", content = systemPrompt },
-                new { role = "user", content = userPrompt },
-            },
-            response_format = new { type = "json_object" },
-        };
-
-        using var req = new HttpRequestMessage(HttpMethod.Post, url);
-        req.Content = JsonContent.Create(payload, options: new JsonSerializerOptions
-        {
-            DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
-        });
-
-        HttpResponseMessage res;
-        try
-        {
-            res = await LlmHttp.SendAsync(req, cancellationToken);
-        }
-        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or IOException)
-        {
-            var detail = ex.InnerException?.Message is { } inner ? $"{ex.Message} ({inner})" : ex.Message;
-            return (null,
-                $"Could not reach the language model at {url}: {detail}. " +
-                "Common causes: request body too large (full catalogs), server/proxy body limit, network drop mid-transfer, or timeout — try a smaller catalog test.");
-        }
-
-        var body = await res.Content.ReadAsStringAsync(cancellationToken);
-        if (!res.IsSuccessStatusCode)
-        {
-            var snippet = body.Length > 400 ? body[..400] + "…" : body;
-            return (null, $"Language model returned HTTP {(int)res.StatusCode}. Body: {snippet}");
-        }
-
-        JsonDocument doc;
-        try
-        {
-            doc = JsonDocument.Parse(body);
-        }
-        catch (JsonException ex)
-        {
-            return (null, $"Language model response was not valid JSON: {ex.Message}");
-        }
-
-        using (doc)
-        {
-            if (!doc.RootElement.TryGetProperty("choices", out var choices) || choices.GetArrayLength() == 0)
-            {
-                var snippet = body.Length > 400 ? body[..400] + "…" : body;
-                return (null, $"Language model JSON had no choices[] (unexpected shape). Snippet: {snippet}");
-            }
-
-            var first = choices[0];
-            if (!first.TryGetProperty("message", out var message))
-            {
-                return (null, "Language model response: choices[0] missing message.");
-            }
-
-            if (message.TryGetProperty("content", out var contentEl))
-            {
-                var text = contentEl.GetString();
-                if (!string.IsNullOrWhiteSpace(text))
-                    return (text, null);
-
-                return (null, "Language model returned empty message content.");
-            }
-
-            return (null, "Language model response: message missing content (some servers use a different schema).");
-        }
-    }
+    private static string AppendCatalogHintIfReachability(string error) =>
+        error.StartsWith("Could not reach the language model at", StringComparison.Ordinal)
+            ? error + " For material estimates: large catalog payloads or slow uploads can contribute — try a smaller radius test."
+            : error;
 }

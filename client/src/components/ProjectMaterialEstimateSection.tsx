@@ -117,7 +117,9 @@ export const ProjectMaterialEstimateSection = forwardRef<ProjectMaterialEstimate
     const [warnings, setWarnings] = useState<string[]>([]);
 
     const getPromptRef = useRef(getEditorPrompt);
-    getPromptRef.current = getEditorPrompt;
+    useEffect(() => {
+      getPromptRef.current = getEditorPrompt;
+    }, [getEditorPrompt]);
 
     const { data: resources, isLoading: loadingResources } = useQuery({
       queryKey: ["stage-resources", projectId],
@@ -130,7 +132,8 @@ export const ProjectMaterialEstimateSection = forwardRef<ProjectMaterialEstimate
     }, []);
 
     useEffect(() => {
-      if (resources) resetDraftFromServer(resources);
+      if (!resources) return;
+      queueMicrotask(() => resetDraftFromServer(resources));
     }, [resources, resetDraftFromServer]);
 
     const estimateMutation = useMutation({
@@ -161,7 +164,9 @@ export const ProjectMaterialEstimateSection = forwardRef<ProjectMaterialEstimate
     });
 
     const mutateEstimateRef = useRef(estimateMutation.mutate);
-    mutateEstimateRef.current = estimateMutation.mutate;
+    useEffect(() => {
+      mutateEstimateRef.current = estimateMutation.mutate;
+    }, [estimateMutation.mutate]);
 
     useImperativeHandle(ref, () => ({
       runEstimate: () => {

@@ -29,6 +29,9 @@ spec:
           value: Host=postgres-service;Port=5432;Database=$(POSTGRES_DB);Username=$(POSTGRES_USER);Password=$(POSTGRES_PASSWORD)
         - name: OTEL_EXPORTER_OTLP_ENDPOINT
           value: http://otel-collector:4318
+        # Substituted by CI (envsubst); must match client image build arg AI_CHAT_ENABLED.
+        - name: Features__AiChatEnabled
+          value: "${AI_CHAT_ENABLED}"
         envFrom:
         - secretRef:
             name: postgres-secret

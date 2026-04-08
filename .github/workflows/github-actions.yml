@@ -8,6 +8,13 @@ on:
       - main
     types: [opened, synchronize, closed]
   workflow_dispatch:
+    inputs:
+      ai_chat_enabled:
+        description: >-
+          Enable AI chat (project-details panel + API). Push/PR builds use repository variable
+          AI_CHAT_ENABLED instead (set to false to disable).
+        type: boolean
+        default: true
 
 jobs:
   cleanup-pr-namespace:
@@ -22,6 +29,9 @@ jobs:
   site-speak-deploy:
     if: github.event_name != 'pull_request' || github.event.action != 'closed'
     runs-on: self-hosted
+    # Single knob: repository variable AI_CHAT_ENABLED=false disables chat, or override on workflow_dispatch.
+    env:
+      AI_CHAT_ENABLED: ${{ github.event_name == 'workflow_dispatch' && (inputs.ai_chat_enabled && 'true' || 'false') || (vars.AI_CHAT_ENABLED == 'false' && 'false' || 'true') }}
     permissions:
       pull-requests: write
     steps:
@@ -71,6 +81,11 @@ jobs:
       - name: build and push client Docker image
         run: |
           docker build --build-arg VITE_CLIENT_ID=$CLIENT_ID -t omallen/site-speak:0.0.$GITHUB_RUN_NUMBER -f Dockerfile.client .
+          echo "AI_CHAT_ENABLED=$AI_CHAT_ENABLED (client Vite + API Deployment)"
+          docker build \
+            --build-arg "AI_CHAT_ENABLED=$AI_CHAT_ENABLED" \
+            -t omallen/site-speak:0.0.$GITHUB_RUN_NUMBER \
+            -f Dockerfile.client .
           docker push omallen/site-speak:0.0.$GITHUB_RUN_NUMBER
 
       - name: build and push API Docker image
