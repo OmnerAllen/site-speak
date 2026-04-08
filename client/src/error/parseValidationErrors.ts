@@ -21,8 +21,8 @@ export function parseValidationErrors(error: unknown): Record<string, string> {
   if (error instanceof ApiError && error.status === 400) {
     const details = error.details;
     
-    if (details && typeof details === "object") {
-      const errors = details.errors;
+    if (details && typeof details === "object" && "errors" in details) {
+      const errors = details.errors as Record<string, unknown>;
       
       if (errors && typeof errors === "object") {
         for (const [key, messages] of Object.entries(errors)) {
