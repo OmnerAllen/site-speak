@@ -1,10 +1,14 @@
 using System.Security.Claims;
 using Microsoft.Extensions.Logging;
 using SiteSpeak.Estimates;
+using SiteSpeak.Geo;
 using SiteSpeak.Logic;
 
 public static class ProjectEndpoints
 {
+    private const string GeocodeFailedMessage =
+        "Address could not be geocoded. Check the address and try again.";
+
     public static WebApplication MapProjectEndpoints(this WebApplication app)
     {
         app.MapGet("/my/projects", async (ClaimsPrincipal user, ProjectRepository projects) =>
@@ -31,7 +35,7 @@ public static class ProjectEndpoints
             return Results.Ok(list);
         }).RequireAuthorization();
 
-        app.MapPost("/my/projects", async (ClaimsPrincipal user, ProjectBody body, ProjectRepository projects, ILogger<Program> logger) =>
+        app.MapPost("/my/projects", async (ClaimsPrincipal user, ProjectBody body, ProjectRepository projects, IGeocoder geocoder, ILogger<Program> logger, CancellationToken cancellationToken) =>
         {
             var sub = user.FindFirstValue("sub");
             if (sub is null) return Results.Unauthorized();
@@ -39,7 +43,12 @@ public static class ProjectEndpoints
             var companyId = await projects.GetCompanyIdForKeycloakSubAsync(sub);
             if (companyId is null) return Results.BadRequest(new { error = "No company assigned" });
 
-            var created = await projects.CreateAsync(companyId.Value, body);
+            var pt = await geocoder.GeocodeAsync(body.Address, cancellationToken);
+            if (pt is null)
+                return Results.BadRequest(new { error = GeocodeFailedMessage });
+            var g = pt.Value;
+
+            var created = await projects.CreateAsync(companyId.Value, body, g.Latitude, g.Longitude, cancellationToken);
             if (created is null) return Results.Problem("Failed to create project.");
 
             var email = user.FindFirstValue("email") ?? user.FindFirstValue("preferred_username") ?? "Unknown";
@@ -48,7 +57,7 @@ public static class ProjectEndpoints
             return Results.Created($"/projects/{created.Id}", created);
         }).RequireAuthorization();
 
-        app.MapPut("/projects/{id:guid}", async (Guid id, ClaimsPrincipal user, ProjectBody body, ProjectRepository projects) =>
+        app.MapPut("/projects/{id:guid}", async (Guid id, ClaimsPrincipal user, ProjectBody body, ProjectRepository projects, IGeocoder geocoder, CancellationToken cancellationToken) =>
         {
             var sub = user.FindFirstValue("sub");
             if (sub is null) return Results.Unauthorized();
@@ -56,7 +65,12 @@ public static class ProjectEndpoints
             var companyId = await projects.GetCompanyIdForKeycloakSubAsync(sub);
             if (companyId is null) return Results.BadRequest(new { error = "No company assigned" });
 
-            var updated = await projects.UpdateAsync(id, companyId.Value, body);
+            var pt = await geocoder.GeocodeAsync(body.Address, cancellationToken);
+            if (pt is null)
+                return Results.BadRequest(new { error = GeocodeFailedMessage });
+            var g = pt.Value;
+
+            var updated = await projects.UpdateAsync(id, companyId.Value, body, g.Latitude, g.Longitude, cancellationToken);
             if (updated is null) return Results.NotFound();
             return Results.Ok(updated);
         }).RequireAuthorization();
@@ -91,7 +105,7 @@ public static class ProjectEndpoints
             return details is null ? Results.NotFound() : Results.Ok(details);
         }).RequireAuthorization();
 
-        app.MapPut("/my/projects/{id:guid}/details", async (Guid id, ClaimsPrincipal user, ProjectDetailsBody body, ProjectRepository projects) =>
+        app.MapPut("/my/projects/{id:guid}/details", async (Guid id, ClaimsPrincipal user, ProjectDetailsBody body, ProjectRepository projects, IGeocoder geocoder, CancellationToken cancellationToken) =>
         {
             var sub = user.FindFirstValue("sub");
             if (sub is null) return Results.Unauthorized();
@@ -99,7 +113,31 @@ public static class ProjectEndpoints
             var companyId = await projects.GetCompanyIdForKeycloakSubAsync(sub);
             if (companyId is null) return Results.BadRequest(new { error = "No company assigned" });
 
-            var result = await projects.UpdateDetailsAsync(id, companyId.Value, body);
+            var existing = await projects.GetDetailsAsync(id, companyId.Value, cancellationToken);
+            if (existing is null)
+                return Results.NotFound();
+
+            double latitude;
+            double longitude;
+            var incoming = body.Address.Trim();
+            var stored = existing.Address.Trim();
+            if (string.Equals(stored, incoming, StringComparison.Ordinal)
+                && existing.Latitude.HasValue
+                && existing.Longitude.HasValue)
+            {
+                latitude = existing.Latitude.Value;
+                longitude = existing.Longitude.Value;
+            }
+            else
+            {
+                var pt = await geocoder.GeocodeAsync(body.Address, cancellationToken);
+                if (pt is null)
+                    return Results.BadRequest(new { error = GeocodeFailedMessage });
+                latitude = pt.Value.Latitude;
+                longitude = pt.Value.Longitude;
+            }
+
+            var result = await projects.UpdateDetailsAsync(id, companyId.Value, body, latitude, longitude, cancellationToken);
             return result switch
             {
                 ProjectDetailsUpdateResult.Ok => Results.NoContent(),

@@ -17,12 +17,12 @@ INSERT INTO employee (company_id, name, type) VALUES
   ((SELECT id FROM company WHERE name = 'Summit Builders LLC'), 'Marcus Webb', 'worker'),
   ((SELECT id FROM company WHERE name = 'Summit Builders LLC'), 'Kelsey Park', 'worker');
 
--- Projects
-INSERT INTO project (company_id, name, address) VALUES
-  ((SELECT id FROM company WHERE name = 'Summit Builders LLC'), 'Highland Estates Remodel', '482 North 1200 East, Lehi, UT 84043'),
-  ((SELECT id FROM company WHERE name = 'Summit Builders LLC'), 'Riverside Office Build-Out', '210 West River Road, Spanish Fork, UT 84660'),
-  ((SELECT id FROM company WHERE name = 'Summit Builders LLC'), 'Cedar Hills Custom Home', '9871 Canyon Road, Cedar Hills, UT 84062'),
-  ((SELECT id FROM company WHERE name = 'Summit Builders LLC'), 'Downtown Orem Renovation', '55 East Center Street, Orem, UT 84057');
+-- Projects (lat/lon geocoded for Utah Valley sample addresses)
+INSERT INTO project (company_id, name, address, latitude, longitude) VALUES
+  ((SELECT id FROM company WHERE name = 'Summit Builders LLC'), 'Highland Estates Remodel', '482 North 1200 East, Lehi, UT 84043', 40.4058, -111.8508),
+  ((SELECT id FROM company WHERE name = 'Summit Builders LLC'), 'Riverside Office Build-Out', '210 West River Road, Spanish Fork, UT 84660', 40.1050, -111.6539),
+  ((SELECT id FROM company WHERE name = 'Summit Builders LLC'), 'Cedar Hills Custom Home', '9871 Canyon Road, Cedar Hills, UT 84062', 40.4147, -111.7535),
+  ((SELECT id FROM company WHERE name = 'Summit Builders LLC'), 'Downtown Orem Renovation', '55 East Center Street, Orem, UT 84057', 40.2969, -111.6946);
 
 -- Stages for each project (all four stages per project)
 INSERT INTO stage (project_id, name) VALUES

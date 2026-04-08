@@ -3,6 +3,7 @@ using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using SiteSpeak.Logic;
 
@@ -13,7 +14,8 @@ public sealed class MaterialEstimateService(
     IOptions<MaterialEstimateOptions> options,
     MaterialRepository materials,
     EquipmentRepository equipment,
-    ProjectRepository projects)
+    ProjectRepository projects,
+    IHostEnvironment hostEnvironment)
 {
     private readonly MaterialEstimateOptions _options = options.Value;
     private static readonly string[] StageOrder = ["demo", "prep", "build/install", "qa"];
@@ -41,7 +43,69 @@ public sealed class MaterialEstimateService(
         if (catalog.Count == 0 && allEquipment.Count == 0)
         {
             warnings.Add("No materials or equipment in the catalog.");
-            return EmptyResponse(warnings);
+            return EmptyResponse(warnings, null);
+        }
+
+        if (!details.Latitude.HasValue || !details.Longitude.HasValue)
+        {
+            warnings.Add("Project job site has no coordinates; distance filter was skipped (full catalog sent to the model).");
+        }
+        else
+        {
+            var jobLat = details.Latitude.Value;
+            var jobLon = details.Longitude.Value;
+            var matSkippedNoCoords = 0;
+            var matOutside = 0;
+            var filteredCatalog = new List<MaterialCatalogItemDto>();
+            foreach (var m in catalog)
+            {
+                if (!m.SupplierLatitude.HasValue || !m.SupplierLongitude.HasValue)
+                {
+                    matSkippedNoCoords++;
+                    continue;
+                }
+
+                if (GeoDistance.MilesBetween(jobLat, jobLon, m.SupplierLatitude.Value, m.SupplierLongitude.Value) <= radiusMiles)
+                    filteredCatalog.Add(m);
+                else
+                    matOutside++;
+            }
+
+            if (matSkippedNoCoords > 0)
+                warnings.Add($"{matSkippedNoCoords} material(s) omitted (supplier missing coordinates).");
+            if (matOutside > 0)
+                warnings.Add($"{matOutside} material(s) omitted (outside {radiusMiles:g} mi of job site).");
+
+            var eqSkippedNoCoords = 0;
+            var eqOutside = 0;
+            var filteredEquipment = new List<EquipmentDto>();
+            foreach (var e in allEquipment)
+            {
+                if (!e.RentalSupplierLatitude.HasValue || !e.RentalSupplierLongitude.HasValue)
+                {
+                    eqSkippedNoCoords++;
+                    continue;
+                }
+
+                if (GeoDistance.MilesBetween(jobLat, jobLon, e.RentalSupplierLatitude.Value, e.RentalSupplierLongitude.Value) <= radiusMiles)
+                    filteredEquipment.Add(e);
+                else
+                    eqOutside++;
+            }
+
+            if (eqSkippedNoCoords > 0)
+                warnings.Add($"{eqSkippedNoCoords} equipment row(s) omitted (rental supplier missing coordinates).");
+            if (eqOutside > 0)
+                warnings.Add($"{eqOutside} equipment row(s) omitted (outside {radiusMiles:g} mi of job site).");
+
+            catalog = filteredCatalog;
+            allEquipment = filteredEquipment;
+        }
+
+        if (catalog.Count == 0 && allEquipment.Count == 0)
+        {
+            warnings.Add("No materials or equipment remain after distance filtering for this job site and radius.");
+            return EmptyResponse(warnings, null);
         }
 
         var materialById = catalog.ToDictionary(m => m.Id);
@@ -54,15 +118,25 @@ public sealed class MaterialEstimateService(
         if (json is null)
         {
             warnings.Add(llmError ?? "Language model did not return usable JSON.");
-            return EmptyResponse(warnings);
+            return EmptyResponse(warnings, null);
         }
 
         var extracted = MaterialEstimateProposalJson.ExtractJsonObject(json) ?? json;
-        var proposal = MaterialEstimateProposalJson.TryParse(extracted);
-        if (proposal?.Stages is null)
+        var candidate = MaterialEstimateProposalJson.TryCoerceRootStagesJson(extracted) ?? extracted;
+        var proposal = MaterialEstimateProposalJson.TryParse(candidate);
+        if (proposal is null)
         {
-            warnings.Add("Failed to parse estimate JSON from the language model.");
-            return EmptyResponse(warnings);
+            var snippet = candidate.Length > 400 ? candidate[..400] + "…" : candidate;
+            warnings.Add($"Failed to parse estimate JSON (invalid JSON). Snippet: {snippet}");
+            return EmptyResponse(warnings, json);
+        }
+
+        if (proposal.Stages is null)
+        {
+            var snippet = candidate.Length > 400 ? candidate[..400] + "…" : candidate;
+            warnings.Add(
+                $"Failed to parse estimate JSON: root must include a non-null \"stages\" array. Snippet: {snippet}");
+            return EmptyResponse(warnings, json);
         }
 
         var allowedMaterialIds = materialById.Keys.ToHashSet();
@@ -109,14 +183,22 @@ public sealed class MaterialEstimateService(
             responseStages.Add(new MaterialEstimateStageApiDto(name, matLines, eqLines));
         }
 
-        return new MaterialEstimateApiResponse(responseStages, warnings);
+        return new MaterialEstimateApiResponse(responseStages, warnings, LlmDebugContent(json));
     }
 
-    private static MaterialEstimateApiResponse EmptyResponse(IReadOnlyList<string> warnings) =>
+    private string? LlmDebugContent(string? rawFromModel) =>
+        rawFromModel is not null
+        && hostEnvironment.IsDevelopment()
+        && _options.IncludeLlmRawContentInResponse
+            ? rawFromModel
+            : null;
+
+    private MaterialEstimateApiResponse EmptyResponse(IReadOnlyList<string> warnings, string? llmRawFromModel) =>
         new(
             StageOrder.Select(n => new MaterialEstimateStageApiDto(n, Array.Empty<MaterialEstimateMaterialLineApiDto>(),
                 Array.Empty<MaterialEstimateEquipmentLineApiDto>())).ToList(),
-            warnings);
+            warnings,
+            LlmDebugContent(llmRawFromModel));
 
     private static Dictionary<string, MaterialEstimateStageJson> MergeStages(
         List<MaterialEstimateStageJson>? stages)
@@ -148,15 +230,14 @@ public sealed class MaterialEstimateService(
     private static string BuildSystemPrompt(double radiusMiles) =>
         $"""
         You are a construction project assistant. You receive the job site address, a project overview, stage notes, and a JSON catalog of materials and equipment from the company inventory.
-        **Distance rule (soft):** The user wants sourcing within about **{radiusMiles:g} miles** of the project address. Use supplier addresses and equipment rental locations in the catalog to judge whether each item could plausibly be used for this job within that range. You do not have exact coordinates—use geographic reasoning from city, region, and country text. If an item is clearly too far away or location text is missing/ambiguous in a way that suggests it is not local to the job, **do not** include it. If nothing in the catalog fits the distance rule for a stage, use an empty array for that stage's materials and/or equipment.         When in doubt, prefer omitting an item over stretching distance.
-        Respond with ONLY a JSON object (no markdown): root key "stages" is an array of four objects with names demo, prep, build/install, qa; each has "materials" (materialId, quantity, optional note) and "equipment" (equipmentId, halfDay, optional note).
+        **Catalog scope:** The materials and equipment lists are already limited by the server to suppliers and rental yards within about **{radiusMiles:g} miles** of the job site (when coordinates are available). Use only IDs from those lists.
+        Respond with ONLY a JSON object (no markdown): root key "stages" is an array of four objects with names demo, prep, build/install, qa; each has "materials" (materialId, quantity, optional note) and "equipment" (equipmentId, halfDay as boolean true/false for half-day rental vs full day, optional note).
         Rules:
         - Include all four stage names exactly: demo, prep, build/install, qa.
         - Only use materialId and equipmentId values from the provided catalog lists.
         - Quantities must be positive decimals where relevant.
-        - Respect the distance rule above when choosing catalog rows.
         - If nothing applies to a stage, use empty arrays for materials and equipment.
-        - You may return empty arrays for every stage if nothing in the catalog fits the work and distance rule.
+        - You may return empty arrays for every stage if nothing in the catalog fits the work.
         """;
 
     private static string BuildUserPrompt(
@@ -170,7 +251,7 @@ public sealed class MaterialEstimateService(
         var stageOverrides = overrides?.Stages;
 
         var sb = new StringBuilder();
-        sb.AppendLine($"Target distance from job site: within approximately {radiusMiles:g} miles (apply the system distance rule).");
+        sb.AppendLine($"Target distance from job site: within approximately {radiusMiles:g} miles (catalog pre-filtered server-side when job coordinates exist).");
         sb.AppendLine("Project name: ").AppendLine(details.Name);
         sb.AppendLine("Project address (job site): ").AppendLine(details.Address);
         sb.AppendLine("Overview:").AppendLine(overview);
@@ -207,14 +288,14 @@ public sealed class MaterialEstimateService(
             supplierAddress = m.SupplierAddress,
         })));
 
-        sb.AppendLine("Equipment catalog (use only these equipmentId values):");
+        sb.AppendLine("Equipment catalog (use only these equipmentId values; rentalSupplier is the rental yard):");
         sb.AppendLine(JsonSerializer.Serialize(equipment.Select(e => new
         {
             e.Id,
             e.Name,
             e.CostPerDay,
             e.CostHalfDay,
-            placeToRentFrom = e.PlaceToRentFrom,
+            rentalSupplier = e.RentalSupplierName,
         })));
 
         return sb.ToString();

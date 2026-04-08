@@ -1,5 +1,5 @@
 public record SupplierBody(string Name, string Address, string? Phone);
-public record EquipmentBody(string Name, decimal CostPerDay, decimal CostHalfDay, string PlaceToRentFrom);
+public record EquipmentBody(string Name, decimal CostPerDay, decimal CostHalfDay, Guid RentalSupplierId);
 public record MaterialBody(string ProductName, string? SupplierName, string Unit, string ProductType, decimal PricePerUnit);
 public record ProjectBody(string Name, string Address, string? Overview = null);
 
@@ -17,7 +17,7 @@ public record ProjectDetailsBody(string Name, string Address, string? Overview, 
 /// <summary>POST /material-estimate. Optional overview/stages override unsaved editor text for the LLM prompt.</summary>
 public record MaterialEstimateRequestBody
 {
-    /// <summary>Max distance in miles (soft constraint for the model; not computed server-side). Default 50.</summary>
+    /// <summary>Max distance in miles for server-side catalog filtering (Haversine). Default 50.</summary>
     public double? RadiusMiles { get; init; }
     public string? Overview { get; init; }
     public List<MaterialEstimateStagePromptBody>? Stages { get; init; }

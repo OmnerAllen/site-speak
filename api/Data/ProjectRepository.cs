@@ -18,19 +18,21 @@ public class ProjectRepository(NpgsqlDataSource dataSource)
             reader.GetString(1),
             reader.GetString(2),
             reader.GetString(3),
-            reader.GetDateTime(4),
-            reader.GetDateTime(5),
-            ReadDateColumn(reader, 6),
-            ReadDateColumn(reader, 7));
+            reader.IsDBNull(4) ? null : reader.GetDouble(4),
+            reader.IsDBNull(5) ? null : reader.GetDouble(5),
+            reader.GetDateTime(6),
+            reader.GetDateTime(7),
+            ReadDateColumn(reader, 8),
+            ReadDateColumn(reader, 9));
 
     private const string ProjectDtoSelectDerived = """
-        p.id, p.name, p.address, p.overview, p.created_at, p.updated_at,
+        p.id, p.name, p.address, p.overview, p.latitude, p.longitude, p.created_at, p.updated_at,
           (SELECT MIN(s.planned_start) FROM stage s WHERE s.project_id = p.id AND s.deleted_at IS NULL),
           (SELECT MAX(s.planned_end) FROM stage s WHERE s.project_id = p.id AND s.deleted_at IS NULL)
         """;
 
     private const string ProjectDtoInsertReturningDerived = """
-        p.id, p.name, p.address, p.overview, p.created_at, p.updated_at,
+        p.id, p.name, p.address, p.overview, p.latitude, p.longitude, p.created_at, p.updated_at,
           (SELECT MIN(s.planned_start) FROM stage s WHERE s.project_id = p.id AND s.deleted_at IS NULL),
           (SELECT MAX(s.planned_end) FROM stage s WHERE s.project_id = p.id AND s.deleted_at IS NULL)
         """;
@@ -127,15 +129,20 @@ public class ProjectRepository(NpgsqlDataSource dataSource)
             cancellationToken: cancellationToken);
     }
 
-    public async Task<ProjectDto?> CreateAsync(Guid companyId, ProjectBody body, CancellationToken cancellationToken = default)
+    public async Task<ProjectDto?> CreateAsync(
+        Guid companyId,
+        ProjectBody body,
+        double latitude,
+        double longitude,
+        CancellationToken cancellationToken = default)
     {
         await using var conn = await dataSource.OpenConnectionAsync(cancellationToken);
         await using var tx = await conn.BeginTransactionAsync(cancellationToken);
 
         var dto = await conn.QuerySingleOrDefaultAsync(
             $"""
-            INSERT INTO project AS p (company_id, name, address, overview)
-            VALUES ($1, $2, $3, COALESCE($4, ''))
+            INSERT INTO project AS p (company_id, name, address, overview, latitude, longitude)
+            VALUES ($1, $2, $3, COALESCE($4, ''), $5, $6)
             RETURNING {ProjectDtoInsertReturningDerived}
             """,
             ReadProjectDto,
@@ -146,6 +153,8 @@ public class ProjectRepository(NpgsqlDataSource dataSource)
                 p.AddWithValue(body.Name);
                 p.AddWithValue(body.Address);
                 p.AddWithValue((object?)body.Overview ?? DBNull.Value);
+                p.AddWithValue(latitude);
+                p.AddWithValue(longitude);
             },
             isWrite: true,
             cancellationToken: cancellationToken);
@@ -161,12 +170,19 @@ public class ProjectRepository(NpgsqlDataSource dataSource)
         return dto;
     }
 
-    public Task<ProjectDto?> UpdateAsync(Guid id, Guid companyId, ProjectBody body, CancellationToken cancellationToken = default)
+    public Task<ProjectDto?> UpdateAsync(
+        Guid id,
+        Guid companyId,
+        ProjectBody body,
+        double latitude,
+        double longitude,
+        CancellationToken cancellationToken = default)
     {
         return dataSource.QuerySingleOrDefaultAsync(
             $"""
             UPDATE project AS p
-            SET name = $2, address = $3, overview = COALESCE($4, overview), updated_at = NOW()
+            SET name = $2, address = $3, overview = COALESCE($4, overview),
+                latitude = $6, longitude = $7, updated_at = NOW()
             WHERE p.id = $1 AND p.company_id = $5 AND p.deleted_at IS NULL
             RETURNING {ProjectDtoSelectDerived}
             """,
@@ -178,6 +194,8 @@ public class ProjectRepository(NpgsqlDataSource dataSource)
                 p.AddWithValue(body.Address);
                 p.AddWithValue((object?)body.Overview ?? DBNull.Value);
                 p.AddWithValue(companyId);
+                p.AddWithValue(latitude);
+                p.AddWithValue(longitude);
             },
             isWrite: true,
             cancellationToken: cancellationToken);
@@ -295,7 +313,7 @@ public class ProjectRepository(NpgsqlDataSource dataSource)
 
         var project = await conn.QuerySingleOrDefaultAsync(
             """
-            SELECT id, name, address, overview, created_at, updated_at
+            SELECT id, name, address, overview, latitude, longitude, created_at, updated_at
             FROM project
             WHERE id = $1 AND company_id = $2 AND deleted_at IS NULL
             """,
@@ -305,8 +323,10 @@ public class ProjectRepository(NpgsqlDataSource dataSource)
                 Name = reader.GetString(1),
                 Address = reader.GetString(2),
                 Overview = reader.GetString(3),
-                CreatedAt = reader.GetDateTime(4),
-                UpdatedAt = reader.GetDateTime(5),
+                Latitude = reader.IsDBNull(4) ? (double?)null : reader.GetDouble(4),
+                Longitude = reader.IsDBNull(5) ? (double?)null : reader.GetDouble(5),
+                CreatedAt = reader.GetDateTime(6),
+                UpdatedAt = reader.GetDateTime(7),
             },
             transaction: null,
             configureParameters: p =>
@@ -352,6 +372,8 @@ public class ProjectRepository(NpgsqlDataSource dataSource)
             project.Name,
             project.Address,
             project.Overview,
+            project.Latitude,
+            project.Longitude,
             project.CreatedAt,
             project.UpdatedAt,
             stages);
@@ -361,6 +383,8 @@ public class ProjectRepository(NpgsqlDataSource dataSource)
         Guid projectId,
         Guid companyId,
         ProjectDetailsBody body,
+        double latitude,
+        double longitude,
         CancellationToken cancellationToken = default)
     {
         var allowedStageNames = new HashSet<string>(StringComparer.Ordinal)
@@ -383,7 +407,8 @@ public class ProjectRepository(NpgsqlDataSource dataSource)
         var projectRows = await conn.ExecuteNonQueryAsync(
             """
             UPDATE project
-            SET name = $2, address = $3, overview = COALESCE($4, ''), updated_at = NOW()
+            SET name = $2, address = $3, overview = COALESCE($4, ''),
+                latitude = $6, longitude = $7, updated_at = NOW()
             WHERE id = $1 AND company_id = $5 AND deleted_at IS NULL
             """,
             tx,
@@ -394,6 +419,8 @@ public class ProjectRepository(NpgsqlDataSource dataSource)
                 p.AddWithValue(body.Address);
                 p.AddWithValue((object?)body.Overview ?? DBNull.Value);
                 p.AddWithValue(companyId);
+                p.AddWithValue(latitude);
+                p.AddWithValue(longitude);
             },
             cancellationToken: cancellationToken);
 

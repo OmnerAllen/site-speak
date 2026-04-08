@@ -1,49 +1,59 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
-  useSuspenseQuery,
   useMutation,
   useQueryClient,
+  useSuspenseQueries,
 } from "@tanstack/react-query";
 import toast from "react-hot-toast";
 import { DynamicForm } from "../components/DynamicForm";
 import { ResourceList } from "../components/ResourceList";
 import { ResourceNav } from "../components/ResourceNav";
 import { api } from "../api";
-import type { Equipment, FormFieldConfig } from "../types";
+import type { Equipment, FormFieldConfig, Supplier } from "../types";
 
-const EQUIPMENT_FIELDS: FormFieldConfig[] = [
-  {
-    type: "small-text",
-    label: "Name",
-    name: "name",
-    placeholder: "e.g. Mini Excavator (3.5 Ton)",
-    required: true,
-  },
-  {
-    type: "money",
-    label: "Cost Per Day",
-    name: "costPerDay",
-    placeholder: "0.00",
-    required: true,
-  },
-  {
-    type: "money",
-    label: "Cost Half Day",
-    name: "costHalfDay",
-    placeholder: "0.00",
-    required: true,
-  },
-  {
-    type: "small-text",
-    label: "Place to Rent From",
-    name: "placeToRentFrom",
-    placeholder: "e.g. United Rentals (Provo)",
-    required: true,
-  },
-];
+function buildEquipmentFields(suppliers: Supplier[]): FormFieldConfig[] {
+  return [
+    {
+      type: "small-text",
+      label: "Name",
+      name: "name",
+      placeholder: "e.g. Mini Excavator (3.5 Ton)",
+      required: true,
+    },
+    {
+      type: "money",
+      label: "Cost Per Day",
+      name: "costPerDay",
+      placeholder: "0.00",
+      required: true,
+    },
+    {
+      type: "money",
+      label: "Cost Half Day",
+      name: "costHalfDay",
+      placeholder: "0.00",
+      required: true,
+    },
+    {
+      type: "select",
+      label: "Rental supplier",
+      name: "rentalSupplierId",
+      required: true,
+      options: suppliers.map((s) => ({
+        value: s.id,
+        label: s.name,
+      })),
+    },
+  ];
+}
 
 function emptyFormValues(): Record<string, string> {
-  return { name: "", costPerDay: "", costHalfDay: "", placeToRentFrom: "" };
+  return {
+    name: "",
+    costPerDay: "",
+    costHalfDay: "",
+    rentalSupplierId: "",
+  };
 }
 
 function equipmentToFormValues(e: Equipment): Record<string, string> {
@@ -51,35 +61,62 @@ function equipmentToFormValues(e: Equipment): Record<string, string> {
     name: e.name,
     costPerDay: String(e.costPerDay),
     costHalfDay: String(e.costHalfDay),
-    placeToRentFrom: e.placeToRentFrom,
+    rentalSupplierId: e.rentalSupplierId ?? "",
   };
 }
 
 export default function EquipmentPage() {
   const queryClient = useQueryClient();
-  const { data: equipment } = useSuspenseQuery({
-    queryKey: ["equipment"],
-    queryFn: api.getEquipment,
+  const [{ data: equipment }, { data: suppliers }] = useSuspenseQueries({
+    queries: [
+      { queryKey: ["equipment"], queryFn: api.getEquipment },
+      { queryKey: ["suppliers"], queryFn: api.getSuppliers },
+    ],
   });
 
+  const fields = useMemo(
+    () => buildEquipmentFields(suppliers),
+    [suppliers],
+  );
+
   const createMutation = useMutation({
-    mutationFn: (body: Omit<Equipment, "id">) => api.createEquipment(body),
+    mutationFn: (body: {
+      name: string;
+      costPerDay: number;
+      costHalfDay: number;
+      rentalSupplierId: string;
+    }) => api.createEquipment(body),
     onSuccess: () => {
       toast.success("Equipment created successfully.");
       queryClient.invalidateQueries({ queryKey: ["equipment"] });
     },
+    onError: () => toast.error("Could not create equipment."),
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, ...body }: Equipment) => api.updateEquipment(id, body),
+    mutationFn: (args: {
+      id: string;
+      name: string;
+      costPerDay: number;
+      costHalfDay: number;
+      rentalSupplierId: string;
+    }) =>
+      api.updateEquipment(args.id, {
+        name: args.name,
+        costPerDay: args.costPerDay,
+        costHalfDay: args.costHalfDay,
+        rentalSupplierId: args.rentalSupplierId,
+      }),
     onSuccess: () =>
       queryClient.invalidateQueries({ queryKey: ["equipment"] }),
+    onError: () => toast.error("Could not update equipment."),
   });
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => api.deleteEquipment(id),
     onSuccess: () =>
       queryClient.invalidateQueries({ queryKey: ["equipment"] }),
+    onError: () => toast.error("Could not delete equipment."),
   });
 
   const [showForm, setShowForm] = useState(false);
@@ -107,17 +144,22 @@ export default function EquipmentPage() {
   };
 
   const handleSubmit = (values: Record<string, string>) => {
-    const body = {
+    if (!values.rentalSupplierId) {
+      toast.error("Choose a rental supplier.");
+      return;
+    }
+
+    const payload = {
       name: values.name,
       costPerDay: parseFloat(values.costPerDay) || 0,
       costHalfDay: parseFloat(values.costHalfDay) || 0,
-      placeToRentFrom: values.placeToRentFrom,
+      rentalSupplierId: values.rentalSupplierId,
     };
 
     if (editingId) {
-      updateMutation.mutate({ id: editingId, ...body });
+      updateMutation.mutate({ id: editingId, ...payload });
     } else {
-      createMutation.mutate(body);
+      createMutation.mutate(payload);
     }
     handleCancel();
   };
@@ -140,7 +182,7 @@ export default function EquipmentPage() {
         <div className="mb-8">
           <h2 className="text-lg font-semibold text-brick-200 mb-4">New Equipment</h2>
           <DynamicForm
-            fields={EQUIPMENT_FIELDS}
+            fields={fields}
             values={formValues}
             onChange={(name, value) =>
               setFormValues((prev) => ({ ...prev, [name]: value }))
@@ -172,7 +214,7 @@ export default function EquipmentPage() {
               </span>
             ),
           },
-          { label: "Rental", value: (e) => e.placeToRentFrom },
+          { label: "Rental", value: (e) => e.rentalSupplierName || "—" },
         ]}
         onItemClick={handleEdit}
         onEdit={handleEdit}
@@ -180,7 +222,7 @@ export default function EquipmentPage() {
         editingId={editingId || undefined}
         renderEditForm={() => (
           <DynamicForm
-            fields={EQUIPMENT_FIELDS}
+            fields={fields}
             values={formValues}
             onChange={(name, value) =>
               setFormValues((prev) => ({ ...prev, [name]: value }))

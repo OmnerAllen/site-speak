@@ -3,6 +3,8 @@ export interface Project {
   name: string;
   address: string;
   overview: string;
+  latitude: number | null;
+  longitude: number | null;
   createdAt: string;
   updatedAt: string;
   plannedStartDate: string | null;
@@ -59,6 +61,8 @@ export interface ProjectDetails {
   name: string;
   address: string;
   overview: string;
+  latitude: number | null;
+  longitude: number | null;
   createdAt: string;
   updatedAt: string;
   stages: ProjectStage[];
@@ -78,7 +82,10 @@ export interface Equipment {
   name: string;
   costPerDay: number;
   costHalfDay: number;
-  placeToRentFrom: string;
+  rentalSupplierId: string | null;
+  rentalSupplierName: string;
+  rentalSupplierLatitude: number | null;
+  rentalSupplierLongitude: number | null;
 }
 
 export interface Supplier {
@@ -86,6 +93,8 @@ export interface Supplier {
   name: string;
   address: string;
   phone: string;
+  latitude: number | null;
+  longitude: number | null;
 }
 
 export type FormFieldType =
@@ -132,7 +141,7 @@ export interface StageResourcesPutBody {
 
 /** Body for POST /material-estimate (optional text overrides unsaved editor content). */
 export interface MaterialEstimateRequestBody {
-  /** Soft distance hint for the model (miles); not computed server-side. Default 50. */
+  /** Server-side distance filter (miles) before calling the model. Default 50. */
   radiusMiles?: number;
   overview?: string;
   stages?: Array<{ name: string; details?: string; notes?: string }>;
@@ -163,6 +172,8 @@ export interface MaterialEstimateResponse {
     }>;
   }>;
   warnings: string[];
+  /** Present in Development when API is configured to echo the model message (debugging). */
+  llmRawContent?: string | null;
 }
 
 export interface UserProfile {
