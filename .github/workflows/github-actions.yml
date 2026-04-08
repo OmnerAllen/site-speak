@@ -17,7 +17,7 @@ jobs:
       - name: Delete PR Namespace
         run: |
           PR_USER=$(echo "${{ github.event.pull_request.user.login }}" | tr '[:upper:]' '[:lower:]')
-          kubectl delete namespace "site-speak-pr-${PR_USER}" --ignore-not-found
+          kubectl delete namespace "site-speak-pr-${PR_USER}-${{ github.event.pull_request.number }}" --ignore-not-found
 
   site-speak-deploy:
     if: github.event_name != 'pull_request' || github.event.action != 'closed'
@@ -29,8 +29,8 @@ jobs:
         run: |
           if [[ "${{ github.event_name }}" == "pull_request" ]]; then
             PR_USER=$(echo "${{ github.event.pull_request.user.login }}" | tr '[:upper:]' '[:lower:]')
-            echo "NAMESPACE=site-speak-pr-${PR_USER}" >> $GITHUB_ENV
-            echo "APP_HOST=${PR_USER}-pr.site-speak.duckdns.org" >> $GITHUB_ENV
+            echo "NAMESPACE=site-speak-pr-${PR_USER}-${{ github.event.pull_request.number }}" >> $GITHUB_ENV
+            echo "APP_HOST=${PR_USER}-pr-${{ github.event.pull_request.number }}.site-speak.duckdns.org" >> $GITHUB_ENV
           else
             echo "NAMESPACE=site-speak-prod" >> $GITHUB_ENV
             echo "APP_HOST=site-speak.duckdns.org" >> $GITHUB_ENV
