@@ -156,3 +156,17 @@ jobs:
                 body,
               });
             }
+
+  discord-notify:
+    name: Notify Discord on failure
+    needs: [site-speak-deploy]
+    if: ${{ always() && needs.site-speak-deploy.result == 'failure' }}
+    runs-on: self-hosted
+    steps:
+      - name: Post to Discord
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+        run: |
+          curl -sS -X POST "$DISCORD_WEBHOOK_URL" \
+            -H 'Content-Type: application/json' \
+            -d "{\"content\":\"❌ **Deploy site-speak** failed — ${{ github.repository }} @ ${{ github.ref_name }} — ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}\"}"
