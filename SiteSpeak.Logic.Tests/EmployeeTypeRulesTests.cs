@@ -19,10 +19,4 @@ public class EmployeeTypeRulesTests
     {
         Assert.False(EmployeeTypeRules.IsAllowed(type));
     }
-
-    [Fact]
-    public void Fail_miserably()
-    {
-        Assert.True(false);
-    }
 }
