@@ -156,3 +156,52 @@ jobs:
                 body,
               });
             }
+
+  discord-notify:
+    name: Notify Discord on failure
+    needs: [site-speak-deploy]
+    if: ${{ always() && needs.site-speak-deploy.result == 'failure' }}
+    runs-on: self-hosted
+    steps:
+      - name: Post to Discord
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          GH_EVENT_NAME: ${{ github.event_name }}
+          PR_TITLE: ${{ github.event.pull_request && github.event.pull_request.title || '' }}
+          PR_NUMBER: ${{ github.event.pull_request && github.event.pull_request.number || '' }}
+          PR_AUTHOR: ${{ github.event.pull_request && github.event.pull_request.user.login || '' }}
+        run: |
+          python3 << 'PY'
+          import json, os, sys, urllib.error, urllib.request
+
+          wh = (os.environ.get("DISCORD_WEBHOOK_URL") or "").strip()
+          if not wh:
+              print("DISCORD_WEBHOOK_URL is missing or empty (check repo Actions secrets).", file=sys.stderr)
+              sys.exit(1)
+
+          pr_title = (os.environ.get("PR_TITLE") or "").strip()
+          pr_number = (os.environ.get("PR_NUMBER") or "").strip()
+          pr_author = (os.environ.get("PR_AUTHOR") or "").strip()
+          if os.environ.get("GH_EVENT_NAME") == "pull_request" and pr_number:
+              title = pr_title if pr_title else "(no title)"
+              who = pr_author if pr_author else "(unknown)"
+              content = f"{title}\nPR #{pr_number}\nOpened by: {who}"
+          else:
+              content = "**site-speak pipeline failed**"
+
+          payload = json.dumps({"content": content}).encode()
+          req = urllib.request.Request(
+              wh,
+              data=payload,
+              headers={
+                  "Content-Type": "application/json",
+                  "User-Agent": "site-speak-github-actions/1.0",
+              },
+              method="POST",
+          )
+          try:
+              urllib.request.urlopen(req)
+          except urllib.error.HTTPError as e:
+              print(f"Discord returned {e.code}: {e.reason}. Check the webhook URL in Discord (Server Settings → Integrations → Webhooks) and repo secret DISCORD_WEBHOOK_URL.", file=sys.stderr)
+              raise
+          PY
