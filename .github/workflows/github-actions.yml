@@ -31,9 +31,11 @@ jobs:
             PR_USER=$(echo "${{ github.event.pull_request.user.login }}" | tr '[:upper:]' '[:lower:]')
             echo "NAMESPACE=site-speak-pr-${PR_USER}-${{ github.event.pull_request.number }}" >> $GITHUB_ENV
             echo "APP_HOST=${PR_USER}-pr-${{ github.event.pull_request.number }}.site-speak.duckdns.org" >> $GITHUB_ENV
+            echo "CLIENT_ID=site-speak-dev" >> $GITHUB_ENV
           else
             echo "NAMESPACE=site-speak-prod" >> $GITHUB_ENV
             echo "APP_HOST=site-speak.duckdns.org" >> $GITHUB_ENV
+            echo "CLIENT_ID=site-speak" >> $GITHUB_ENV
           fi
 
       - name: Check out repository code
@@ -62,7 +64,7 @@ jobs:
 
       - name: build and push client Docker image
         run: |
-          docker build -t omallen/site-speak:0.0.$GITHUB_RUN_NUMBER -f Dockerfile.client .
+          docker build --build-arg VITE_CLIENT_ID=$CLIENT_ID -t omallen/site-speak:0.0.$GITHUB_RUN_NUMBER -f Dockerfile.client .
           docker push omallen/site-speak:0.0.$GITHUB_RUN_NUMBER
 
       - name: build and push API Docker image
