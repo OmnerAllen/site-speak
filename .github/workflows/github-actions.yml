@@ -81,6 +81,15 @@ jobs:
       - name: Deploy namespace
         run: envsubst < kubernetes/0-namespace.yml | kubectl apply -f -
 
+      - name: Copy TLS secret to PR namespace
+        run: |
+          if [[ "$NAMESPACE" != "site-speak-prod" ]]; then
+            kubectl get secret sitespeak-wildcard-tls -n site-speak-prod -o json | \
+            jq 'del(.metadata["namespace","creationTimestamp","resourceVersion","uid"])' | \
+            kubectl apply -n $NAMESPACE -f - || echo "TLS secret copy failed or not found in prod"
+          fi
+
+
       - name: Create Postgres init-sql ConfigMap
         run: |
           kubectl create configmap init-sql \
