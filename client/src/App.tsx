@@ -15,7 +15,7 @@ import Suppliers from "./pages/Suppliers";
 import EmployeesPage from "./pages/Employees";
 import WorkLogsPage from "./pages/WorkLogs";
 import ProjectSchedulePage from "./pages/ProjectSchedule";
-import { usePageTelemetry } from "./telemetry/usePageTelemetry";
+import { usePageTelemetry, logFrontendError } from "./telemetry/usePageTelemetry";
 
 function PageTelemetry() {
   usePageTelemetry();
@@ -27,7 +27,10 @@ export default function App() {
     <Layout>
       <PageTelemetry />
       <Toaster />
-      <ErrorBoundary FallbackComponent={ErrorFallback}>
+      <ErrorBoundary 
+        FallbackComponent={ErrorFallback}
+        onError={(error, info) => logFrontendError(error, { componentStack: info?.componentStack, source: 'error-boundary' })}
+      >
         <Suspense
           fallback={
             <div className="p-8 text-center text-brick-300 animate-pulse">

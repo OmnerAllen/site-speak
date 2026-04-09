@@ -5,6 +5,23 @@ import { useLocation } from "react-router-dom";
 let initialLoadRecorded = false;
 let lastPathSeen: string | null = null;
 
+export function logFrontendError(error: unknown, additionalContext?: Record<string, unknown>) {
+  const payload = {
+    message: error instanceof Error ? error.message : String(error),
+    stack: error instanceof Error ? error.stack : undefined,
+    url: window.location.href,
+    userAgent: navigator.userAgent,
+    ...additionalContext,
+  };
+
+  void fetch("/api/telemetry/frontend-error", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+    keepalive: true,
+  })
+}
+
 function postPageView(kind: "first_load" | "navigation", page: string) {
   void fetch("/api/telemetry/page-view", {
     method: "POST",
