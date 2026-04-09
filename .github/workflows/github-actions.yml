@@ -166,7 +166,32 @@ jobs:
       - name: Post to Discord
         env:
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          GH_EVENT_NAME: ${{ github.event_name }}
+          PR_TITLE: ${{ github.event.pull_request && github.event.pull_request.title || '' }}
+          PR_NUMBER: ${{ github.event.pull_request && github.event.pull_request.number || '' }}
+          PR_AUTHOR: ${{ github.event.pull_request && github.event.pull_request.user.login || '' }}
         run: |
-          curl -sS -X POST "$DISCORD_WEBHOOK_URL" \
-            -H 'Content-Type: application/json' \
-            -d "{\"content\":\"❌ **Deploy site-speak** failed — ${{ github.repository }} @ ${{ github.ref_name }} — ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}\"}"
+          python3 << 'PY'
+          import json, os, urllib.request
+
+          pr_title = (os.environ.get("PR_TITLE") or "").strip()
+          pr_number = (os.environ.get("PR_NUMBER") or "").strip()
+          pr_author = (os.environ.get("PR_AUTHOR") or "").strip()
+          if os.environ.get("GH_EVENT_NAME") == "pull_request" and pr_number:
+              title = pr_title if pr_title else "(no title)"
+              who = pr_author if pr_author else "(unknown)"
+              content = f"{title}\nPR #{pr_number}\nOpened by: {who}"
+          else:
+              content = "**site-speak pipeline failed**"
+
+          payload = json.dumps({"content": content}).encode()
+          wh = os.environ["DISCORD_WEBHOOK_URL"]
+          urllib.request.urlopen(
+              urllib.request.Request(
+                  wh,
+                  data=payload,
+                  headers={"Content-Type": "application/json"},
+                  method="POST",
+              )
+          )
+          PY
