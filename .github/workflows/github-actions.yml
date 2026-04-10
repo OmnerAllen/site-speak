@@ -74,9 +74,9 @@ jobs:
 
       - name: build and push client Docker image
         run: |
-          docker build --build-arg VITE_CLIENT_ID=$CLIENT_ID -t omallen/site-speak:0.0.$GITHUB_RUN_NUMBER -f Dockerfile.client .
           echo "AI_CHAT_ENABLED=$AI_CHAT_ENABLED (client Vite + API Deployment)"
           docker build \
+            --build-arg "VITE_CLIENT_ID=$CLIENT_ID" \
             --build-arg "AI_CHAT_ENABLED=$AI_CHAT_ENABLED" \
             -t omallen/site-speak:0.0.$GITHUB_RUN_NUMBER \
             -f Dockerfile.client .
