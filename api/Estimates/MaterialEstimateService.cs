@@ -1,25 +1,17 @@
 using System.Linq;
 using System.Text;
 using System.Text.Json;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Options;
 using SiteSpeak.Logic;
-using SiteSpeak.Llm;
 
 namespace SiteSpeak.Estimates;
 
 public sealed class MaterialEstimateService(
-    ILlmChatClient llm,
-    IOptions<MaterialEstimateOptions> options,
     MaterialRepository materials,
     EquipmentRepository equipment,
-    ProjectRepository projects,
-    IHostEnvironment hostEnvironment)
+    ProjectRepository projects)
 {
-    private readonly MaterialEstimateOptions _options = options.Value;
-    private static readonly string[] StageOrder = ["demo", "prep", "build/install", "qa"];
-
-    public async Task<MaterialEstimateApiResponse?> RunEstimateAsync(
+    /// <summary>Builds LLM seed (messages, tools, allowlists) for the client-side tool-calling loop. Does not call the model.</summary>
+    public async Task<MaterialEstimateSeedResponse?> BuildEstimateSeedAsync(
         Guid projectId,
         Guid companyId,
         MaterialEstimateRequestBody? request,
@@ -40,7 +32,7 @@ public sealed class MaterialEstimateService(
         if (catalog.Count == 0 && allEquipment.Count == 0)
         {
             warnings.Add("No materials or equipment in the catalog.");
-            return EmptyResponse(warnings, null);
+            return EmptySeed(warnings);
         }
 
         if (!details.Latitude.HasValue || !details.Longitude.HasValue)
@@ -102,145 +94,64 @@ public sealed class MaterialEstimateService(
         if (catalog.Count == 0 && allEquipment.Count == 0)
         {
             warnings.Add("No materials or equipment remain after distance filtering for this job site and radius.");
-            return EmptyResponse(warnings, null);
+            return EmptySeed(warnings);
         }
 
-        var materialById = catalog.ToDictionary(m => m.Id);
-        var equipmentById = allEquipment.ToDictionary(e => e.Id);
-
-        var systemPrompt = BuildSystemPrompt(radiusMiles);
+        var systemPrompt = BuildSystemPromptForTools(radiusMiles);
         var userPrompt = BuildUserPrompt(details, catalog, allEquipment, request, radiusMiles);
 
-        var messages = new[]
+        var messagesPayload = new[]
         {
-            new LlmChatMessage("system", systemPrompt),
-            new LlmChatMessage("user", userPrompt),
+            new { role = "system", content = systemPrompt },
+            new { role = "user", content = userPrompt },
         };
-        var (json, rawLlmError) = await llm.CompleteAsync(messages, jsonObjectResponse: true, cancellationToken);
-        var llmError = rawLlmError is not null ? AppendCatalogHintIfReachability(rawLlmError) : null;
-        if (json is null)
-        {
-            warnings.Add(llmError ?? "Language model did not return usable JSON.");
-            return EmptyResponse(warnings, null);
-        }
 
-        var extracted = MaterialEstimateProposalJson.ExtractJsonObject(json) ?? json;
-        var candidate = MaterialEstimateProposalJson.TryCoerceRootStagesJson(extracted) ?? extracted;
-        var proposal = MaterialEstimateProposalJson.TryParse(candidate);
-        if (proposal is null)
-        {
-            var snippet = candidate.Length > 400 ? candidate[..400] + "…" : candidate;
-            warnings.Add($"Failed to parse estimate JSON (invalid JSON). Snippet: {snippet}");
-            return EmptyResponse(warnings, json);
-        }
+        var messagesEl = JsonSerializer.SerializeToElement(messagesPayload);
 
-        if (proposal.Stages is null)
-        {
-            var snippet = candidate.Length > 400 ? candidate[..400] + "…" : candidate;
-            warnings.Add(
-                $"Failed to parse estimate JSON: root must include a non-null \"stages\" array. Snippet: {snippet}");
-            return EmptyResponse(warnings, json);
-        }
+        var allowedMat = catalog.Select(m => m.Id.ToString()).ToList();
+        var allowedEq = allEquipment.Select(e => e.Id.ToString()).ToList();
+        var matLabels = catalog.ToDictionary(m => m.Id.ToString(), m => m.ProductName);
+        var eqLabels = allEquipment.ToDictionary(e => e.Id.ToString(), e => e.Name);
 
-        var allowedMaterialIds = materialById.Keys.ToHashSet();
-        var allowedEquipmentIds = equipmentById.Keys.ToHashSet();
-
-        var merged = MergeStages(proposal.Stages);
-        var responseStages = new List<MaterialEstimateStageApiDto>();
-
-        foreach (var name in StageOrder)
-        {
-            var stageJson = merged.GetValueOrDefault(name);
-            var matLines = new List<MaterialEstimateMaterialLineApiDto>();
-            var eqLines = new List<MaterialEstimateEquipmentLineApiDto>();
-
-            if (stageJson?.Materials is not null)
-            {
-                foreach (var line in stageJson.Materials)
-                {
-                    if (!allowedMaterialIds.Contains(line.MaterialId)) continue;
-                    if (line.Quantity <= 0) continue;
-                    if (!materialById.TryGetValue(line.MaterialId, out var row)) continue;
-                    matLines.Add(new MaterialEstimateMaterialLineApiDto(
-                        line.MaterialId,
-                        row.ProductName,
-                        line.Quantity,
-                        line.Note));
-                }
-            }
-
-            if (stageJson?.Equipment is not null)
-            {
-                foreach (var line in stageJson.Equipment)
-                {
-                    if (!allowedEquipmentIds.Contains(line.EquipmentId)) continue;
-                    if (!equipmentById.TryGetValue(line.EquipmentId, out var row)) continue;
-                    eqLines.Add(new MaterialEstimateEquipmentLineApiDto(
-                        line.EquipmentId,
-                        row.Name,
-                        line.HalfDay,
-                        line.Note));
-                }
-            }
-
-            responseStages.Add(new MaterialEstimateStageApiDto(name, matLines, eqLines));
-        }
-
-        return new MaterialEstimateApiResponse(responseStages, warnings, LlmDebugContent(json));
-    }
-
-    private string? LlmDebugContent(string? rawFromModel) =>
-        rawFromModel is not null
-        && hostEnvironment.IsDevelopment()
-        && _options.IncludeLlmRawContentInResponse
-            ? rawFromModel
-            : null;
-
-    private MaterialEstimateApiResponse EmptyResponse(IReadOnlyList<string> warnings, string? llmRawFromModel) =>
-        new(
-            StageOrder.Select(n => new MaterialEstimateStageApiDto(n, Array.Empty<MaterialEstimateMaterialLineApiDto>(),
-                Array.Empty<MaterialEstimateEquipmentLineApiDto>())).ToList(),
+        return new MaterialEstimateSeedResponse(
             warnings,
-            LlmDebugContent(llmRawFromModel));
-
-    private static Dictionary<string, MaterialEstimateStageJson> MergeStages(
-        List<MaterialEstimateStageJson>? stages)
-    {
-        var map = new Dictionary<string, MaterialEstimateStageJson>(StringComparer.OrdinalIgnoreCase);
-        if (stages is null) return map;
-
-        foreach (var s in stages)
-        {
-            if (string.IsNullOrWhiteSpace(s.Name)) continue;
-            var key = NormalizeStageName(s.Name.Trim());
-            if (key is null) continue;
-            map[key] = s;
-        }
-
-        return map;
+            messagesEl,
+            MaterialEstimateToolDefinition.Tools,
+            MaterialEstimateToolDefinition.ToolChoiceAuto,
+            allowedMat,
+            allowedEq,
+            matLabels,
+            eqLabels);
     }
 
-    private static string? NormalizeStageName(string name) =>
-        name.ToLowerInvariant() switch
-        {
-            "demo" => "demo",
-            "prep" => "prep",
-            "build/install" or "build" or "install" or "build-install" => "build/install",
-            "qa" => "qa",
-            _ => null,
-        };
+    private static MaterialEstimateSeedResponse EmptySeed(IReadOnlyList<string> warnings)
+    {
+        var emptyMessages = JsonSerializer.SerializeToElement(Array.Empty<object>());
+        var emptyTools = JsonSerializer.SerializeToElement(Array.Empty<object>());
+        var autoChoice = JsonSerializer.SerializeToElement(new { type = "auto" });
+        return new MaterialEstimateSeedResponse(
+            warnings,
+            emptyMessages,
+            emptyTools,
+            autoChoice,
+            Array.Empty<string>(),
+            Array.Empty<string>(),
+            new Dictionary<string, string>(),
+            new Dictionary<string, string>());
+    }
 
-    private static string BuildSystemPrompt(double radiusMiles) =>
+    private static string BuildSystemPromptForTools(double radiusMiles) =>
         $"""
         You are a construction project assistant. You receive the job site address, a project overview, stage notes, and a JSON catalog of materials and equipment from the company inventory.
         **Catalog scope:** The materials and equipment lists are already limited by the server to suppliers and rental yards within about **{radiusMiles:g} miles** of the job site (when coordinates are available). Use only IDs from those lists.
-        Respond with ONLY a JSON object (no markdown): root key "stages" is an array of four objects with names demo, prep, build/install, qa; each has "materials" (materialId, quantity, optional note) and "equipment" (equipmentId, halfDay as boolean true/false for half-day rental vs full day, optional note).
+        First call **{MaterialEstimateToolDefinition.HighlightToolName}** once (no arguments). That applies the Site Speak **radioactive** accent color to the Materials & equipment sidebar so the user sees that tools are running.
+        Then call **{MaterialEstimateToolDefinition.ToolName}** to submit your estimate (structured stages with materials and equipment). You may issue both tool calls in the same assistant turn. Do not answer with plain prose only—use the tools as described.
         Rules:
-        - Include all four stage names exactly: demo, prep, build/install, qa.
+        - Include all four stage names exactly in the tool arguments: demo, prep, build/install, qa.
         - Only use materialId and equipmentId values from the provided catalog lists.
         - Quantities must be positive decimals where relevant.
-        - If nothing applies to a stage, use empty arrays for materials and equipment.
-        - You may return empty arrays for every stage if nothing in the catalog fits the work.
+        - If nothing applies to a stage, use empty arrays for materials and equipment in that stage.
+        - You may submit empty arrays for every stage if nothing in the catalog fits the work.
         """;
 
     private static string BuildUserPrompt(
@@ -301,6 +212,10 @@ public sealed class MaterialEstimateService(
             rentalSupplier = e.RentalSupplierName,
         })));
 
+        sb.AppendLine();
+        sb.AppendLine(
+            $"Reminder: call {MaterialEstimateToolDefinition.HighlightToolName} first (radioactive sidebar highlight), then {MaterialEstimateToolDefinition.ToolName} with your line items.");
+
         return sb.ToString();
     }
 
@@ -312,9 +227,4 @@ public sealed class MaterialEstimateService(
         "qa" => 3,
         _ => 99,
     };
-
-    private static string AppendCatalogHintIfReachability(string error) =>
-        error.StartsWith("Could not reach the language model at", StringComparison.Ordinal)
-            ? error + " For material estimates: large catalog payloads or slow uploads can contribute — try a smaller radius test."
-            : error;
 }

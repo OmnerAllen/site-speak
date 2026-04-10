@@ -158,25 +158,16 @@ export interface AiChatMessage {
   content: string;
 }
 
-export interface MaterialEstimateResponse {
-  stages: Array<{
-    name: StageName;
-    materials: Array<{
-      materialId: string;
-      productName: string;
-      quantity: number;
-      note: string | null;
-    }>;
-    equipment: Array<{
-      equipmentId: string;
-      name: string;
-      halfDay: boolean;
-      note: string | null;
-    }>;
-  }>;
+/** POST /material-estimate — seed for client-side tool-calling loop (no LLM call on server). */
+export interface MaterialEstimateSeedResponse {
   warnings: string[];
-  /** Present in Development when API is configured to echo the model message (debugging). */
-  llmRawContent?: string | null;
+  messages: unknown[];
+  tools: unknown[];
+  toolChoice: unknown;
+  allowedMaterialIds: string[];
+  allowedEquipmentIds: string[];
+  materialLabels: Record<string, string>;
+  equipmentLabels: Record<string, string>;
 }
 
 export interface UserProfile {

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import toast from "react-hot-toast";
 import { api } from "../api";
+import { runToolCallingLoop, type ChatCompletionMessage } from "../ai/runToolCallingLoop";
 import type { AiChatMessage } from "../types";
 
 type Props = {
@@ -8,10 +9,34 @@ type Props = {
   projectName?: string;
 };
 
+/** Same tool-calling demo pattern as RAG AiChat (background color via function call). */
+const CHAT_TOOLS = [
+  {
+    type: "function",
+    function: {
+      name: "change_background_color",
+      description:
+        "Changes this chat panel background color. Valid Tailwind classes: bg-red-900, bg-blue-900, bg-green-900, bg-yellow-900, bg-black, bg-white, bg-brick-900/40, bg-brick-950/80",
+      parameters: {
+        type: "object",
+        properties: {
+          color: {
+            type: "string",
+            description:
+              "Background class, e.g. bg-blue-900 or bg-brick-950/80",
+          },
+        },
+        required: ["color"],
+      },
+    },
+  },
+];
+
 export function ProjectAiChatPanel({ projectName }: Props) {
   const [messages, setMessages] = useState<AiChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [pending, setPending] = useState(false);
+  const [panelBg, setPanelBg] = useState("bg-brick-900/40");
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -29,8 +54,30 @@ export function ProjectAiChatPanel({ projectName }: Props) {
     setPending(true);
 
     try {
-      const { reply } = await api.postAiChat({ messages: nextMessages });
-      setMessages([...nextMessages, { role: "assistant", content: reply }]);
+      const initial: ChatCompletionMessage[] = nextMessages.map((m) => ({
+        role: m.role,
+        content: m.content,
+      }));
+
+      const { finalContent } = await runToolCallingLoop({
+        initialMessages: initial,
+        tools: CHAT_TOOLS,
+        toolChoice: "auto",
+        logContext: "ai-chat",
+        complete: (body) => api.postAiCompletions(body),
+        handlers: {
+          change_background_color: (argsJson) => {
+            const { color } = JSON.parse(argsJson) as { color: string };
+            setPanelBg(color);
+            return "Background updated.";
+          },
+        },
+      });
+
+      setMessages([
+        ...nextMessages,
+        { role: "assistant", content: finalContent?.trim() ? finalContent : "(no text)" },
+      ]);
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Chat request failed.";
       toast.error(msg);
@@ -41,24 +88,31 @@ export function ProjectAiChatPanel({ projectName }: Props) {
   };
 
   return (
-    <section className="rounded-xl border border-brick-700/50 bg-brick-900/40 flex flex-col h-[min(70vh,36rem)] lg:h-[min(80vh,42rem)] lg:sticky lg:top-6">
+    <section
+      className={`rounded-xl border border-brick-700/50 flex flex-col h-[min(70vh,36rem)] lg:h-[min(80vh,42rem)] lg:sticky lg:top-6 ${panelBg}`}
+    >
+      {/* Keep dynamic Tailwind bg classes in the bundle (RAG pattern). */}
+      <div className="hidden bg-red-900 bg-blue-900 bg-green-900 bg-yellow-900 bg-black bg-white bg-brick-900/40 bg-brick-950/80" />
+
       <div className="p-4 border-b border-brick-700/40 shrink-0">
         <h2 className="text-base md:text-lg font-semibold text-brick-100">AI chat</h2>
         <p className="text-xs md:text-sm text-brick-400 mt-1">
           {projectName ? (
             <>
-              Quick messages to the model for <span className="text-brick-300">{projectName}</span> — no
-              catalog payload, unlike material estimates.
+              Quick messages for <span className="text-brick-300">{projectName}</span> — tool calling
+              enabled (try asking to change this panel&apos;s background color).
             </>
           ) : (
-            <>Quick messages to the model — no catalog payload, unlike material estimates.</>
+            <>Quick messages — tool calling enabled (e.g. change the panel background color).</>
           )}
         </p>
       </div>
 
       <div className="flex-1 min-h-0 overflow-y-auto px-4 py-3 space-y-3">
         {messages.length === 0 && (
-          <p className="text-xs text-brick-500">Ask a question or describe what you need. History stays in this session.</p>
+          <p className="text-xs text-brick-500">
+            Ask a question or describe what you need. History stays in this session.
+          </p>
         )}
         {messages.map((m, i) => (
           <div
@@ -75,9 +129,7 @@ export function ProjectAiChatPanel({ projectName }: Props) {
             <div className="whitespace-pre-wrap wrap-break-word">{m.content}</div>
           </div>
         ))}
-        {pending && (
-          <p className="text-xs text-brick-500 animate-pulse">Thinking…</p>
-        )}
+        {pending && <p className="text-xs text-brick-500 animate-pulse">Thinking…</p>}
         <div ref={bottomRef} />
       </div>
 

@@ -9,14 +9,20 @@ import {
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
 import { api } from "../api";
-import type {
-  MaterialEstimateResponse,
-  ProjectStageResourcesResponse,
-  StageName,
-  StageResourcesPutBody,
-} from "../types";
+import { runMaterialEstimateRagLoop } from "../ai/materialEstimateRagLoop";
+import { proposalToDraft, type MaterialProposal } from "../ai/materialEstimateFromTool";
+import { STAGE_ORDER, type DraftStage } from "../ai/materialEstimateTypes";
+import type { ChatCompletionMessage } from "../ai/runToolCallingLoop";
+import type { ProjectStageResourcesResponse, StageName, StageResourcesPutBody } from "../types";
 
-const STAGE_ORDER: StageName[] = ["demo", "prep", "build/install", "qa"];
+const SUBMIT_MATERIAL_ESTIMATE = "submit_material_estimate";
+const HIGHLIGHT_MATERIALS_EQUIPMENT_PANEL = "highlight_materials_equipment_panel";
+
+/** Site Speak @theme radioactive palette — keep classes referenced for Tailwind. */
+const MATERIALS_PANEL_DEFAULT =
+  "rounded-xl border border-brick-700/50 bg-brick-900/40 p-4 md:p-5 space-y-5";
+const MATERIALS_PANEL_RADIOACTIVE =
+  "rounded-xl border border-radioactive-500/55 bg-radioactive-600/15 ring-1 ring-radioactive-400/35 shadow-[0_0_22px_rgba(234,179,8,0.14)] p-4 md:p-5 space-y-5";
 
 export type EditorPrompt = {
   overview: string;
@@ -34,12 +40,6 @@ function stageLabel(name: StageName): string {
   return `${name.charAt(0).toUpperCase()}${name.slice(1)}`;
 }
 
-type DraftStage = {
-  name: StageName;
-  materials: Array<{ materialId: string; quantity: number; label: string }>;
-  equipment: Array<{ equipmentId: string; halfDay: boolean; label: string }>;
-};
-
 function emptyDraft(): DraftStage[] {
   return STAGE_ORDER.map((name) => ({
     name,
@@ -49,28 +49,6 @@ function emptyDraft(): DraftStage[] {
 }
 
 function resourcesToDraft(r: ProjectStageResourcesResponse): DraftStage[] {
-  const byName = new Map(r.stages.map((s) => [s.name, s] as const));
-  return STAGE_ORDER.map((name) => {
-    const s = byName.get(name);
-    return {
-      name,
-      materials:
-        s?.materials.map((m) => ({
-          materialId: m.materialId,
-          quantity: m.quantity,
-          label: m.productName,
-        })) ?? [],
-      equipment:
-        s?.equipment.map((e) => ({
-          equipmentId: e.equipmentId,
-          halfDay: e.halfDay,
-          label: e.name,
-        })) ?? [],
-    };
-  });
-}
-
-function estimateToDraft(r: MaterialEstimateResponse): DraftStage[] {
   const byName = new Map(r.stages.map((s) => [s.name, s] as const));
   return STAGE_ORDER.map((name) => {
     const s = byName.get(name);
@@ -109,12 +87,22 @@ interface Props {
   getEditorPrompt: () => EditorPrompt;
 }
 
+/** Mutation result — avoids throwing on informational empty-catalog cases (warnings are not errors). */
+type MaterialEstimateMutationResult =
+  | { status: "empty_seed" }
+  | { status: "completed"; appliedViaSubmitTool: boolean };
+
 export const ProjectMaterialEstimateSection = forwardRef<ProjectMaterialEstimateHandle, Props>(
   function ProjectMaterialEstimateSection({ projectId, getEditorPrompt }, ref) {
     const queryClient = useQueryClient();
     const [radiusMiles, setRadiusMiles] = useState(50);
     const [draft, setDraft] = useState<DraftStage[]>(() => emptyDraft());
     const [warnings, setWarnings] = useState<string[]>([]);
+    const [materialsPanelSurface, setMaterialsPanelSurface] = useState<"default" | "radioactive">(
+      "default",
+    );
+    /** Set true only when the model invokes <code>submit_material_estimate</code> (not JSON-in-text). */
+    const submitToolFiredRef = useRef(false);
 
     const getPromptRef = useRef(getEditorPrompt);
     useEffect(() => {
@@ -136,10 +124,13 @@ export const ProjectMaterialEstimateSection = forwardRef<ProjectMaterialEstimate
       queueMicrotask(() => resetDraftFromServer(resources));
     }, [resources, resetDraftFromServer]);
 
-    const estimateMutation = useMutation({
-      mutationFn: () => {
+    const estimateMutation = useMutation<MaterialEstimateMutationResult, Error, void>({
+      mutationFn: async (): Promise<MaterialEstimateMutationResult> => {
+        setMaterialsPanelSurface("default");
+        submitToolFiredRef.current = false;
+
         const p = getPromptRef.current();
-        return api.postMaterialEstimate(projectId, {
+        const seed = await api.postMaterialEstimate(projectId, {
           radiusMiles,
           overview: p.overview,
           stages: p.stages.map((s) => ({
@@ -148,18 +139,88 @@ export const ProjectMaterialEstimateSection = forwardRef<ProjectMaterialEstimate
             notes: s.notes,
           })),
         });
+
+        setWarnings(seed.warnings ?? []);
+        const rawMessages = seed.messages;
+
+        if (!Array.isArray(rawMessages) || rawMessages.length === 0) {
+          return { status: "empty_seed" };
+        }
+
+        const allowedMat = new Set(seed.allowedMaterialIds ?? []);
+        const allowedEq = new Set(seed.allowedEquipmentIds ?? []);
+
+        const completeWithFallback = async (body: Record<string, unknown>) => {
+          try {
+            return await api.postAiCompletions(body);
+          } catch (err) {
+            if (body.tool_choice !== undefined) {
+              console.warn(
+                "material-estimate: postAiCompletions failed; retrying without tool_choice",
+                err instanceof Error ? err.message : String(err),
+              );
+              const { tool_choice, ...rest } = body;
+              void tool_choice;
+              return await api.postAiCompletions(rest);
+            }
+            if (err instanceof Error) throw err;
+            throw new Error(String(err));
+          }
+        };
+
+        await runMaterialEstimateRagLoop({
+          initialMessages: rawMessages as ChatCompletionMessage[],
+          tools: Array.isArray(seed.tools) ? seed.tools : [],
+          toolChoice: seed.toolChoice,
+          complete: completeWithFallback,
+          handlers: {
+            [HIGHLIGHT_MATERIALS_EQUIPMENT_PANEL]: () => {
+              setMaterialsPanelSurface("radioactive");
+              return "Materials & equipment panel set to radioactive accent.";
+            },
+            [SUBMIT_MATERIAL_ESTIMATE]: (argsJson) => {
+              submitToolFiredRef.current = true;
+              let proposal: MaterialProposal;
+              try {
+                proposal = JSON.parse(argsJson) as MaterialProposal;
+              } catch {
+                throw new Error("Invalid submit_material_estimate arguments JSON.");
+              }
+              const next = proposalToDraft(
+                proposal,
+                allowedMat,
+                allowedEq,
+                seed.materialLabels ?? {},
+                seed.equipmentLabels ?? {},
+              );
+              setDraft(next);
+              return "Estimate applied.";
+            },
+          },
+        });
+
+        return { status: "completed", appliedViaSubmitTool: submitToolFiredRef.current };
       },
       onSuccess: (data) => {
-        setDraft(estimateToDraft(data));
-        setWarnings(data.warnings ?? []);
-        if (data.llmRawContent) {
-          // Dev-only echo from API; use to fix prompts or parser when estimates fail.
-          console.info("[material-estimate] LLM message content:\n", data.llmRawContent);
+        if (data.status === "empty_seed") {
+          toast.error(
+            "No materials or equipment left in range for this job site. Increase the radius (mi) or fix supplier/rental coordinates, then try again.",
+            { duration: 8000 },
+          );
+          return;
+        }
+        if (!data.appliedViaSubmitTool) {
+          toast.error(
+            "The model did not call submit_material_estimate (it likely returned plain JSON text instead of tool_calls). The table was not updated. Use an OpenAI-compatible server that emits tool_calls, or a model that follows function-calling.",
+            { duration: 12_000 },
+          );
+          return;
         }
         toast.success("Estimate generated. Review and apply when ready.");
       },
-      onError: () => {
-        toast.error("Could not generate estimate.");
+      onError: (e) => {
+        const msg = e instanceof Error ? e.message : "Could not generate estimate.";
+        toast.error(msg);
       },
     });
 
@@ -243,7 +304,13 @@ export const ProjectMaterialEstimateSection = forwardRef<ProjectMaterialEstimate
     };
 
     return (
-      <section className="rounded-xl border border-brick-700/50 bg-brick-900/40 p-4 md:p-5 space-y-5">
+      <section
+        className={
+          materialsPanelSurface === "radioactive" ? MATERIALS_PANEL_RADIOACTIVE : MATERIALS_PANEL_DEFAULT
+        }
+      >
+        {/* Keep dynamic radioactive utility classes in the bundle */}
+        <div className="hidden border-radioactive-500/55 bg-radioactive-600/15 ring-radioactive-400/35 shadow-[0_0_22px_rgba(234,179,8,0.14)]" />
         <div>
           <h2 className="text-base md:text-lg font-semibold text-brick-100">Materials &amp; equipment</h2>
           <p className="text-xs md:text-sm text-brick-400 mt-1">
