@@ -4,6 +4,7 @@ metadata:
   name: site-speak-ingress-prod
   namespace: ${NAMESPACE}
   annotations:
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
     # Match long-running /api/* (LLM) requests; ingress-nginx defaults are ~60s → 504 in prod.
     nginx.ingress.kubernetes.io/proxy-connect-timeout: "60"
     nginx.ingress.kubernetes.io/proxy-send-timeout: "900"
