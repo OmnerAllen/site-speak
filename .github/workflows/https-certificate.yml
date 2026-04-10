@@ -38,6 +38,7 @@ jobs:
           mkdir -p "$CERTS_DIR" "$LOGS_DIR"
 
           docker run --rm \
+            --network host \
             -v "$CERTS_DIR:/etc/letsencrypt" \
             -v "$LOGS_DIR:/var/log/letsencrypt" \
             infinityofspace/certbot_dns_duckdns:latest \
@@ -55,6 +56,7 @@ jobs:
             -d "$BASE_DOMAIN"
 
           docker run --rm \
+            --network host \
             -v "$CERTS_DIR:/etc/letsencrypt" \
             -v "$LOGS_DIR:/var/log/letsencrypt" \
             infinityofspace/certbot_dns_duckdns:latest \
