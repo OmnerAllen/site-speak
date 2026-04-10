@@ -65,11 +65,11 @@ public sealed class OpenAiCompatibleChatClient(
 
         if (parsed.ToolCalls.Count > 0 && string.IsNullOrWhiteSpace(parsed.Content))
             return (null,
-                "Language model returned tool_calls without plain text. Use POST /my/ai/completions with tool handlers.");
+                "Language model returned tool_calls without plain text. Tool calling is handled on the server for material estimates; plain chat cannot process tool_calls.");
 
         if (parsed.ToolCalls.Count > 0)
             return (null,
-                "Language model returned tool_calls. Use POST /my/ai/completions with tool handlers.");
+                "Language model returned tool_calls. Tool calling is handled on the server for material estimates; plain chat cannot process tool_calls.");
 
         if (!string.IsNullOrWhiteSpace(parsed.Content))
             return (parsed.Content, null);

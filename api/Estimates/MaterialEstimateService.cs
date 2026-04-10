@@ -1,17 +1,24 @@
 using System.Linq;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using SiteSpeak.Logic;
+using SiteSpeak.Llm;
 
 namespace SiteSpeak.Estimates;
 
 public sealed class MaterialEstimateService(
     MaterialRepository materials,
     EquipmentRepository equipment,
-    ProjectRepository projects)
+    ProjectRepository projects,
+    ILlmChatClient llm)
 {
-    /// <summary>Builds LLM seed (messages, tools, allowlists) for the client-side tool-calling loop. Does not call the model.</summary>
-    public async Task<MaterialEstimateSeedResponse?> BuildEstimateSeedAsync(
+    private const int MaxToolLoopIterations = 16;
+
+    /// <summary>
+    /// Builds prompts, calls the LLM on the server (tool loop), and returns draft stages for the UI.
+    /// </summary>
+    public async Task<MaterialEstimateCompleteResponse?> RunMaterialEstimateAsync(
         Guid projectId,
         Guid companyId,
         MaterialEstimateRequestBody? request,
@@ -32,7 +39,7 @@ public sealed class MaterialEstimateService(
         if (catalog.Count == 0 && allEquipment.Count == 0)
         {
             warnings.Add("No materials or equipment in the catalog.");
-            return EmptySeed(warnings);
+            return MaterialEstimateCompleteResponse.EmptyCatalog(warnings);
         }
 
         if (!details.Latitude.HasValue || !details.Longitude.HasValue)
@@ -94,57 +101,213 @@ public sealed class MaterialEstimateService(
         if (catalog.Count == 0 && allEquipment.Count == 0)
         {
             warnings.Add("No materials or equipment remain after distance filtering for this job site and radius.");
-            return EmptySeed(warnings);
+            return MaterialEstimateCompleteResponse.EmptyCatalog(warnings);
         }
 
         var systemPrompt = BuildSystemPromptForTools(radiusMiles);
         var userPrompt = BuildUserPrompt(details, catalog, allEquipment, request, radiusMiles);
 
-        var messagesPayload = new[]
+        var messagesArray = new JsonArray
         {
-            new { role = "system", content = systemPrompt },
-            new { role = "user", content = userPrompt },
+            JsonSerializer.SerializeToNode(new { role = "system", content = systemPrompt }),
+            JsonSerializer.SerializeToNode(new { role = "user", content = userPrompt }),
         };
 
-        var messagesEl = JsonSerializer.SerializeToElement(messagesPayload);
-
-        var allowedMat = catalog.Select(m => m.Id.ToString()).ToList();
-        var allowedEq = allEquipment.Select(e => e.Id.ToString()).ToList();
+        var allowedMat = catalog.Select(m => m.Id.ToString()).ToHashSet(StringComparer.Ordinal);
+        var allowedEq = allEquipment.Select(e => e.Id.ToString()).ToHashSet(StringComparer.Ordinal);
         var matLabels = catalog.ToDictionary(m => m.Id.ToString(), m => m.ProductName);
         var eqLabels = allEquipment.ToDictionary(e => e.Id.ToString(), e => e.Name);
 
-        return new MaterialEstimateSeedResponse(
+        var toolsNode = JsonNode.Parse(MaterialEstimateToolDefinition.Tools.GetRawText())!;
+        var toolChoiceNode = JsonNode.Parse(MaterialEstimateToolDefinition.ToolChoiceAuto.GetRawText())!;
+
+        var highlightPanel = false;
+        var appliedSubmit = false;
+        IReadOnlyList<MaterialEstimateDraftStageDto>? draftStages = null;
+        var exitedWithFinalTurn = false;
+
+        for (var i = 0; i < MaxToolLoopIterations; i++)
+        {
+            var (raw, parsed, err) = await PostCompletionsWithToolChoiceFallbackAsync(
+                messagesArray,
+                toolsNode,
+                toolChoiceNode,
+                cancellationToken);
+
+            if (err is not null)
+                throw new InvalidOperationException(err);
+
+            if (parsed is null)
+                throw new InvalidOperationException("Language model response could not be parsed.");
+
+            if (string.IsNullOrEmpty(raw))
+                throw new InvalidOperationException("Language model returned an empty body.");
+
+            using var doc = JsonDocument.Parse(raw);
+            if (doc.RootElement.TryGetProperty("error", out var errEl) && errEl.ValueKind != JsonValueKind.Null)
+            {
+                var msg = errEl.TryGetProperty("message", out var mEl) ? mEl.GetString() : errEl.GetRawText();
+                throw new InvalidOperationException(msg ?? "Language model returned an error.");
+            }
+
+            var choice = doc.RootElement.GetProperty("choices")[0];
+            var finishReason = choice.TryGetProperty("finish_reason", out var frEl) ? frEl.GetString() : null;
+            if (!choice.TryGetProperty("message", out var messageEl))
+                throw new InvalidOperationException("Language model response had no choices[0].message.");
+
+            var toolCalls = parsed.ToolCalls;
+            if (toolCalls.Count > 0 || string.Equals(finishReason, "tool_calls", StringComparison.Ordinal))
+            {
+                messagesArray.Add(JsonNode.Parse(messageEl.GetRawText())!);
+
+                foreach (var tc in toolCalls)
+                {
+                    if (string.IsNullOrEmpty(tc.Name)) continue;
+
+                    string toolContent;
+                    if (string.Equals(tc.Name, MaterialEstimateToolDefinition.HighlightToolName, StringComparison.Ordinal))
+                    {
+                        highlightPanel = true;
+                        toolContent = "Materials & equipment panel set to radioactive accent.";
+                    }
+                    else if (string.Equals(tc.Name, MaterialEstimateToolDefinition.ToolName, StringComparison.Ordinal))
+                    {
+                        var proposal = MaterialEstimateProposalJson.TryParse(tc.Arguments);
+                        if (proposal is null)
+                        {
+                            var coerced = MaterialEstimateProposalJson.TryCoerceRootStagesJson(tc.Arguments);
+                            if (coerced is not null)
+                                proposal = MaterialEstimateProposalJson.TryParse(coerced);
+                        }
+
+                        if (proposal is null)
+                            throw new InvalidOperationException("Invalid submit_material_estimate arguments JSON.");
+
+                        draftStages = ProposalToDraft(proposal, allowedMat, allowedEq, matLabels, eqLabels);
+                        appliedSubmit = true;
+                        toolContent = "Estimate applied.";
+                    }
+                    else
+                    {
+                        throw new InvalidOperationException($"No handler registered for tool \"{tc.Name}\".");
+                    }
+
+                    messagesArray.Add(new JsonObject
+                    {
+                        ["role"] = "tool",
+                        ["content"] = toolContent,
+                        ["tool_call_id"] = tc.Id,
+                    });
+                }
+
+                continue;
+            }
+
+            exitedWithFinalTurn = true;
+            break;
+        }
+
+        if (!exitedWithFinalTurn)
+            throw new InvalidOperationException("Tool-calling loop exceeded max iterations.");
+
+        return new MaterialEstimateCompleteResponse(
             warnings,
-            messagesEl,
-            MaterialEstimateToolDefinition.Tools,
-            MaterialEstimateToolDefinition.ToolChoiceAuto,
-            allowedMat,
-            allowedEq,
-            matLabels,
-            eqLabels);
+            MaterialEstimateCompleteStatus.Ok,
+            highlightPanel,
+            appliedSubmit,
+            draftStages);
     }
 
-    private static MaterialEstimateSeedResponse EmptySeed(IReadOnlyList<string> warnings)
+    private async Task<(string? Raw, LlmChatCompletionResult? Parsed, string? Error)> PostCompletionsWithToolChoiceFallbackAsync(
+        JsonArray messagesArray,
+        JsonNode toolsNode,
+        JsonNode toolChoiceNode,
+        CancellationToken cancellationToken)
     {
-        var emptyMessages = JsonSerializer.SerializeToElement(Array.Empty<object>());
-        var emptyTools = JsonSerializer.SerializeToElement(Array.Empty<object>());
-        var autoChoice = JsonSerializer.SerializeToElement(new { type = "auto" });
-        return new MaterialEstimateSeedResponse(
-            warnings,
-            emptyMessages,
-            emptyTools,
-            autoChoice,
-            Array.Empty<string>(),
-            Array.Empty<string>(),
-            new Dictionary<string, string>(),
-            new Dictionary<string, string>());
+        var withChoice = BuildCompletionBody(messagesArray, toolsNode, toolChoiceNode);
+        var (raw, parsed, err) = await llm.PostChatCompletionsAsync(withChoice, cancellationToken);
+        if (err is null) return (raw, parsed, null);
+
+        var withoutChoice = BuildCompletionBody(messagesArray, toolsNode, toolChoice: null);
+        return await llm.PostChatCompletionsAsync(withoutChoice, cancellationToken);
+    }
+
+    private static JsonElement BuildCompletionBody(JsonArray messagesArray, JsonNode toolsNode, JsonNode? toolChoice)
+    {
+        var o = new JsonObject
+        {
+            ["messages"] = JsonSerializer.SerializeToNode(messagesArray)!,
+            ["tools"] = toolsNode.DeepClone(),
+        };
+        if (toolChoice is not null)
+            o["tool_choice"] = toolChoice.DeepClone();
+
+        return JsonSerializer.SerializeToElement(o, JsonSerializerOptions.Web);
+    }
+
+    private static IReadOnlyList<MaterialEstimateDraftStageDto> ProposalToDraft(
+        MaterialEstimateProposal proposal,
+        HashSet<string> allowedMat,
+        HashSet<string> allowedEq,
+        IReadOnlyDictionary<string, string> matLabels,
+        IReadOnlyDictionary<string, string> eqLabels)
+    {
+        var merged = new Dictionary<string, MaterialEstimateStageJson>(StringComparer.OrdinalIgnoreCase);
+        foreach (var s in proposal.Stages ?? [])
+        {
+            var key = NormalizeStageName(s.Name);
+            if (key is not null)
+                merged[key] = s;
+        }
+
+        string[] order = ["demo", "prep", "build/install", "qa"];
+        var result = new List<MaterialEstimateDraftStageDto>(4);
+        foreach (var name in order)
+        {
+            merged.TryGetValue(name, out var stage);
+            var mats = (stage?.Materials ?? [])
+                .Where(m => allowedMat.Contains(m.MaterialId.ToString()) && m.Quantity > 0)
+                .Select(m =>
+                {
+                    var id = m.MaterialId.ToString();
+                    return new MaterialEstimateDraftMaterialLineDto(id, (double)m.Quantity, matLabels.GetValueOrDefault(id, id));
+                })
+                .ToList();
+
+            var eqs = (stage?.Equipment ?? [])
+                .Where(e => allowedEq.Contains(e.EquipmentId.ToString()))
+                .Select(e =>
+                {
+                    var id = e.EquipmentId.ToString();
+                    return new MaterialEstimateDraftEquipmentLineDto(id, e.HalfDay, eqLabels.GetValueOrDefault(id, id));
+                })
+                .ToList();
+
+            result.Add(new MaterialEstimateDraftStageDto(name, mats, eqs));
+        }
+
+        return result;
+    }
+
+    private static string? NormalizeStageName(string? name)
+    {
+        if (string.IsNullOrWhiteSpace(name)) return null;
+        var n = name.Trim().ToLowerInvariant();
+        return n switch
+        {
+            "demo" => "demo",
+            "prep" => "prep",
+            "qa" => "qa",
+            "build/install" or "build" or "install" or "build-install" => "build/install",
+            _ => null,
+        };
     }
 
     private static string BuildSystemPromptForTools(double radiusMiles) =>
         $"""
         You are a construction project assistant. You receive the job site address, a project overview, stage notes, and a JSON catalog of materials and equipment from the company inventory.
         **Catalog scope:** The materials and equipment lists are already limited by the server to suppliers and rental yards within about **{radiusMiles:g} miles** of the job site (when coordinates are available). Use only IDs from those lists.
-        First call **{MaterialEstimateToolDefinition.HighlightToolName}** once (no arguments). That applies the Site Speak **radioactive** accent color to the Materials & equipment sidebar so the user sees that tools are running.
+        First call **{MaterialEstimateToolDefinition.HighlightToolName}** once (no arguments). That signals the UI to apply the Site Speak **radioactive** accent color to the Materials & equipment sidebar so the user sees that tools are running.
         Then call **{MaterialEstimateToolDefinition.ToolName}** to submit your estimate (structured stages with materials and equipment). You may issue both tool calls in the same assistant turn. Do not answer with plain prose only—use the tools as described.
         Rules:
         - Include all four stage names exactly in the tool arguments: demo, prep, build/install, qa.

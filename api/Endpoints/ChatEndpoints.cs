@@ -7,22 +7,6 @@ public static class ChatEndpoints
 {
     public static WebApplication MapChatEndpoints(this WebApplication app)
     {
-        app.MapPost("/my/ai/completions", async (
-            ClaimsPrincipal user,
-            System.Text.Json.JsonElement body,
-            AiChatService chat,
-            CancellationToken cancellationToken) =>
-        {
-            if (user.FindFirstValue("sub") is null)
-                return Results.Unauthorized();
-
-            var (raw, _, error) = await chat.CompletionsAsync(body, cancellationToken);
-            if (error is not null)
-                return Results.Json(new { error }, statusCode: StatusCodes.Status502BadGateway);
-
-            return Results.Text(raw, "application/json");
-        }).RequireAuthorization();
-
         app.MapPost("/my/ai/chat", async (
             ClaimsPrincipal user,
             AiChatRequestBody body,
