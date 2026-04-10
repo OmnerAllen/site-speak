@@ -1,0 +1,115 @@
+name: Manage HTTPS certificate
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "17 3 * * 1"
+
+jobs:
+  issue-and-sync-certificate:
+    runs-on: self-hosted
+    permissions:
+      contents: read
+    env:
+      BASE_DOMAIN: site-speak.duckdns.org
+      ROOT_TLS_SECRET_NAME: sitespeak-root-tls
+      WILDCARD_TLS_SECRET_NAME: sitespeak-wildcard-tls
+    steps:
+      - name: Issue or renew certificates
+        env:
+          DUCKDNS_TOKEN: ${{ secrets.DUCKDNS_TOKEN }}
+          LE_EMAIL: ${{ secrets.LE_EMAIL }}
+        run: |
+          set -euo pipefail
+
+          if [[ -z "${DUCKDNS_TOKEN:-}" ]]; then
+            echo "DUCKDNS_TOKEN secret is required"
+            exit 1
+          fi
+
+          if [[ -z "${LE_EMAIL:-}" ]]; then
+            echo "LE_EMAIL secret is required"
+            exit 1
+          fi
+
+          CERTS_DIR="$RUNNER_TEMP/letsencrypt/etc"
+          LOGS_DIR="$RUNNER_TEMP/letsencrypt/log"
+
+          mkdir -p "$CERTS_DIR" "$LOGS_DIR"
+
+          docker run --rm \
+            -v "$CERTS_DIR:/etc/letsencrypt" \
+            -v "$LOGS_DIR:/var/log/letsencrypt" \
+            infinityofspace/certbot_dns_duckdns:latest \
+            certonly \
+            --non-interactive \
+            --agree-tos \
+            --email "$LE_EMAIL" \
+            --preferred-challenges dns \
+            --server "https://acme-v02.api.letsencrypt.org/directory" \
+            --authenticator dns-duckdns \
+            --dns-duckdns-token "$DUCKDNS_TOKEN" \
+            --dns-duckdns-propagation-seconds 90 \
+            --keep-until-expiring \
+            --cert-name root-cert \
+            -d "$BASE_DOMAIN"
+
+          docker run --rm \
+            -v "$CERTS_DIR:/etc/letsencrypt" \
+            -v "$LOGS_DIR:/var/log/letsencrypt" \
+            infinityofspace/certbot_dns_duckdns:latest \
+            certonly \
+            --non-interactive \
+            --agree-tos \
+            --email "$LE_EMAIL" \
+            --preferred-challenges dns \
+            --server "https://acme-v02.api.letsencrypt.org/directory" \
+            --authenticator dns-duckdns \
+            --dns-duckdns-token "$DUCKDNS_TOKEN" \
+            --dns-duckdns-propagation-seconds 90 \
+            --keep-until-expiring \
+            --cert-name wildcard-cert \
+            -d "*.$BASE_DOMAIN"
+
+          echo "CERTS_DIR=$CERTS_DIR" >> "$GITHUB_ENV"
+
+      - name: Sync TLS secrets to active namespaces
+        run: |
+          set -euo pipefail
+
+          ROOT_CERT_FILE="$CERTS_DIR/live/root-cert/fullchain.pem"
+          ROOT_KEY_FILE="$CERTS_DIR/live/root-cert/privkey.pem"
+          WILDCARD_CERT_FILE="$CERTS_DIR/live/wildcard-cert/fullchain.pem"
+          WILDCARD_KEY_FILE="$CERTS_DIR/live/wildcard-cert/privkey.pem"
+
+          if [[ ! -f "$ROOT_CERT_FILE" || ! -f "$ROOT_KEY_FILE" ]]; then
+            echo "Root certificate files not found"
+            exit 1
+          fi
+
+          if [[ ! -f "$WILDCARD_CERT_FILE" || ! -f "$WILDCARD_KEY_FILE" ]]; then
+            echo "Wildcard certificate files not found"
+            exit 1
+          fi
+
+          namespaces=$(kubectl get ns -o jsonpath='{range .items[*]}{.metadata.name}{"\n"}{end}' | grep '^site-speak-' || true)
+
+          if [[ -z "$namespaces" ]]; then
+            echo "No site-speak namespaces found. Nothing to sync."
+            exit 0
+          fi
+
+          while IFS= read -r ns; do
+            [[ -z "$ns" ]] && continue
+            echo "Syncing TLS secrets to namespace: $ns"
+            
+            kubectl -n "$ns" create secret tls "$ROOT_TLS_SECRET_NAME" \
+              --cert="$ROOT_CERT_FILE" \
+              --key="$ROOT_KEY_FILE" \
+              --dry-run=client -o yaml | kubectl apply -f -
+              
+            kubectl -n "$ns" create secret tls "$WILDCARD_TLS_SECRET_NAME" \
+              --cert="$WILDCARD_CERT_FILE" \
+              --key="$WILDCARD_KEY_FILE" \
+              --dry-run=client -o yaml | kubectl apply -f -
+          done <<< "$namespaces"

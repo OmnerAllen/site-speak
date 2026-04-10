@@ -3,8 +3,17 @@ kind: Ingress
 metadata:
   name: site-speak-ingress
   namespace: ${NAMESPACE}
+  annotations:
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
 spec:
   ingressClassName: nginx
+  tls:
+  - hosts:
+    - ${APP_HOST}
+    - ${GRAFANA_HOST}
+    - ${PROMETHEUS_HOST}
+    - ${COLLECTOR_HOST}
+    secretName: sitespeak-wildcard-tls
   rules:
   - host: ${APP_HOST}
     http:
@@ -16,7 +25,7 @@ spec:
             name: site-speak-service
             port:
               number: 80
-  - host: grafana.${APP_HOST}
+  - host: ${GRAFANA_HOST}
     http:
       paths:
       - path: /
@@ -26,7 +35,7 @@ spec:
             name: grafana
             port:
               number: 3000
-  - host: prometheus.${APP_HOST}
+  - host: ${PROMETHEUS_HOST}
     http:
       paths:
       - path: /
@@ -36,7 +45,7 @@ spec:
             name: prometheus
             port:
               number: 9090
-  - host: collector-demo.${APP_HOST}
+  - host: ${COLLECTOR_HOST}
     http:
       paths:
       - path: /
