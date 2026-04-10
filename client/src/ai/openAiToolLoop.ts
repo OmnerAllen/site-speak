@@ -1,39 +1,48 @@
 /**
- * RAG-style tool loop (see rag-kadebaxter AiChat): explicit rounds, full response logged each time.
- * OpenAI chat-completions shape; same behavior as runToolCallingLoop without extra debug noise.
+ * Generic multi-turn OpenAI-style chat completions with tool calls (browser executes handlers).
  */
 
-import type { ChatCompletionMessage, ToolCallPart } from "./runToolCallingLoop";
+import type { ChatCompletionMessage, ToolCallPart } from "./chatCompletionTypes";
 
-export type MaterialEstimateRagHandlers = Record<
-  string,
-  (argsJson: string) => string | Promise<string>
->;
+export type { ChatCompletionMessage, ToolCallPart } from "./chatCompletionTypes";
 
-export type MaterialEstimateRagLoopOptions = {
+export type ToolHandler = (argsJson: string) => string | Promise<string>;
+
+export type RunOpenAiToolLoopOptions = {
   initialMessages: ChatCompletionMessage[];
-  tools: unknown[];
-  toolChoice: unknown;
+  tools?: unknown[];
+  toolChoice?: unknown;
   complete: (body: Record<string, unknown>) => Promise<string>;
-  handlers: MaterialEstimateRagHandlers;
+  handlers: Record<string, ToolHandler>;
+  /** Default 16 */
   maxIterations?: number;
+  /**
+   * Invoked after each completion response is parsed as JSON (e.g. log the full payload per round).
+   */
+  onRoundResponse?: (args: { iteration: number; data: unknown }) => void;
 };
 
-export type MaterialEstimateRagLoopResult = {
+export type RunOpenAiToolLoopResult = {
   finalContent: string | null;
   lastRaw: unknown;
 };
 
-/**
- * Mirrors RAG `while` + `console.log("AI Response:", …)` pattern; supports multiple tool_calls per turn.
- */
-export async function runMaterialEstimateRagLoop(
-  options: MaterialEstimateRagLoopOptions,
-): Promise<MaterialEstimateRagLoopResult> {
+function completionErrorMessage(data: { error?: unknown }): string {
+  const err = data.error;
+  if (typeof err === "object" && err !== null && "message" in err) {
+    return String((err as { message?: unknown }).message);
+  }
+  return JSON.stringify(err);
+}
+
+export async function runOpenAiToolLoop(
+  options: RunOpenAiToolLoopOptions,
+): Promise<RunOpenAiToolLoopResult> {
   const max = options.maxIterations ?? 16;
   let messages: ChatCompletionMessage[] = [...options.initialMessages];
 
   for (let i = 0; i < max; i++) {
+    const iteration = i + 1;
     const body: Record<string, unknown> = { messages };
     const tools = options.tools as unknown[] | undefined;
     if (tools !== undefined && tools.length > 0) {
@@ -44,23 +53,27 @@ export async function runMaterialEstimateRagLoop(
     }
 
     const rawText = await options.complete(body);
-    const data = JSON.parse(rawText) as {
+
+    let data: {
       error?: unknown;
       choices?: Array<{
         finish_reason?: string;
         message?: ChatCompletionMessage & { tool_calls?: ToolCallPart[] };
       }>;
     };
+    try {
+      data = JSON.parse(rawText) as typeof data;
+    } catch (e) {
+      const preview = rawText.length > 500 ? `${rawText.slice(0, 500)}…` : rawText;
+      throw new Error(
+        `Language model response was not valid JSON: ${e instanceof Error ? e.message : String(e)}. Preview: ${preview}`,
+      );
+    }
 
-    // Same idea as RAG AiChat: inspect the full payload each round.
-    console.log("AI Response:", data);
+    options.onRoundResponse?.({ iteration, data });
 
     if (data.error !== undefined && data.error !== null) {
-      const errMsg =
-        typeof data.error === "object" && data.error !== null && "message" in data.error
-          ? String((data.error as { message?: unknown }).message)
-          : JSON.stringify(data.error);
-      throw new Error(errMsg || "Language model returned an error.");
+      throw new Error(completionErrorMessage(data) || "Language model returned an error.");
     }
 
     const choice = data.choices?.[0];

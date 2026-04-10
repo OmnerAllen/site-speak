@@ -9,10 +9,10 @@ import {
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
 import { api } from "../api";
-import { runMaterialEstimateRagLoop } from "../ai/materialEstimateRagLoop";
+import type { ChatCompletionMessage } from "../ai/chatCompletionTypes";
+import { runOpenAiToolLoop } from "../ai/openAiToolLoop";
 import { proposalToDraft, type MaterialProposal } from "../ai/materialEstimateFromTool";
 import { STAGE_ORDER, type DraftStage } from "../ai/materialEstimateTypes";
-import type { ChatCompletionMessage } from "../ai/runToolCallingLoop";
 import type { ProjectStageResourcesResponse, StageName, StageResourcesPutBody } from "../types";
 
 const SUBMIT_MATERIAL_ESTIMATE = "submit_material_estimate";
@@ -168,11 +168,14 @@ export const ProjectMaterialEstimateSection = forwardRef<ProjectMaterialEstimate
           }
         };
 
-        await runMaterialEstimateRagLoop({
+        await runOpenAiToolLoop({
           initialMessages: rawMessages as ChatCompletionMessage[],
           tools: Array.isArray(seed.tools) ? seed.tools : [],
           toolChoice: seed.toolChoice,
           complete: completeWithFallback,
+          onRoundResponse: ({ data }) => {
+            console.log("AI Response:", data);
+          },
           handlers: {
             [HIGHLIGHT_MATERIALS_EQUIPMENT_PANEL]: () => {
               setMaterialsPanelSurface("radioactive");

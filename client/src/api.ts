@@ -123,7 +123,7 @@ export const api = {
       body: JSON.stringify(body),
     }),
 
-  /** Raw OpenAI-shaped chat completions (tool-calling loops). */
+  /** Raw OpenAI-shaped chat completions (material-estimate tool loop). */
   postAiCompletions: async (body: Record<string, unknown>) => {
     const res = await fetch(`/api/my/ai/completions`, {
       method: "POST",
