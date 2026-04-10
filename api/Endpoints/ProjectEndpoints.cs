@@ -189,12 +189,16 @@ public static class ProjectEndpoints
 
             try
             {
-                var result = await estimates.BuildEstimateSeedAsync(id, companyId.Value, body, cancellationToken);
+                var result = await estimates.RunMaterialEstimateAsync(id, companyId.Value, body, cancellationToken);
                 return result is null ? Results.NotFound() : Results.Ok(result);
             }
             catch (ArgumentOutOfRangeException ex)
             {
                 return Results.BadRequest(new { error = ex.Message });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return Results.Json(new { error = ex.Message }, statusCode: StatusCodes.Status502BadGateway);
             }
         }).RequireAuthorization();
 

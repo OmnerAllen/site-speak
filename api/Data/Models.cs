@@ -141,16 +141,32 @@ public record MaterialEstimateApiResponse(
     IReadOnlyList<string> Warnings,
     string? LlmRawContent = null);
 
-/// <summary>Seed for client-side tool-calling loop: messages + tools + ID allowlists and display labels.</summary>
-public record MaterialEstimateSeedResponse(
+public enum MaterialEstimateCompleteStatus
+{
+    Ok,
+    EmptyCatalog,
+}
+
+/// <summary>Result of POST material-estimate: server ran the LLM tool loop and returns UI draft rows.</summary>
+public record MaterialEstimateCompleteResponse(
     IReadOnlyList<string> Warnings,
-    System.Text.Json.JsonElement Messages,
-    System.Text.Json.JsonElement Tools,
-    System.Text.Json.JsonElement ToolChoice,
-    IReadOnlyList<string> AllowedMaterialIds,
-    IReadOnlyList<string> AllowedEquipmentIds,
-    IReadOnlyDictionary<string, string> MaterialLabels,
-    IReadOnlyDictionary<string, string> EquipmentLabels);
+    MaterialEstimateCompleteStatus Status,
+    bool HighlightMaterialsPanel,
+    bool AppliedViaSubmitTool,
+    IReadOnlyList<MaterialEstimateDraftStageDto>? DraftStages)
+{
+    public static MaterialEstimateCompleteResponse EmptyCatalog(IReadOnlyList<string> warnings) =>
+        new(warnings, MaterialEstimateCompleteStatus.EmptyCatalog, false, false, null);
+}
+
+public record MaterialEstimateDraftStageDto(
+    string Name,
+    IReadOnlyList<MaterialEstimateDraftMaterialLineDto> Materials,
+    IReadOnlyList<MaterialEstimateDraftEquipmentLineDto> Equipment);
+
+public record MaterialEstimateDraftMaterialLineDto(string MaterialId, double Quantity, string Label);
+
+public record MaterialEstimateDraftEquipmentLineDto(string EquipmentId, bool HalfDay, string Label);
 
 public record MaterialEstimateStageApiDto(
     string Name,

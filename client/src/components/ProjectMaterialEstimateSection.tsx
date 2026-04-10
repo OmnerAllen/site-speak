@@ -9,14 +9,8 @@ import {
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
 import { api } from "../api";
-import type { ChatCompletionMessage } from "../ai/chatCompletionTypes";
-import { runOpenAiToolLoop } from "../ai/openAiToolLoop";
-import { proposalToDraft, type MaterialProposal } from "../ai/materialEstimateFromTool";
 import { STAGE_ORDER, type DraftStage } from "../ai/materialEstimateTypes";
 import type { ProjectStageResourcesResponse, StageName, StageResourcesPutBody } from "../types";
-
-const SUBMIT_MATERIAL_ESTIMATE = "submit_material_estimate";
-const HIGHLIGHT_MATERIALS_EQUIPMENT_PANEL = "highlight_materials_equipment_panel";
 
 /** Site Speak @theme radioactive palette — keep classes referenced for Tailwind. */
 const MATERIALS_PANEL_DEFAULT =
@@ -101,9 +95,6 @@ export const ProjectMaterialEstimateSection = forwardRef<ProjectMaterialEstimate
     const [materialsPanelSurface, setMaterialsPanelSurface] = useState<"default" | "radioactive">(
       "default",
     );
-    /** Set true only when the model invokes <code>submit_material_estimate</code> (not JSON-in-text). */
-    const submitToolFiredRef = useRef(false);
-
     const getPromptRef = useRef(getEditorPrompt);
     useEffect(() => {
       getPromptRef.current = getEditorPrompt;
@@ -127,10 +118,9 @@ export const ProjectMaterialEstimateSection = forwardRef<ProjectMaterialEstimate
     const estimateMutation = useMutation<MaterialEstimateMutationResult, Error, void>({
       mutationFn: async (): Promise<MaterialEstimateMutationResult> => {
         setMaterialsPanelSurface("default");
-        submitToolFiredRef.current = false;
 
         const p = getPromptRef.current();
-        const seed = await api.postMaterialEstimate(projectId, {
+        const res = await api.postMaterialEstimate(projectId, {
           radiusMiles,
           overview: p.overview,
           stages: p.stages.map((s) => ({
@@ -140,69 +130,21 @@ export const ProjectMaterialEstimateSection = forwardRef<ProjectMaterialEstimate
           })),
         });
 
-        setWarnings(seed.warnings ?? []);
-        const rawMessages = seed.messages;
+        setWarnings(res.warnings ?? []);
 
-        if (!Array.isArray(rawMessages) || rawMessages.length === 0) {
+        if (res.status === "emptyCatalog") {
           return { status: "empty_seed" };
         }
 
-        const allowedMat = new Set(seed.allowedMaterialIds ?? []);
-        const allowedEq = new Set(seed.allowedEquipmentIds ?? []);
+        if (res.highlightMaterialsPanel) {
+          setMaterialsPanelSurface("radioactive");
+        }
 
-        const completeWithFallback = async (body: Record<string, unknown>) => {
-          try {
-            return await api.postAiCompletions(body);
-          } catch (err) {
-            if (body.tool_choice !== undefined) {
-              console.warn(
-                "material-estimate: postAiCompletions failed; retrying without tool_choice",
-                err instanceof Error ? err.message : String(err),
-              );
-              const { tool_choice, ...rest } = body;
-              void tool_choice;
-              return await api.postAiCompletions(rest);
-            }
-            if (err instanceof Error) throw err;
-            throw new Error(String(err));
-          }
-        };
+        if (res.appliedViaSubmitTool && res.draftStages) {
+          setDraft(res.draftStages);
+        }
 
-        await runOpenAiToolLoop({
-          initialMessages: rawMessages as ChatCompletionMessage[],
-          tools: Array.isArray(seed.tools) ? seed.tools : [],
-          toolChoice: seed.toolChoice,
-          complete: completeWithFallback,
-          onRoundResponse: ({ data }) => {
-            console.log("AI Response:", data);
-          },
-          handlers: {
-            [HIGHLIGHT_MATERIALS_EQUIPMENT_PANEL]: () => {
-              setMaterialsPanelSurface("radioactive");
-              return "Materials & equipment panel set to radioactive accent.";
-            },
-            [SUBMIT_MATERIAL_ESTIMATE]: (argsJson) => {
-              submitToolFiredRef.current = true;
-              let proposal: MaterialProposal;
-              try {
-                proposal = JSON.parse(argsJson) as MaterialProposal;
-              } catch {
-                throw new Error("Invalid submit_material_estimate arguments JSON.");
-              }
-              const next = proposalToDraft(
-                proposal,
-                allowedMat,
-                allowedEq,
-                seed.materialLabels ?? {},
-                seed.equipmentLabels ?? {},
-              );
-              setDraft(next);
-              return "Estimate applied.";
-            },
-          },
-        });
-
-        return { status: "completed", appliedViaSubmitTool: submitToolFiredRef.current };
+        return { status: "completed", appliedViaSubmitTool: res.appliedViaSubmitTool };
       },
       onSuccess: (data) => {
         if (data.status === "empty_seed") {

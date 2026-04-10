@@ -158,16 +158,21 @@ export interface AiChatMessage {
   content: string;
 }
 
-/** POST /material-estimate — seed for client-side tool-calling loop (no LLM call on server). */
-export interface MaterialEstimateSeedResponse {
+/** POST /material-estimate — server runs the LLM tool loop and returns draft rows. */
+export type MaterialEstimateCompleteStatus = "ok" | "emptyCatalog";
+
+export interface MaterialEstimateDraftStageDto {
+  name: StageName;
+  materials: Array<{ materialId: string; quantity: number; label: string }>;
+  equipment: Array<{ equipmentId: string; halfDay: boolean; label: string }>;
+}
+
+export interface MaterialEstimateCompleteResponse {
   warnings: string[];
-  messages: unknown[];
-  tools: unknown[];
-  toolChoice: unknown;
-  allowedMaterialIds: string[];
-  allowedEquipmentIds: string[];
-  materialLabels: Record<string, string>;
-  equipmentLabels: Record<string, string>;
+  status: MaterialEstimateCompleteStatus;
+  highlightMaterialsPanel: boolean;
+  appliedViaSubmitTool: boolean;
+  draftStages: MaterialEstimateDraftStageDto[] | null;
 }
 
 export interface UserProfile {
