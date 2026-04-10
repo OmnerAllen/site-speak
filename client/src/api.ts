@@ -10,7 +10,7 @@ import type {
   Employee,
   WorkLog,
   MaterialEstimateRequestBody,
-  MaterialEstimateResponse,
+  MaterialEstimateSeedResponse,
   StageResourcesPutBody,
   AiChatMessage,
 } from "./types";
@@ -118,10 +118,35 @@ export const api = {
     }),
 
   postMaterialEstimate: (projectId: string, body: MaterialEstimateRequestBody) =>
-    apiFetch<MaterialEstimateResponse>(`/my/projects/${projectId}/material-estimate`, {
+    apiFetch<MaterialEstimateSeedResponse>(`/my/projects/${projectId}/material-estimate`, {
       method: "POST",
       body: JSON.stringify(body),
     }),
+
+  /** Raw OpenAI-shaped chat completions (tool-calling loops). */
+  postAiCompletions: async (body: Record<string, unknown>) => {
+    const res = await fetch(`/api/my/ai/completions`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    if (res.status === 401) {
+      document.cookie = "id_token=; path=/; max-age=0";
+      window.location.href = "/";
+      throw new Error("Session expired");
+    }
+    if (!res.ok) {
+      let msg = `Request failed: ${res.status}`;
+      try {
+        const j = (await res.json()) as { error?: string };
+        if (j?.error) msg = j.error;
+      } catch {
+        /* ignore */
+      }
+      throw new Error(msg);
+    }
+    return res.text();
+  },
 
   /** Lightweight chat to the configured LLM (no full material/equipment catalogs). */
   postAiChat: async (body: { messages: AiChatMessage[] }) => {

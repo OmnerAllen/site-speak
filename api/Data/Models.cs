@@ -141,6 +141,17 @@ public record MaterialEstimateApiResponse(
     IReadOnlyList<string> Warnings,
     string? LlmRawContent = null);
 
+/// <summary>Seed for client-side tool-calling loop: messages + tools + ID allowlists and display labels.</summary>
+public record MaterialEstimateSeedResponse(
+    IReadOnlyList<string> Warnings,
+    System.Text.Json.JsonElement Messages,
+    System.Text.Json.JsonElement Tools,
+    System.Text.Json.JsonElement ToolChoice,
+    IReadOnlyList<string> AllowedMaterialIds,
+    IReadOnlyList<string> AllowedEquipmentIds,
+    IReadOnlyDictionary<string, string> MaterialLabels,
+    IReadOnlyDictionary<string, string> EquipmentLabels);
+
 public record MaterialEstimateStageApiDto(
     string Name,
     IReadOnlyList<MaterialEstimateMaterialLineApiDto> Materials,

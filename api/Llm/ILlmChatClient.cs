@@ -1,3 +1,5 @@
+using System.Text.Json;
+
 namespace SiteSpeak.Llm;
 
 public interface ILlmChatClient
@@ -9,5 +11,13 @@ public interface ILlmChatClient
     Task<(string? Content, string? Error)> CompleteAsync(
         IReadOnlyList<LlmChatMessage> messages,
         bool jsonObjectResponse,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// POST a chat completions body (must include <c>messages</c>). Injects <c>model</c> from config when missing.
+    /// Returns the raw upstream JSON body and parsed first choice (content and/or tool calls).
+    /// </summary>
+    Task<(string RawBody, LlmChatCompletionResult? Parsed, string? Error)> PostChatCompletionsAsync(
+        JsonElement requestBody,
         CancellationToken cancellationToken = default);
 }

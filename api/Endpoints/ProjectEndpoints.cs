@@ -189,7 +189,7 @@ public static class ProjectEndpoints
 
             try
             {
-                var result = await estimates.RunEstimateAsync(id, companyId.Value, body, cancellationToken);
+                var result = await estimates.BuildEstimateSeedAsync(id, companyId.Value, body, cancellationToken);
                 return result is null ? Results.NotFound() : Results.Ok(result);
             }
             catch (ArgumentOutOfRangeException ex)
