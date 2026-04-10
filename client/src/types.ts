@@ -3,6 +3,8 @@ export interface Project {
   name: string;
   address: string;
   overview: string;
+  latitude: number | null;
+  longitude: number | null;
   createdAt: string;
   updatedAt: string;
   plannedStartDate: string | null;
@@ -59,6 +61,8 @@ export interface ProjectDetails {
   name: string;
   address: string;
   overview: string;
+  latitude: number | null;
+  longitude: number | null;
   createdAt: string;
   updatedAt: string;
   stages: ProjectStage[];
@@ -78,7 +82,10 @@ export interface Equipment {
   name: string;
   costPerDay: number;
   costHalfDay: number;
-  placeToRentFrom: string;
+  rentalSupplierId: string | null;
+  rentalSupplierName: string;
+  rentalSupplierLatitude: number | null;
+  rentalSupplierLongitude: number | null;
 }
 
 export interface Supplier {
@@ -86,7 +93,12 @@ export interface Supplier {
   name: string;
   address: string;
   phone: string;
+  latitude: number | null;
+  longitude: number | null;
 }
+
+/** POST/PUT /suppliers; server geocodes address and sets latitude/longitude. */
+export type SupplierUpsertBody = Pick<Supplier, "name" | "address" | "phone">;
 
 export type FormFieldType =
   | "small-text"
@@ -110,6 +122,57 @@ export interface FormFieldConfig {
   options?: { value: string; label: string }[];
   /** Shown under the label for `heading` fields. */
   description?: string;
+}
+
+export type StageName = "demo" | "prep" | "build/install" | "qa";
+
+export interface ProjectStageResourcesResponse {
+  stages: Array<{
+    name: StageName;
+    materials: Array<{ materialId: string; productName: string; quantity: number }>;
+    equipment: Array<{ equipmentId: string; name: string; halfDay: boolean; dateOfUse: string }>;
+  }>;
+}
+
+export interface StageResourcesPutBody {
+  stages: Array<{
+    name: StageName;
+    materials: Array<{ materialId: string; quantity: number }>;
+    equipment: Array<{ equipmentId: string; halfDay: boolean }>;
+  }>;
+}
+
+/** Body for POST /material-estimate (optional text overrides unsaved editor content). */
+export interface MaterialEstimateRequestBody {
+  /** Server-side distance filter (miles) before calling the model. Default 50. */
+  radiusMiles?: number;
+  overview?: string;
+  stages?: Array<{ name: string; details?: string; notes?: string }>;
+}
+
+/** POST /my/ai/chat — small payload; uses the API `Llm` config. */
+export type AiChatRole = "system" | "user" | "assistant";
+
+export interface AiChatMessage {
+  role: AiChatRole;
+  content: string;
+}
+
+/** POST /material-estimate — server runs the LLM tool loop and returns draft rows. */
+export type MaterialEstimateCompleteStatus = "ok" | "emptyCatalog";
+
+export interface MaterialEstimateDraftStageDto {
+  name: StageName;
+  materials: Array<{ materialId: string; quantity: number; label: string }>;
+  equipment: Array<{ equipmentId: string; halfDay: boolean; label: string }>;
+}
+
+export interface MaterialEstimateCompleteResponse {
+  warnings: string[];
+  status: MaterialEstimateCompleteStatus;
+  highlightMaterialsPanel: boolean;
+  appliedViaSubmitTool: boolean;
+  draftStages: MaterialEstimateDraftStageDto[] | null;
 }
 
 export interface UserProfile {

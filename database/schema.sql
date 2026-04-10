@@ -31,6 +31,8 @@ CREATE TABLE supplier (
     name VARCHAR(255) NOT NULL,
     address VARCHAR(255) NOT NULL,
     phone VARCHAR(50),
+    latitude DOUBLE PRECISION,
+    longitude DOUBLE PRECISION,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW(),
     deleted_at TIMESTAMPTZ
@@ -43,6 +45,8 @@ CREATE TABLE project (
     name VARCHAR(255) NOT NULL,
     address VARCHAR(255) NOT NULL,
     overview TEXT NOT NULL DEFAULT '',
+    latitude DOUBLE PRECISION,
+    longitude DOUBLE PRECISION,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW(),
     deleted_at TIMESTAMPTZ
@@ -80,7 +84,7 @@ CREATE TABLE equipment (
     name VARCHAR(255) NOT NULL,
     cost_per_day DECIMAL(10, 2),
     cost_half_day DECIMAL(10, 2),
-    place_to_rent_from VARCHAR(255),
+    rental_supplier_id UUID REFERENCES supplier(id) ON DELETE SET NULL,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW(),
     deleted_at TIMESTAMPTZ
@@ -174,6 +178,7 @@ CREATE INDEX idx_stage_project ON stage(project_id);
 CREATE UNIQUE INDEX uq_stage_project_name_active ON stage(project_id, name) WHERE deleted_at IS NULL;
 CREATE INDEX idx_stage_equipment_stage ON stage_equipment(stage_id);
 CREATE INDEX idx_stage_material_stage ON stage_material(stage_id);
+CREATE INDEX idx_equipment_rental_supplier ON equipment(rental_supplier_id);
 CREATE INDEX idx_work_log_employee ON work_log(employee_id);
 CREATE INDEX idx_work_log_project ON work_log(project_id);
 CREATE INDEX idx_work_log_started_at ON work_log(started_at);

@@ -1,9 +1,16 @@
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
 import { DynamicForm } from "../components/DynamicForm";
+import { ProjectAiChatPanel } from "../components/ProjectAiChatPanel";
+import {
+  ProjectMaterialEstimateSection,
+  type EditorPrompt,
+  type ProjectMaterialEstimateHandle,
+} from "../components/ProjectMaterialEstimateSection";
 import { api } from "../api";
+import { isAiChatEnabled } from "../features";
 import type { FormFieldConfig, ProjectDetails, ProjectStage } from "../types";
 
 const STAGE_ORDER: ProjectStage["name"][] = ["demo", "prep", "build/install", "qa"];
@@ -60,7 +67,8 @@ function buildProjectFormFields(): FormFieldConfig[] {
         type: "heading",
         name: `h_${p}`,
         label: stageLabel(stage),
-        description: "Materials and equipment coming soon.",
+        description:
+          "Materials & equipment: use the sidebar (desktop) or section below the form (mobile) after you fill the overview.",
       },
       {
         type: "large-text",
@@ -189,6 +197,25 @@ export default function ProjectDetailsPage() {
   const [draftValues, setDraftValues] = useState<Record<string, string> | null>(null);
   const formValues = draftValues ?? baseValues;
 
+  const estimateSectionRef = useRef<ProjectMaterialEstimateHandle>(null);
+
+  const getEditorPrompt = useCallback((): EditorPrompt => {
+    const state = valuesToEditorState(formValues);
+    return {
+      overview: state.overview,
+      stages: STAGE_ORDER.map((name) => ({
+        name,
+        details: state.stages[name].details,
+        notes: state.stages[name].notes,
+      })),
+    };
+  }, [formValues]);
+
+  const handleFieldBlur = (name: string) => {
+    if (name !== "overview") return;
+    if (!isCreateMode) estimateSectionRef.current?.runEstimate();
+  };
+
   const saveMutation = useMutation({
     mutationFn: async (state: ProjectEditorState) => {
       const payload = editorPayload(state);
@@ -274,25 +301,57 @@ export default function ProjectDetailsPage() {
     (!isCreateMode && !hasChanges);
 
   return (
-    <div className="max-w-5xl mx-auto p-6 md:p-12 space-y-8">
+    <div className="max-w-7xl mx-auto p-6 md:p-12 space-y-8">
       <div className="py-4">
         <h1 className="text-2xl md:text-3xl font-bold text-brick-100 mt-2">
           {isCreateMode ? "New Project" : "Project Details"}
         </h1>
       </div>
 
-      <DynamicForm
-        fields={PROJECT_FORM_FIELDS}
-        values={formValues}
-        onChange={(name, value) =>
-          setDraftValues((prev) => ({ ...(prev ?? baseValues), [name]: value }))
-        }
-        onSubmit={handleSubmit}
-        submitLabel={submitLabel}
-        onCancel={handleCancel}
-        submitDisabled={submitDisabled}
-        cancelDisabled={saveMutation.isPending}
-      />
+      {!isCreateMode && projectId ? (
+        <div className="flex flex-col gap-8 lg:flex-row lg:items-stretch lg:gap-8">
+          <aside className="w-full lg:w-[min(22rem,100%)] lg:shrink-0 order-2 lg:order-1">
+            <ProjectMaterialEstimateSection
+              ref={estimateSectionRef}
+              projectId={projectId}
+              getEditorPrompt={getEditorPrompt}
+            />
+          </aside>
+          <div className="flex-1 min-w-0 order-1 lg:order-2">
+            <DynamicForm
+              fields={PROJECT_FORM_FIELDS}
+              values={formValues}
+              onChange={(name, value) =>
+                setDraftValues((prev) => ({ ...(prev ?? baseValues), [name]: value }))
+              }
+              onFieldBlur={handleFieldBlur}
+              onSubmit={handleSubmit}
+              submitLabel={submitLabel}
+              onCancel={handleCancel}
+              submitDisabled={submitDisabled}
+              cancelDisabled={saveMutation.isPending}
+            />
+          </div>
+          {isAiChatEnabled ? (
+            <aside className="w-full lg:w-[min(22rem,100%)] lg:shrink-0 order-3">
+              <ProjectAiChatPanel projectName={project?.name} />
+            </aside>
+          ) : null}
+        </div>
+      ) : (
+        <DynamicForm
+          fields={PROJECT_FORM_FIELDS}
+          values={formValues}
+          onChange={(name, value) =>
+            setDraftValues((prev) => ({ ...(prev ?? baseValues), [name]: value }))
+          }
+          onSubmit={handleSubmit}
+          submitLabel={submitLabel}
+          onCancel={handleCancel}
+          submitDisabled={submitDisabled}
+          cancelDisabled={saveMutation.isPending}
+        />
+      )}
     </div>
   );
 }

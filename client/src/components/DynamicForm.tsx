@@ -16,6 +16,8 @@ export interface DynamicFormProps {
   values: Record<string, string>;
   onChange: (name: string, value: string) => void;
   onSubmit: (values: Record<string, string>) => void;
+  /** Fires when a field loses focus (e.g. overview blur to run AI estimate). */
+  onFieldBlur?: (name: string) => void;
   submitLabel?: string;
   onCancel?: () => void;
   submitDisabled?: boolean;
@@ -27,6 +29,7 @@ export const DynamicForm: React.FC<DynamicFormProps> = ({
   values,
   onChange,
   onSubmit,
+  onFieldBlur,
   submitLabel = "Submit",
   onCancel,
   submitDisabled = false,
@@ -64,6 +67,7 @@ export const DynamicForm: React.FC<DynamicFormProps> = ({
             name={name}
             value={values[name] ?? ""}
             onChange={(e) => onChange(name, e.target.value)}
+            onBlur={() => onFieldBlur?.(name)}
             placeholder={placeholder}
             required={required}
           />
@@ -88,6 +92,7 @@ export const DynamicForm: React.FC<DynamicFormProps> = ({
             name={name}
             value={values[name] ?? ""}
             onChange={(e) => onChange(name, e.target.value)}
+            onBlur={() => onFieldBlur?.(name)}
             placeholder={placeholder}
             required={required}
           />

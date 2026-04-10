@@ -71,16 +71,16 @@ Login Page
 #### Estimates:
 
 Rubric items:
-- [ ] 5 pts Technology: Network Calls that read and write data
-- [ ] 5 pts Technology: CI/CD pipeline
-- [ ] 5 pts Technology: tests run in pipeline, pipeline aborts if they fail
-- [ ] 5 pts Technology: linting in pipeline
+- [x] 5 pts Technology: Network Calls that read and write data
+- [x] 5 pts Technology: CI/CD pipeline
+- [x] 5 pts Technology: tests run in pipeline, pipeline aborts if they fail
+- [x] 5 pts Technology: linting in pipeline
 
 
 Features:
-- [ ] Deployed App that runs
-- [ ] Have Data in DB
-- [ ] Minimal Backend to talk to DB
+- [x] Deployed App that runs
+- [x] Have Data in DB
+- [x] Minimal Backend to talk to DB
 
 
 #### Delivered
@@ -199,6 +199,8 @@ Note: We are just working more on these, can't really finish a singular one
 Features:
 - [ ] Voice-To-Text for worklogs
 - [ ] AI material estimates
+- Will read from the Project Overview (user needs to type everything in here) and find materials/equipment based on project address and supplier address (Omner's genius idea: filter based on address before AI and let user choose how far {make sure AI knows it can return nothing if outside of the area})for each stage of the project. Then go ahead and return a json object that is a project and inside of the project the number of stages with the materials/equipment for that stage. Use a form to show the materials and allow the user to edit them. 
+- [ ] Split edit schedule into separate page
 
 #### Delivered
 
@@ -220,6 +222,7 @@ Note: We are just working more on these, can't really finish a singular one
 Features:
 - [ ] AI Project Scheduling materials recommended purchase based on stage time
 - [ ] Design rules of thumb for our UI
+
 
 #### Delivered
 
@@ -317,4 +320,25 @@ Backlog Features:
 - Customizable Worker Forms
 - Error in estimates (waste factor and markup)
 - Real Material usage
+
+## Geocoding and distance-filtered estimates
+
+**Suppliers** and **projects** store `latitude` / `longitude`. Creating or updating a supplier or project **geocodes the address** (OpenStreetMap Nominatim by default). If geocoding fails, the API returns **400** with a short error message.
+
+Configure the **`Geocoding`** section in `api/appsettings.json` (`BaseUrl`, `UserAgent`, optional `DevBypass`). Development uses the same merged config as other environments unless you override locally (e.g. user secrets or env vars).
+
+**Equipment** references a **rental supplier** via `rentalSupplierId` (same `supplier` table as material vendors). Regenerate supplier/equipment SQL from CSVs with `database/scripts/generate_geo_seeds.py` (uses Nominatim; respects `database/geocode_cache.json`). After schema changes, reset Postgres with `docker compose down -v` and bring the stack back up so init scripts rerun.
+
+## AI material estimates (API configuration)
+
+Material estimates **pre-filter** the materials and equipment catalogs by **Haversine distance** from the project job site to each row’s supplier (or equipment’s rental supplier), using **`radiusMiles`** from the request (default **50**, max **500**). Only the reduced catalog is sent to the LLM, which avoids huge prompts when the inventory is large. If the project has no coordinates, the server skips filtering and adds a warning.
+
+Configure the **`Llm`** section in `api/appsettings.json`, or override with environment variables such as `Llm__ChatCompletionsUrl` (double underscore nests into the section). Material-estimate debug echo of raw model output is controlled separately under **`MaterialEstimate`** (`IncludeLlmRawContentInResponse`, Development only).
+
+Default URL is **`https://ai-snow.reindeer-pinecone.ts.net:9292/v1/chat/completions`**. Default model id is **`gemma4-31b`** (matches the `id` from that host’s **`GET /v1/models`** — llama.cpp `--alias` for the Gemma 4 31B IT GGUF). Override with `Llm__Model` or `LLM_MODEL` if you point at another server.
+
+**Finding the exact `model` string:** many OpenAI-compatible servers list ids at **`GET …/v1/models`** (same host/base as chat, path `/v1/models`). Example: `curl -sS https://your-host:9292/v1/models | jq` and use the `id` field from the response. **Ollama** often uses ids like `gemma4`, `gemma4:31b`, or `gemma4:26b` instead of the Hugging Face path. The listener on that port must use TLS; **`http://` there often yields HTTP 400** (“Client sent an HTTP request to an HTTPS server”). Outbound LLM requests send **`Content-Type: application/json` only** (no `Authorization` header). If the API runs in **Docker**, avoid `localhost` for the LLM URL unless the model listens there from the container’s network namespace.
+
+- **`Llm:ChatCompletionsUrl`** — Full URL to an OpenAI-compatible `POST .../v1/chat/completions` endpoint.
+- **`Llm:Model`** — Model name sent to that endpoint.
 

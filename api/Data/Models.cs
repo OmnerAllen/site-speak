@@ -8,9 +8,17 @@ public record UserMeResponse(
     IReadOnlyList<string> Roles,
     IReadOnlyList<string> Permissions);
 
-public record SupplierDto(Guid Id, string Name, string Address, string Phone);
+public record SupplierDto(Guid Id, string Name, string Address, string Phone, double? Latitude, double? Longitude);
 
-public record EquipmentDto(Guid Id, string Name, decimal CostPerDay, decimal CostHalfDay, string PlaceToRentFrom);
+public record EquipmentDto(
+    Guid Id,
+    string Name,
+    decimal CostPerDay,
+    decimal CostHalfDay,
+    Guid? RentalSupplierId,
+    string RentalSupplierName,
+    double? RentalSupplierLatitude,
+    double? RentalSupplierLongitude);
 
 public record MaterialListItemDto(
     Guid Id,
@@ -20,11 +28,26 @@ public record MaterialListItemDto(
     string ProductType,
     decimal PricePerUnit);
 
+/// <summary>Material row with supplier address for geo filtering and LLM catalog.</summary>
+public record MaterialCatalogItemDto(
+    Guid Id,
+    string ProductName,
+    Guid? SupplierId,
+    string SupplierName,
+    string SupplierAddress,
+    double? SupplierLatitude,
+    double? SupplierLongitude,
+    string Unit,
+    string ProductType,
+    decimal PricePerUnit);
+
 public record ProjectDto(
     Guid Id,
     string Name,
     string Address,
     string Overview,
+    double? Latitude,
+    double? Longitude,
     DateTime CreatedAt,
     DateTime UpdatedAt,
     string? PlannedStartDate,
@@ -80,6 +103,8 @@ public record ProjectDetailsResponse(
     string Name,
     string Address,
     string Overview,
+    double? Latitude,
+    double? Longitude,
     DateTime CreatedAt,
     DateTime UpdatedAt,
     IReadOnlyList<StageDto> Stages);
@@ -90,4 +115,81 @@ public enum ProjectDetailsUpdateResult
     NotFound,
     StagesRequired,
     InvalidStage
+}
+
+public record StageMaterialResourceDto(
+    Guid MaterialId,
+    string ProductName,
+    decimal Quantity);
+
+public record StageEquipmentResourceDto(
+    Guid EquipmentId,
+    string Name,
+    bool HalfDay,
+    string DateOfUse);
+
+public record StageResourcesStageDto(
+    string Name,
+    IReadOnlyList<StageMaterialResourceDto> Materials,
+    IReadOnlyList<StageEquipmentResourceDto> Equipment);
+
+public record ProjectStageResourcesResponse(IReadOnlyList<StageResourcesStageDto> Stages);
+
+/// <summary>API response for POST material-estimate (enriched for UI).</summary>
+public record MaterialEstimateApiResponse(
+    IReadOnlyList<MaterialEstimateStageApiDto> Stages,
+    IReadOnlyList<string> Warnings,
+    string? LlmRawContent = null);
+
+public enum MaterialEstimateCompleteStatus
+{
+    Ok,
+    EmptyCatalog,
+}
+
+/// <summary>Result of POST material-estimate: server ran the LLM tool loop and returns UI draft rows.</summary>
+public record MaterialEstimateCompleteResponse(
+    IReadOnlyList<string> Warnings,
+    MaterialEstimateCompleteStatus Status,
+    bool HighlightMaterialsPanel,
+    bool AppliedViaSubmitTool,
+    IReadOnlyList<MaterialEstimateDraftStageDto>? DraftStages)
+{
+    public static MaterialEstimateCompleteResponse EmptyCatalog(IReadOnlyList<string> warnings) =>
+        new(warnings, MaterialEstimateCompleteStatus.EmptyCatalog, false, false, null);
+}
+
+public record MaterialEstimateDraftStageDto(
+    string Name,
+    IReadOnlyList<MaterialEstimateDraftMaterialLineDto> Materials,
+    IReadOnlyList<MaterialEstimateDraftEquipmentLineDto> Equipment);
+
+public record MaterialEstimateDraftMaterialLineDto(string MaterialId, double Quantity, string Label);
+
+public record MaterialEstimateDraftEquipmentLineDto(string EquipmentId, bool HalfDay, string Label);
+
+public record MaterialEstimateStageApiDto(
+    string Name,
+    IReadOnlyList<MaterialEstimateMaterialLineApiDto> Materials,
+    IReadOnlyList<MaterialEstimateEquipmentLineApiDto> Equipment);
+
+public record MaterialEstimateMaterialLineApiDto(
+    Guid MaterialId,
+    string ProductName,
+    decimal Quantity,
+    string? Note);
+
+public record MaterialEstimateEquipmentLineApiDto(
+    Guid EquipmentId,
+    string Name,
+    bool HalfDay,
+    string? Note);
+
+public enum StageResourcesReplaceResult
+{
+    Ok,
+    ProjectNotFound,
+    InvalidStage,
+    InvalidMaterial,
+    InvalidEquipment
 }

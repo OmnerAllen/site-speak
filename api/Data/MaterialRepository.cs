@@ -2,6 +2,37 @@ using Npgsql;
 
 public class MaterialRepository(NpgsqlDataSource dataSource)
 {
+    /// <summary>Materials with supplier id and address for distance filtering.</summary>
+    public Task<IReadOnlyList<MaterialCatalogItemDto>> ListCatalogForEstimateAsync(
+        CancellationToken cancellationToken = default)
+    {
+        return dataSource.QueryAsync(
+            """
+            SELECT m.id, m.product_name, s.id, s.name, COALESCE(s.address, ''),
+                   s.latitude, s.longitude, m.unit, m.product_type, m.price_per_unit
+            FROM material m
+            LEFT JOIN supplier s ON s.id = m.supplier_id AND s.deleted_at IS NULL
+            WHERE m.deleted_at IS NULL
+            ORDER BY m.product_name
+            """,
+            reader =>
+            {
+                var supplierId = reader.IsDBNull(2) ? (Guid?)null : reader.GetGuid(2);
+                return new MaterialCatalogItemDto(
+                    reader.GetGuid(0),
+                    reader.GetString(1),
+                    supplierId,
+                    reader.IsDBNull(3) ? "" : reader.GetString(3),
+                    reader.GetString(4),
+                    reader.IsDBNull(5) ? null : reader.GetDouble(5),
+                    reader.IsDBNull(6) ? null : reader.GetDouble(6),
+                    reader.IsDBNull(7) ? "" : reader.GetString(7),
+                    reader.IsDBNull(8) ? "" : reader.GetString(8),
+                    reader.IsDBNull(9) ? 0m : reader.GetDecimal(9));
+            },
+            cancellationToken: cancellationToken);
+    }
+
     public Task<IReadOnlyList<MaterialListItemDto>> ListAsync(CancellationToken cancellationToken = default)
     {
         return dataSource.QueryAsync(

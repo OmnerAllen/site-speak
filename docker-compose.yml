@@ -24,10 +24,15 @@ services:
     ports:
       - "5000:5000"
     working_dir: /app
+    env_file:
+      - .env
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
       - ASPNETCORE_URLS=http://+:5000
       - ConnectionStrings__DefaultConnection=Host=db;Port=5432;Database=sitespeak;Username=postgres;Password=postgres
+      # LLM must be reachable from this container (localhost:9292 is wrong unless the model runs inside the same container)
+      - Llm__ChatCompletionsUrl=${LLM_CHAT_COMPLETIONS_URL:-https://ai-snow.reindeer-pinecone.ts.net:9292/v1/chat/completions}
+      # Optional: set Llm__Model in .env to override api/Llm/LlmOptions.DefaultModelId (do not set empty)
     volumes:
       - ./api:/app
       # api.csproj references ../SiteSpeak.Logic — must exist beside /app in the container
@@ -43,6 +48,8 @@ services:
     ports:
       - "5173:5173"
     working_dir: /app
+    env_file:
+      - .env
     environment:
       - NODE_ENV=development
     volumes:
