@@ -73,6 +73,11 @@ jobs:
             --cert-name wildcard-cert \
             -d "*.$BASE_DOMAIN"
 
+          # Fix permissions on created certificates so the non-root GitHub Actions runner can read them
+          docker run --rm \
+            -v "$CERTS_DIR:/etc/letsencrypt" \
+            alpine:latest chown -R $(id -u):$(id -g) /etc/letsencrypt
+
           echo "CERTS_DIR=$CERTS_DIR" >> "$GITHUB_ENV"
 
       - name: Sync TLS secrets to active namespaces
