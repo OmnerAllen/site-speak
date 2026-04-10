@@ -1,7 +1,7 @@
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: site-speak-ingress
+  name: site-speak-ingress-prod
   namespace: ${NAMESPACE}
   annotations:
     nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
@@ -10,10 +10,7 @@ spec:
   tls:
   - hosts:
     - ${APP_HOST}
-    - ${GRAFANA_HOST}
-    - ${PROMETHEUS_HOST}
-    - ${COLLECTOR_HOST}
-    secretName: sitespeak-wildcard-tls
+    secretName: sitespeak-root-tls
   rules:
   - host: ${APP_HOST}
     http:
@@ -25,6 +22,23 @@ spec:
             name: site-speak-service
             port:
               number: 80
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: site-speak-ingress-wildcard
+  namespace: ${NAMESPACE}
+  annotations:
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+spec:
+  ingressClassName: nginx
+  tls:
+  - hosts:
+    - ${GRAFANA_HOST}
+    - ${PROMETHEUS_HOST}
+    - ${COLLECTOR_HOST}
+    secretName: sitespeak-wildcard-tls
+  rules:
   - host: ${GRAFANA_HOST}
     http:
       paths:
