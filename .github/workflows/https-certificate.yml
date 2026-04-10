@@ -2,15 +2,6 @@ name: Manage HTTPS certificate
 
 on:
   workflow_dispatch:
-    inputs:
-      letsencrypt_environment:
-        description: "Let's Encrypt environment"
-        required: true
-        default: production
-        type: choice
-        options:
-          - staging
-          - production
   schedule:
     - cron: "17 3 * * 1"
 
@@ -21,23 +12,10 @@ jobs:
       contents: read
     env:
       BASE_DOMAIN: site-speak.duckdns.org
-      TLS_SECRET_NAME: sitespeak-wildcard-tls
+      ROOT_TLS_SECRET_NAME: sitespeak-root-tls
+      WILDCARD_TLS_SECRET_NAME: sitespeak-wildcard-tls
     steps:
-      - name: Resolve ACME server
-        run: |
-          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
-            ACME_ENV="${{ inputs.letsencrypt_environment }}"
-          else
-            ACME_ENV="production"
-          fi
-
-          if [[ "$ACME_ENV" == "staging" ]]; then
-            echo "ACME_SERVER=https://acme-staging-v02.api.letsencrypt.org/directory" >> "$GITHUB_ENV"
-          else
-            echo "ACME_SERVER=https://acme-v02.api.letsencrypt.org/directory" >> "$GITHUB_ENV"
-          fi
-
-      - name: Issue or renew wildcard certificate
+      - name: Issue or renew certificates
         env:
           DUCKDNS_TOKEN: ${{ secrets.DUCKDNS_TOKEN }}
           LE_EMAIL: ${{ secrets.LE_EMAIL }}
@@ -68,25 +46,49 @@ jobs:
             --agree-tos \
             --email "$LE_EMAIL" \
             --preferred-challenges dns \
-            --server "$ACME_SERVER" \
+            --server "https://acme-v02.api.letsencrypt.org/directory" \
             --authenticator dns-duckdns \
             --dns-duckdns-token "$DUCKDNS_TOKEN" \
             --dns-duckdns-propagation-seconds 90 \
             --keep-until-expiring \
-            -d "$BASE_DOMAIN" \
+            --cert-name root-cert \
+            -d "$BASE_DOMAIN"
+
+          docker run --rm \
+            -v "$CERTS_DIR:/etc/letsencrypt" \
+            -v "$LOGS_DIR:/var/log/letsencrypt" \
+            infinityofspace/certbot_dns_duckdns:latest \
+            certonly \
+            --non-interactive \
+            --agree-tos \
+            --email "$LE_EMAIL" \
+            --preferred-challenges dns \
+            --server "https://acme-v02.api.letsencrypt.org/directory" \
+            --authenticator dns-duckdns \
+            --dns-duckdns-token "$DUCKDNS_TOKEN" \
+            --dns-duckdns-propagation-seconds 90 \
+            --keep-until-expiring \
+            --cert-name wildcard-cert \
             -d "*.$BASE_DOMAIN"
 
           echo "CERTS_DIR=$CERTS_DIR" >> "$GITHUB_ENV"
 
-      - name: Sync TLS secret to active namespaces
+      - name: Sync TLS secrets to active namespaces
         run: |
           set -euo pipefail
 
-          CERT_FILE="$CERTS_DIR/live/$BASE_DOMAIN/fullchain.pem"
-          KEY_FILE="$CERTS_DIR/live/$BASE_DOMAIN/privkey.pem"
+          ROOT_CERT_FILE="$CERTS_DIR/live/root-cert/fullchain.pem"
+          ROOT_KEY_FILE="$CERTS_DIR/live/root-cert/privkey.pem"
+          WILDCARD_CERT_FILE="$CERTS_DIR/live/wildcard-cert/fullchain.pem"
+          WILDCARD_KEY_FILE="$CERTS_DIR/live/wildcard-cert/privkey.pem"
 
-          if [[ ! -f "$CERT_FILE" || ! -f "$KEY_FILE" ]]; then
-            echo "Certificate files not found"
+          if [[ ! -f "$ROOT_CERT_FILE" || ! -f "$ROOT_KEY_FILE" ]]; then
+            echo "Root certificate files not found"
+            exit 1
+          fi
+
+          if [[ ! -f "$WILDCARD_CERT_FILE" || ! -f "$WILDCARD_KEY_FILE" ]]; then
+            echo "Wildcard certificate files not found"
             exit 1
           fi
 
@@ -99,9 +101,15 @@ jobs:
 
           while IFS= read -r ns; do
             [[ -z "$ns" ]] && continue
-            echo "Syncing TLS secret to namespace: $ns"
-            kubectl -n "$ns" create secret tls "$TLS_SECRET_NAME" \
-              --cert="$CERT_FILE" \
-              --key="$KEY_FILE" \
+            echo "Syncing TLS secrets to namespace: $ns"
+            
+            kubectl -n "$ns" create secret tls "$ROOT_TLS_SECRET_NAME" \
+              --cert="$ROOT_CERT_FILE" \
+              --key="$ROOT_KEY_FILE" \
+              --dry-run=client -o yaml | kubectl apply -f -
+              
+            kubectl -n "$ns" create secret tls "$WILDCARD_TLS_SECRET_NAME" \
+              --cert="$WILDCARD_CERT_FILE" \
+              --key="$WILDCARD_KEY_FILE" \
               --dry-run=client -o yaml | kubectl apply -f -
           done <<< "$namespaces"
