@@ -241,6 +241,7 @@ export default function WorkLogsPage() {
         </div>
       )}
 
+
       {showForm && (
         <div className="mb-8">
           <h2 className="text-lg font-semibold text-brick-200 mb-4">
