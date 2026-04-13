@@ -9,6 +9,7 @@ import type {
   ScheduleProject,
   Employee,
   WorkLog,
+  WorkLogDraft,
   MaterialEstimateRequestBody,
   MaterialEstimateCompleteResponse,
   StageResourcesPutBody,
@@ -172,6 +173,46 @@ export const api = {
     apiFetch<void>(`/my/employees/${id}`, { method: "DELETE" }),
 
   getWorkLogs: () => apiFetch<WorkLog[]>("/my/work-logs"),
+  
+  parseAudioWorkLog: async (audioBlob: Blob, language: string = "auto", prompt: string = ""): Promise<{ text: string }> => {
+    const formData = new FormData();
+    formData.append("file", audioBlob, "recording.webm");
+    formData.append("language", language);
+    formData.append("prompt", prompt);
+    const res = await fetch("/api/my/work-logs/transcribe-chunk", {
+      method: "POST",
+      body: formData,
+    });
+    if (res.status === 401) {
+      document.cookie = "id_token=; path=/; max-age=0";
+      window.location.href = "/";
+      throw new Error("Unauthorized");
+    }
+    const data = await res.json();
+    if (!res.ok) {
+      throw new ApiError(data.error || "Failed to parse audio", res.status);
+    }
+    return data;
+  },
+
+  parseTextWorkLog: async (transcript: string): Promise<{ draft: WorkLogDraft; transcript: string }> => {
+    const res = await fetch("/api/my/work-logs/parse-text", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ transcript }),
+    });
+    if (res.status === 401) {
+      document.cookie = "id_token=; path=/; max-age=0";
+      window.location.href = "/";
+      throw new Error("Unauthorized");
+    }
+    const data = await res.json();
+    if (!res.ok) {
+      throw new ApiError(data.error || "Failed to parse text", res.status);
+    }
+    return data;
+  },
+
   createWorkLog: (body: {
     employeeId: string;
     projectId: string;

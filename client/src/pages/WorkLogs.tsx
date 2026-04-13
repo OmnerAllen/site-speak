@@ -1,13 +1,10 @@
 import { useMemo, useState } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
-import {
-  useSuspenseQuery,
-  useMutation,
-  useQueryClient,
-} from "@tanstack/react-query";
+import { useSuspenseQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
 import { DynamicForm } from "../components/DynamicForm";
 import { ResourceList } from "../components/ResourceList";
+import { DictationWidget } from "../components/DictationWidget";
 import { api } from "../api";
 import type { Employee, FormFieldConfig, Project, WorkLog } from "../types";
 
@@ -150,8 +147,29 @@ export default function WorkLogsPage() {
   });
 
   const [showForm, setShowForm] = useState(false);
+  const [showDictation, setShowDictation] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formValues, setFormValues] = useState<Record<string, string>>(emptyFormValues());
+
+  const handleDictationFinish = (data: { draft: import("../types").WorkLogDraft; transcript: string }) => {
+    const { draft, transcript } = data;
+    setEditingId(null);
+    setFormValues({
+      ...emptyFormValues(),
+      employeeId: employeeIdQuery ?? "",
+      projectId: draft.projectId ?? "",
+      startedAt: draft.startedAt ? toDatetimeLocalValue(draft.startedAt) : "",
+      endedAt: draft.endedAt ? toDatetimeLocalValue(draft.endedAt) : "",
+      notes: draft.notes ? `${draft.notes}\n\n[Transcript: ${transcript}]` : `[Transcript: ${transcript}]`,
+    });
+    setShowDictation(false);
+    setShowForm(true);
+  };
+
+  const handleStartDictation = () => {
+    setShowDictation(true);
+    setShowForm(false);
+  };
 
   const canAdd = employees.length > 0 && projects.length > 0;
 
@@ -165,17 +183,20 @@ export default function WorkLogsPage() {
       ...emptyFormValues(),
       employeeId: employeeIdQuery ?? "",
     });
+    setShowDictation(false);
     setShowForm(true);
   };
 
   const handleEdit = (item: WorkLog) => {
     setEditingId(item.id);
     setFormValues(workLogToFormValues(item));
+    setShowDictation(false);
     setShowForm(true);
   };
 
   const handleCancel = () => {
     setShowForm(false);
+    setShowDictation(false);
     setEditingId(null);
     setFormValues(emptyFormValues());
   };
@@ -221,7 +242,7 @@ export default function WorkLogsPage() {
         </p>
       )}
 
-      {!showForm && (
+      {!showForm && !showDictation && (
         <div className="flex items-center justify-between mb-6 pb-4 border-b border-brick-800">
           <button
             type="button"
@@ -230,17 +251,33 @@ export default function WorkLogsPage() {
           >
             Back to Employee
           </button>
-          <button
-            type="button"
-            onClick={handleAdd}
-            className="bg-grass-700 text-grass-100 font-medium py-2 px-4 rounded-md hover:bg-grass-600 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-            disabled={!canAdd}
-          >
-            + Log Work
-          </button>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={handleStartDictation}
+              disabled={!canAdd}
+              className="flex items-center gap-2 font-medium py-2 px-4 rounded-md transition-colors cursor-pointer bg-sky-600 text-white hover:bg-sky-500 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              🎤 Dictate Work Log
+            </button>
+            <button
+              type="button"
+              onClick={handleAdd}
+              disabled={!canAdd}
+              className="bg-grass-700 text-grass-100 font-medium py-2 px-4 rounded-md hover:bg-grass-600 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              + Log Work
+            </button>
+          </div>
         </div>
       )}
 
+      {showDictation && (
+        <DictationWidget
+          onCancel={handleCancel}
+          onFinish={handleDictationFinish}
+        />
+      )}
 
       {showForm && (
         <div className="mb-8">

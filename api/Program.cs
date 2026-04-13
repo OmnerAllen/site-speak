@@ -36,6 +36,13 @@ builder.Services.AddHttpClient(OpenAiCompatibleChatClient.HttpClientName, client
     client.Timeout = TimeSpan.FromMinutes(15);
 });
 builder.Services.AddSingleton<ILlmChatClient, OpenAiCompatibleChatClient>();
+builder.Services.AddHttpClient<IWhisperClient, SiteSpeak.Llm.AiOfficeWhisperClient>(client =>
+{
+    client.BaseAddress = new Uri("https://ai-office-server:8443");
+}).ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
+{
+    ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator
+});
 builder.Services.AddSingleton<MaterialEstimateService>();
 builder.Services.AddSingleton<AiChatService>();
 
