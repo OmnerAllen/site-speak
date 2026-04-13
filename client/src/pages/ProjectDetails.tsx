@@ -7,6 +7,7 @@ import { ProjectAiChatPanel } from "../components/ProjectAiChatPanel";
 import {
   ProjectMaterialEstimateSection,
   type EditorPrompt,
+  type MaterialEstimateToolbarState,
   type ProjectMaterialEstimateHandle,
 } from "../components/ProjectMaterialEstimateSection";
 import { api } from "../api";
@@ -15,7 +16,7 @@ import type { FormFieldConfig, ProjectDetails, ProjectStage } from "../types";
 
 const STAGE_ORDER: ProjectStage["name"][] = ["demo", "prep", "build/install", "qa"];
 
-type StageFormState = Record<ProjectStage["name"], { details: string; notes: string }>;
+type StageFormState = Record<ProjectStage["name"], { details: string }>;
 
 interface ProjectEditorState {
   name: string;
@@ -68,20 +69,13 @@ function buildProjectFormFields(): FormFieldConfig[] {
         name: `h_${p}`,
         label: stageLabel(stage),
         description:
-          "Materials & equipment: use the sidebar (desktop) or section below the form (mobile) after you fill the overview.",
+          "After the overview is filled, set radius under Materials & equipment and use Regenerate in the toolbar.",
       },
       {
         type: "large-text",
         name: `${p}_details`,
         label: "Details",
         placeholder: "What are we doing during this stage?",
-        required: false,
-      },
-      {
-        type: "large-text",
-        name: `${p}_notes`,
-        label: "Notes (optional)",
-        placeholder: "Secondary notes, reminders, or context...",
         required: false,
       },
     );
@@ -92,18 +86,41 @@ function buildProjectFormFields(): FormFieldConfig[] {
 
 const PROJECT_FORM_FIELDS = buildProjectFormFields();
 
+const PROJECT_EDITOR_FORM_ID = "project-editor-form";
+
+type ProjectFormEditorSection = "info" | ProjectStage["name"];
+
+const PROJECT_EDITOR_TABS: { id: ProjectFormEditorSection; label: string }[] = [
+  { id: "info", label: "Project info" },
+  { id: "demo", label: "Demo" },
+  { id: "prep", label: "Prep" },
+  { id: "build/install", label: "Build/Install" },
+  { id: "qa", label: "QA" },
+];
+
+function projectFormFieldsForSection(section: ProjectFormEditorSection): FormFieldConfig[] {
+  if (section === "info") {
+    return PROJECT_FORM_FIELDS.filter((f) =>
+      ["h_project", "name", "address", "overview"].includes(f.name),
+    );
+  }
+  const p = stageFieldPrefix(section);
+  return PROJECT_FORM_FIELDS.filter(
+    (f) => f.name === `h_${p}` || f.name === `${p}_details`,
+  );
+}
+
 function toEditorState(project: ProjectDetails): ProjectEditorState {
   const baseStages: StageFormState = {
-    demo: { details: "", notes: "" },
-    prep: { details: "", notes: "" },
-    "build/install": { details: "", notes: "" },
-    qa: { details: "", notes: "" },
+    demo: { details: "" },
+    prep: { details: "" },
+    "build/install": { details: "" },
+    qa: { details: "" },
   };
 
   for (const stage of project.stages) {
     baseStages[stage.name] = {
       details: stage.details ?? "",
-      notes: stage.notes ?? "",
     };
   }
 
@@ -124,7 +141,6 @@ function editorStateToValues(s: ProjectEditorState): Record<string, string> {
   for (const stage of STAGE_ORDER) {
     const p = stageFieldPrefix(stage);
     v[`${p}_details`] = s.stages[stage].details;
-    v[`${p}_notes`] = s.stages[stage].notes;
   }
   return v;
 }
@@ -135,7 +151,6 @@ function valuesToEditorState(v: Record<string, string>): ProjectEditorState {
     const p = stageFieldPrefix(stage);
     stages[stage] = {
       details: v[`${p}_details`] ?? "",
-      notes: v[`${p}_notes`] ?? "",
     };
   }
   return {
@@ -154,7 +169,7 @@ function editorPayload(form: ProjectEditorState) {
     stages: STAGE_ORDER.map((name) => ({
       name,
       details: form.stages[name].details,
-      notes: form.stages[name].notes,
+      notes: "",
     })),
   };
 }
@@ -165,10 +180,10 @@ function emptyEditorState(): ProjectEditorState {
     address: "",
     overview: "",
     stages: {
-      demo: { details: "", notes: "" },
-      prep: { details: "", notes: "" },
-      "build/install": { details: "", notes: "" },
-      qa: { details: "", notes: "" },
+      demo: { details: "" },
+      prep: { details: "" },
+      "build/install": { details: "" },
+      qa: { details: "" },
     },
   };
 }
@@ -197,7 +212,28 @@ export default function ProjectDetailsPage() {
   const [draftValues, setDraftValues] = useState<Record<string, string> | null>(null);
   const formValues = draftValues ?? baseValues;
 
+  const [editorSection, setEditorSection] = useState<ProjectFormEditorSection>("info");
+  const sectionFields = useMemo(
+    () => projectFormFieldsForSection(editorSection),
+    [editorSection],
+  );
+
   const estimateSectionRef = useRef<ProjectMaterialEstimateHandle>(null);
+  const [materialToolbarState, setMaterialToolbarState] = useState<MaterialEstimateToolbarState>({
+    estimatePending: false,
+    applyPending: false,
+    canReset: false,
+  });
+
+  const onMaterialActionState = useCallback((next: MaterialEstimateToolbarState) => {
+    setMaterialToolbarState((prev) =>
+      prev.estimatePending === next.estimatePending &&
+      prev.applyPending === next.applyPending &&
+      prev.canReset === next.canReset
+        ? prev
+        : next,
+    );
+  }, []);
 
   const getEditorPrompt = useCallback((): EditorPrompt => {
     const state = valuesToEditorState(formValues);
@@ -206,7 +242,7 @@ export default function ProjectDetailsPage() {
       stages: STAGE_ORDER.map((name) => ({
         name,
         details: state.stages[name].details,
-        notes: state.stages[name].notes,
+        notes: "",
       })),
     };
   }, [formValues]);
@@ -300,58 +336,139 @@ export default function ProjectDetailsPage() {
     !formValues.address?.trim() ||
     (!isCreateMode && !hasChanges);
 
+  const pageTitle = isCreateMode ? "New Project" : "Project Details";
+
+  /** Existing project: one card for stage form + materials; create flow keeps a standalone form card. */
+  const bundleFormWithMaterials = !isCreateMode && !!projectId;
+
+  const sharedFormProps = {
+    formId: PROJECT_EDITOR_FORM_ID,
+    stickyActionBar: true as const,
+    hideBottomActions: true as const,
+    fields: sectionFields,
+    values: formValues,
+    onChange: (name: string, value: string) =>
+      setDraftValues((prev) => ({ ...(prev ?? baseValues), [name]: value })),
+    onFieldBlur: handleFieldBlur,
+    onSubmit: handleSubmit,
+    submitLabel,
+    onCancel: handleCancel,
+    submitDisabled,
+    cancelDisabled: saveMutation.isPending,
+    embedded: bundleFormWithMaterials,
+  };
+
   return (
-    <div className="max-w-7xl mx-auto p-6 md:p-12 space-y-8">
-      <div className="py-4">
-        <h1 className="text-2xl md:text-3xl font-bold text-brick-100 mt-2">
-          {isCreateMode ? "New Project" : "Project Details"}
-        </h1>
+    <div className="max-w-7xl mx-auto px-6 md:px-12 pb-16 md:pb-12">
+      <div className="sticky top-14 z-30 -mx-6 md:-mx-12 px-6 md:px-12 py-3 bg-brick-950/95 backdrop-blur-md border-b border-brick-800">
+        <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 min-w-0">
+            <Link
+              to="/projects"
+              className="text-sm text-brick-400 hover:text-brick-200 transition-colors shrink-0"
+            >
+              ← Projects
+            </Link>
+            <h1 className="text-xl md:text-2xl font-bold text-brick-100 truncate">{pageTitle}</h1>
+          </div>
+          <div className="flex flex-wrap items-center gap-2 justify-start xl:justify-end">
+            {!isCreateMode && projectId ? (
+              <>
+                <button
+                  type="button"
+                  onClick={() => estimateSectionRef.current?.regenerateEstimate()}
+                  disabled={materialToolbarState.estimatePending}
+                  className="rounded bg-brick-600 hover:bg-brick-500 text-brick-50 px-3 py-2 text-xs sm:text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                >
+                  {materialToolbarState.estimatePending ? "Generating…" : "Regenerate"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => estimateSectionRef.current?.applyResources()}
+                  disabled={materialToolbarState.applyPending}
+                  className="rounded border border-brick-500 text-brick-200 hover:bg-brick-800 px-3 py-2 text-xs sm:text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                >
+                  {materialToolbarState.applyPending ? "Saving…" : "Apply materials"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => estimateSectionRef.current?.resetFromSaved()}
+                  disabled={!materialToolbarState.canReset}
+                  className="text-xs sm:text-sm text-brick-400 hover:text-brick-200 underline disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                >
+                  Reset materials
+                </button>
+                <span className="hidden sm:inline w-px h-6 bg-brick-700 shrink-0" aria-hidden />
+              </>
+            ) : null}
+            <button
+              type="button"
+              onClick={handleCancel}
+              disabled={saveMutation.isPending}
+              className="px-3 py-2 text-brick-300 hover:text-brick-100 border border-brick-600 rounded-md hover:bg-brick-700 transition-colors text-xs sm:text-sm cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              form={PROJECT_EDITOR_FORM_ID}
+              disabled={submitDisabled}
+              className="bg-grass-700 text-grass-100 font-medium py-2 px-4 rounded-md hover:bg-grass-600 text-xs sm:text-sm cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+            >
+              {submitLabel}
+            </button>
+          </div>
+        </div>
       </div>
 
-      {!isCreateMode && projectId ? (
-        <div className="flex flex-col gap-8 lg:flex-row lg:items-stretch lg:gap-8">
-          <aside className="w-full lg:w-[min(22rem,100%)] lg:shrink-0 order-2 lg:order-1">
+      <div
+        className="flex gap-1 overflow-x-auto pb-2 mt-6 mb-4 border-b border-brick-800"
+        role="tablist"
+        aria-label="Project sections"
+      >
+        {PROJECT_EDITOR_TABS.map((tab) => {
+          const active = editorSection === tab.id;
+          return (
+            <button
+              key={tab.id}
+              type="button"
+              role="tab"
+              aria-selected={active}
+              onClick={() => setEditorSection(tab.id)}
+              className={`shrink-0 px-3 py-2 text-sm font-medium rounded-t-md border-b-2 transition-colors cursor-pointer ${
+                active
+                  ? "text-grass-400 border-grass-400 bg-brick-900/50"
+                  : "text-brick-400 border-transparent hover:text-brick-200 hover:bg-brick-900/30"
+              }`}
+            >
+              {tab.label}
+            </button>
+          );
+        })}
+      </div>
+
+      <div className="flex flex-col gap-8">
+        {bundleFormWithMaterials ? (
+          <div className="rounded-lg border border-brick-700 bg-brick-800 shadow-md overflow-hidden flex flex-col">
+            <DynamicForm {...sharedFormProps} />
             <ProjectMaterialEstimateSection
               ref={estimateSectionRef}
               projectId={projectId}
               getEditorPrompt={getEditorPrompt}
-            />
-          </aside>
-          <div className="flex-1 min-w-0 order-1 lg:order-2">
-            <DynamicForm
-              fields={PROJECT_FORM_FIELDS}
-              values={formValues}
-              onChange={(name, value) =>
-                setDraftValues((prev) => ({ ...(prev ?? baseValues), [name]: value }))
-              }
-              onFieldBlur={handleFieldBlur}
-              onSubmit={handleSubmit}
-              submitLabel={submitLabel}
-              onCancel={handleCancel}
-              submitDisabled={submitDisabled}
-              cancelDisabled={saveMutation.isPending}
+              hideActionButtons
+              onActionState={onMaterialActionState}
+              viewStage={editorSection}
+              embedded
             />
           </div>
-          {isAiChatEnabled ? (
-            <aside className="w-full lg:w-[min(22rem,100%)] lg:shrink-0 order-3">
-              <ProjectAiChatPanel projectName={project?.name} />
-            </aside>
-          ) : null}
-        </div>
-      ) : (
-        <DynamicForm
-          fields={PROJECT_FORM_FIELDS}
-          values={formValues}
-          onChange={(name, value) =>
-            setDraftValues((prev) => ({ ...(prev ?? baseValues), [name]: value }))
-          }
-          onSubmit={handleSubmit}
-          submitLabel={submitLabel}
-          onCancel={handleCancel}
-          submitDisabled={submitDisabled}
-          cancelDisabled={saveMutation.isPending}
-        />
-      )}
+        ) : (
+          <DynamicForm {...sharedFormProps} />
+        )}
+
+        {!isCreateMode && projectId && isAiChatEnabled ? (
+          <ProjectAiChatPanel projectName={project?.name} />
+        ) : null}
+      </div>
     </div>
   );
 }
