@@ -27,6 +27,7 @@ jobs:
           kubectl delete namespace "site-speak-pr-${PR_USER}-${{ github.event.pull_request.number }}" --ignore-not-found
 
   site-speak-deploy:
+    name: site-speak-deploy
     if: github.event_name != 'pull_request' || github.event.action != 'closed'
     runs-on: self-hosted
     # Single knob: repository variable AI_CHAT_ENABLED=false disables chat, or override on workflow_dispatch.
@@ -187,10 +188,55 @@ jobs:
               });
             }
 
+  deploy-synthetic-probe:
+    name: Deploy synthetic probe
+    # Only prod-style runs on main (not PR preview deploys). Push to main is always main here; workflow_dispatch must be from main.
+    if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+    steps:
+      - name: Set target hosts (prod only)
+        run: |
+          echo "APP_HOST=site-speak.duckdns.org" >> $GITHUB_ENV
+          echo "COLLECTOR_HOST=otel-collector.site-speak.duckdns.org" >> $GITHUB_ENV
+
+      - name: Check out repository code
+        uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Build DeployProbeLog
+        run: dotnet build tools/DeployProbeLog/DeployProbeLog.csproj -c Release
+
+      - name: Run probe until deploy completes then export OTLP
+        env:
+          GH_TOKEN: ${{ github.token }}
+          DEPLOY_PROBE_RPS: "80"
+        run: bash tools/run_deploy_probe.sh
+
+  deploy-probe-report:
+    name: Deploy / probe summary
+    needs: [site-speak-deploy, deploy-synthetic-probe]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Report job results
+        run: |
+          echo "site-speak-deploy: ${{ needs.site-speak-deploy.result }}"
+          echo "deploy-synthetic-probe: ${{ needs.deploy-synthetic-probe.result }}"
+          if [[ "${{ needs.deploy-synthetic-probe.result }}" == "failure" ]]; then
+            echo "::error::Synthetic probe job failed (see workflow logs and Loki: service_name=DeploySyntheticProbe)."
+            exit 1
+          fi
+
   discord-notify:
     name: Notify Discord on failure
-    needs: [site-speak-deploy]
-    if: ${{ always() && needs.site-speak-deploy.result == 'failure' }}
+    needs: [site-speak-deploy, deploy-synthetic-probe]
+    if: ${{ always() && (needs.site-speak-deploy.result == 'failure' || needs.deploy-synthetic-probe.result == 'failure') }}
     runs-on: self-hosted
     steps:
       - name: Post to Discord
