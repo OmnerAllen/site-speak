@@ -42,6 +42,7 @@ jobs:
             PR_USER=$(echo "${{ github.event.pull_request.user.login }}" | tr '[:upper:]' '[:lower:]')
             echo "NAMESPACE=site-speak-pr-${PR_USER}-${{ github.event.pull_request.number }}" >> $GITHUB_ENV
             echo "APP_HOST=${PR_USER}-pr-${{ github.event.pull_request.number }}.site-speak.duckdns.org" >> $GITHUB_ENV
+            echo "APP_TLS_SECRET=sitespeak-wildcard-tls" >> $GITHUB_ENV
             echo "CLIENT_ID=site-speak-dev" >> $GITHUB_ENV
             echo "GRAFANA_HOST=grafana-${PR_USER}-pr-${{ github.event.pull_request.number }}.site-speak.duckdns.org" >> $GITHUB_ENV
             echo "PROMETHEUS_HOST=prometheus-${PR_USER}-pr-${{ github.event.pull_request.number }}.site-speak.duckdns.org" >> $GITHUB_ENV
@@ -49,6 +50,7 @@ jobs:
           else
             echo "NAMESPACE=site-speak-prod" >> $GITHUB_ENV
             echo "APP_HOST=site-speak.duckdns.org" >> $GITHUB_ENV
+            echo "APP_TLS_SECRET=sitespeak-root-tls" >> $GITHUB_ENV
             echo "CLIENT_ID=site-speak" >> $GITHUB_ENV
             echo "GRAFANA_HOST=grafana.site-speak.duckdns.org" >> $GITHUB_ENV
             echo "PROMETHEUS_HOST=prometheus.site-speak.duckdns.org" >> $GITHUB_ENV
