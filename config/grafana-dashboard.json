@@ -78,7 +78,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 0
+        "y": 34
       },
       "id": 5,
       "options": {
@@ -130,7 +130,7 @@
         "h": 10,
         "w": 12,
         "x": 12,
-        "y": 0
+        "y": 34
       },
       "id": 4,
       "options": {
@@ -249,7 +249,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 8
+        "y": 42
       },
       "id": 1,
       "options": {
@@ -347,7 +347,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 10
+        "y": 44
       },
       "id": 2,
       "options": {
@@ -445,7 +445,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 16
+        "y": 50
       },
       "id": 3,
       "options": {
@@ -488,7 +488,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 24
+        "y": 0
       },
       "id": 20,
       "panels": [],
@@ -500,7 +500,7 @@
         "type": "loki",
         "uid": "P8E80F9AEF21F6940"
       },
-      "description": "Count of deploy_probe_fail log lines in the selected range. Non-zero matches a failed GitHub Actions deploy-synthetic-probe job.",
+      "description": "Total deploy_probe_fail lines in the time picker: range query with 1-minute buckets, Stat sums buckets (same total as counting lines; avoids Loki/Grafana timeouts from count_over_time([$__range]) on long windows).",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -528,7 +528,7 @@
         "h": 5,
         "w": 8,
         "x": 0,
-        "y": 25
+        "y": 1
       },
       "id": 21,
       "options": {
@@ -538,7 +538,7 @@
         "orientation": "auto",
         "reduceOptions": {
           "calcs": [
-            "lastNotNull"
+            "sum"
           ],
           "fields": "",
           "values": false
@@ -553,9 +553,10 @@
             "uid": "P8E80F9AEF21F6940"
           },
           "editorMode": "code",
-          "expr": "sum(count_over_time({service_name=\"DeploySyntheticProbe\"} |= \"deploy_probe_fail\" [$__range]))",
-          "queryType": "instant",
-          "refId": "A"
+          "expr": "sum(count_over_time({service_name=\"DeploySyntheticProbe\"} |= \"deploy_probe_fail\" [1m]))",
+          "queryType": "range",
+          "refId": "A",
+          "step": "1m"
         }
       ],
       "title": "Deploy probe failures (range)",
@@ -566,7 +567,7 @@
         "type": "loki",
         "uid": "P8E80F9AEF21F6940"
       },
-      "description": "Successful deploy_probe_ok lines in range (high volume during a main deploy is expected).",
+      "description": "Total deploy_probe_ok lines in the time picker (1-minute buckets summed). High counts during a main deploy are expected.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -590,7 +591,7 @@
         "h": 5,
         "w": 8,
         "x": 8,
-        "y": 25
+        "y": 1
       },
       "id": 22,
       "options": {
@@ -600,7 +601,7 @@
         "orientation": "auto",
         "reduceOptions": {
           "calcs": [
-            "lastNotNull"
+            "sum"
           ],
           "fields": "",
           "values": false
@@ -615,9 +616,10 @@
             "uid": "P8E80F9AEF21F6940"
           },
           "editorMode": "code",
-          "expr": "sum(count_over_time({service_name=\"DeploySyntheticProbe\"} |= \"deploy_probe_ok\" [$__range]))",
-          "queryType": "instant",
-          "refId": "A"
+          "expr": "sum(count_over_time({service_name=\"DeploySyntheticProbe\"} |= \"deploy_probe_ok\" [1m]))",
+          "queryType": "range",
+          "refId": "A",
+          "step": "1m"
         }
       ],
       "title": "Deploy probe successes (range)",
@@ -658,7 +660,7 @@
         "h": 5,
         "w": 8,
         "x": 16,
-        "y": 25
+        "y": 1
       },
       "id": 23,
       "options": {
@@ -774,7 +776,7 @@
         "h": 6,
         "w": 24,
         "x": 0,
-        "y": 30
+        "y": 6
       },
       "id": 6,
       "options": {
@@ -877,7 +879,7 @@
         "h": 6,
         "w": 24,
         "x": 0,
-        "y": 36
+        "y": 12
       },
       "id": 7,
       "options": {
@@ -955,7 +957,7 @@
         "h": 8,
         "w": 24,
         "x": 0,
-        "y": 42
+        "y": 18
       },
       "id": 8,
       "options": {
@@ -1048,7 +1050,7 @@
         "h": 8,
         "w": 24,
         "x": 0,
-        "y": 50
+        "y": 26
       },
       "id": 9,
       "options": {
@@ -1105,7 +1107,7 @@
   },
   "timepicker": {},
   "timezone": "browser",
-  "title": "Dev",
+  "title": "Site Speak overview",
   "uid": "gf8cxh",
-  "version": 7
+  "version": 8
 }
