@@ -69,7 +69,7 @@ export function DictationWidget({ onCancel, onFinish }: Props) {
         <button type="button" onClick={onCancel} className="text-brick-400 hover:text-brick-200 uppercase text-sm">Cancel</button>
       </div>
 
-      <AudioVisualizer stream={mediaStream} />
+      <AudioVisualizer stream={isRecording ? mediaStream : null} />
 
       <div className="min-h-[160px] max-w-full bg-brick-950 border border-brick-800 rounded-lg p-4 mb-4 text-brick-100 whitespace-pre-wrap">
         {transcript || <span className="text-brick-500 italic">Hold the button below or Spacebar, and start speaking...</span>}
@@ -79,12 +79,19 @@ export function DictationWidget({ onCancel, onFinish }: Props) {
       <div className="flex flex-wrap gap-4 items-center justify-between">
         <button
           type="button"
-          onMouseDown={(e) => { e.preventDefault(); startRecording(); }}
-          onMouseUp={stopRecording}
-          onMouseLeave={stopRecording}
-          onTouchStart={(e) => { e.preventDefault(); startRecording(); }}
-          onTouchEnd={stopRecording}
-          onTouchCancel={stopRecording}
+          onPointerDown={(e) => {
+            e.preventDefault();
+            e.currentTarget.setPointerCapture(e.pointerId);
+            startRecording();
+          }}
+          onPointerUp={(e) => {
+            e.currentTarget.releasePointerCapture(e.pointerId);
+            stopRecording();
+          }}
+          onPointerCancel={(e) => {
+            e.currentTarget.releasePointerCapture(e.pointerId);
+            stopRecording();
+          }}
           className={`flex items-center justify-center w-32 h-32 rounded-full border-4 font-bold select-none cursor-pointer transition-all ${
             isRecording ? "bg-red-600 border-red-400 text-white transform scale-95 shadow-[0_0_20px_rgba(220,38,38,0.5)]" 
             : isTranscribing ? "bg-yellow-600 border-yellow-400 text-white cursor-wait"

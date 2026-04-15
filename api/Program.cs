@@ -36,9 +36,10 @@ builder.Services.AddHttpClient(OpenAiCompatibleChatClient.HttpClientName, client
     client.Timeout = TimeSpan.FromMinutes(15);
 });
 builder.Services.AddSingleton<ILlmChatClient, OpenAiCompatibleChatClient>();
-builder.Services.AddHttpClient<IWhisperClient, SiteSpeak.Llm.AiOfficeWhisperClient>(client =>
+builder.Services.AddHttpClient<IWhisperClient, SiteSpeak.Llm.AiOfficeWhisperClient>((sp, client) =>
 {
-    client.BaseAddress = new Uri("https://ai-office-server:8443");
+    var options = sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<SiteSpeak.Llm.LlmOptions>>().Value;
+    client.BaseAddress = new Uri(options.WhisperUrl);
 }).ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
 {
     ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator

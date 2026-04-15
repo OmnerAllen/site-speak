@@ -14,5 +14,7 @@ public class LlmOptions
     public string ChatCompletionsUrl { get; set; } =
         "https://ai-snow.reindeer-pinecone.ts.net:9292/v1/chat/completions";
 
+    public string WhisperUrl { get; set; } = "https://ai-office-server:8443";
+
     public string Model { get; set; } = DefaultModelId;
 }

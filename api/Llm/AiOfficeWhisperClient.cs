@@ -18,21 +18,68 @@ public class AiOfficeWhisperClient : IWhisperClient
 
     public async Task<string> TranscribeAudioAsync(Stream audioStream, string filename, string language = "", string prompt = "", CancellationToken cancellationToken = default)
     {
-        using var content = new MultipartFormDataContent();
+        if (audioStream.CanSeek)
+        {
+            audioStream.Position = 0;
+        }
         
-        var streamContent = new StreamContent(audioStream);
-        streamContent.Headers.ContentType = new MediaTypeHeaderValue("audio/webm");
-        content.Add(streamContent, "file", filename);
+        using var ms = new MemoryStream();
+        await audioStream.CopyToAsync(ms, cancellationToken);
+        var fileBytes = ms.ToArray();
         
-        content.Add(new StringContent("json"), "response_format");
-        
-        if (!string.IsNullOrEmpty(language) && language != "auto")
-            content.Add(new StringContent(language), "language");
+        MultipartFormDataContent CreateContent()
+        {
+            var boundary = System.Guid.NewGuid().ToString();
+            var multipart = new MultipartFormDataContent(boundary);
+            multipart.Headers.Remove("Content-Type");
+            // Some C++ servers do not understand boundary IDs surrounded by quotes, so we strip them explicitly
+            multipart.Headers.TryAddWithoutValidation("Content-Type", $"multipart/form-data; boundary={boundary}");
             
-        if (!string.IsNullOrEmpty(prompt))
-            content.Add(new StringContent(prompt), "prompt");
+            var byteContent = new ByteArrayContent(fileBytes);
+            byteContent.Headers.ContentType = new MediaTypeHeaderValue("audio/webm");
+            // To prevent .NET from emitting filename*=utf-8'' attributes which break cpp-httplib,
+            // we configure the disposition explicitly without using the .Add(content, name, filename) helper
+            byteContent.Headers.ContentDisposition = new ContentDispositionHeaderValue("form-data")
+            {
+                Name = "\"file\"",
+                FileName = $"\"{filename}\""
+            };
+            multipart.Add(byteContent);
+            
+            var jsonContent = new StringContent("json");
+            jsonContent.Headers.ContentDisposition = new ContentDispositionHeaderValue("form-data") { Name = "\"response_format\"" };
+            multipart.Add(jsonContent);
+            
+            if (!string.IsNullOrEmpty(language) && language != "auto")
+            {
+                var langContent = new StringContent(language);
+                langContent.Headers.ContentDisposition = new ContentDispositionHeaderValue("form-data") { Name = "\"language\"" };
+                multipart.Add(langContent);
+            }
+                
+            if (!string.IsNullOrEmpty(prompt))
+            {
+                var promptContent = new StringContent(prompt);
+                promptContent.Headers.ContentDisposition = new ContentDispositionHeaderValue("form-data") { Name = "\"prompt\"" };
+                multipart.Add(promptContent);
+            }
+                
+            return multipart;
+        }
 
-        var response = await _httpClient.PostAsync("/inference", content, cancellationToken);
+        string originalStreamLength = audioStream.CanSeek ? audioStream.Length.ToString() : "Unknown (not seekable)";
+        System.Console.WriteLine($"[Whisper API] Initiating transcription to {_httpClient.BaseAddress}. Original stream length: {originalStreamLength} bytes, Payload buffer length: {fileBytes.Length} bytes.");
+
+        // Newer whisper.cpp servers (main branch) removed /inference and use standard OpenAI API routes
+        using var contentV1 = CreateContent();
+        var response = await _httpClient.PostAsync("/v1/audio/transcriptions", contentV1, cancellationToken);
+        
+        if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+        {
+            response.Dispose();
+            using var contentInference = CreateContent();
+            response = await _httpClient.PostAsync("/inference", contentInference, cancellationToken);
+        }
         
         if (!response.IsSuccessStatusCode)
         {
