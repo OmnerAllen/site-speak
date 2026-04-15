@@ -804,6 +804,7 @@
           },
           "editorMode": "code",
           "expr": "probe_success{job=\"blackbox\"}",
+          "format": "time_series",
           "legendFormat": "{{instance}}",
           "range": true,
           "refId": "A"
@@ -904,6 +905,7 @@
           },
           "editorMode": "code",
           "expr": "probe_duration_seconds{job=\"blackbox\"}",
+          "format": "time_series",
           "legendFormat": "{{instance}}",
           "range": true,
           "refId": "A"
@@ -1109,5 +1111,5 @@
   "timezone": "browser",
   "title": "Site Speak overview",
   "uid": "gf8cxh",
-  "version": 8
+  "version": 9
 }
