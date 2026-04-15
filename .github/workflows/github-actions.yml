@@ -218,6 +218,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           DEPLOY_PROBE_RPS: "80"
+          DEPLOY_PROBE_MAX_WAIT: "180"
         run: bash tools/run_deploy_probe.sh
 
   deploy-probe-report:

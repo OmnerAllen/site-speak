@@ -11,20 +11,18 @@ set -euo pipefail
 export DEPLOY_PROBE_TARGET_URL="https://${APP_HOST}/"
 export DEPLOY_PROBE_OUT="${RUNNER_TEMP:-/tmp}/deploy-probe-${GITHUB_RUN_ID}.ndjson"
 export DEPLOY_PROBE_RPS="${DEPLOY_PROBE_RPS:-80}"
-export DEPLOY_PROBE_MAX_WAIT="${DEPLOY_PROBE_MAX_WAIT:-3600}"
+export DEPLOY_PROBE_MAX_WAIT="${DEPLOY_PROBE_MAX_WAIT:-180}"
 
 : >"$DEPLOY_PROBE_OUT"
 
 python3 "$GITHUB_WORKSPACE/tools/deploy_probe_http.py" &
 PROBE_PID=$!
 
-poll_s=10
+poll_s=5
 elapsed=0
 while true; do
-  status="$(
-    gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}/jobs" --paginate \
-      --jq '.jobs[] | select(.name=="site-speak-deploy") | .status' 2>/dev/null | head -1 || true
-  )"
+  # Single-page gh api + Python parse (avoids gh --paginate + --jq edge cases); logs to stderr if gh fails.
+  status="$(python3 "$GITHUB_WORKSPACE/tools/deploy_probe_poll_status.py")"
   if [[ "$status" == "completed" ]]; then
     break
   fi
