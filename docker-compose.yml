@@ -21,6 +21,10 @@ services:
   api:
     image: mcr.microsoft.com/dotnet/sdk:10.0
     container_name: sitespeak-api
+    networks:
+      default:
+        aliases:
+          - api-service
     ports:
       - "5000:5000"
     working_dir: /app
@@ -45,8 +49,13 @@ services:
   client:
     image: node:20-alpine
     container_name: sitespeak-client
+    networks:
+      default:
+        aliases:
+          - site-speak-service
     ports:
-      - "5173:5173"
+      # Host 5173 → container 80 so Blackbox can probe http://site-speak-service:80/ (same as Kubernetes).
+      - "5173:80"
     working_dir: /app
     env_file:
       - .env
@@ -56,7 +65,7 @@ services:
       - ./client:/app
       - /app/node_modules
     command: >-
-      sh -c "npm install -g pnpm && pnpm i && pnpm run dev --host 0.0.0.0"
+      sh -c "npm install -g pnpm && pnpm i && pnpm run dev -- --host 0.0.0.0 --port 80"
     depends_on:
       - db
 
@@ -82,6 +91,14 @@ services:
       - "9090:9090"
     depends_on:
       - otel-collector
+      - blackbox-exporter
+
+  blackbox-exporter:
+    image: prom/blackbox-exporter:v0.28.0
+    container_name: sitespeak-blackbox-exporter
+    restart: unless-stopped
+    ports:
+      - "9115:9115"
 
   loki:
     image: grafana/loki:3.5.11
