@@ -19,24 +19,40 @@ python3 "$GITHUB_WORKSPACE/tools/deploy_probe_http.py" &
 PROBE_PID=$!
 
 poll_s=5
-elapsed=0
+# Wall-clock cap: old logic used "elapsed += poll_s" only, so slow polls (each up to 60s HTTP)
+# did not count — the step could run far longer than DEPLOY_PROBE_MAX_WAIT.
+SECONDS=0
 while true; do
-  # Single-page gh api + Python parse (avoids gh --paginate + --jq edge cases); logs to stderr if gh fails.
   status="$(python3 "$GITHUB_WORKSPACE/tools/deploy_probe_poll_status.py")"
   if [[ "$status" == "completed" ]]; then
     break
   fi
-  if [[ "$elapsed" -ge "$DEPLOY_PROBE_MAX_WAIT" ]]; then
-    echo "Timeout waiting for site-speak-deploy (${DEPLOY_PROBE_MAX_WAIT}s)" >&2
+  if ((SECONDS >= DEPLOY_PROBE_MAX_WAIT)); then
+    echo "Timeout waiting for site-speak-deploy (${DEPLOY_PROBE_MAX_WAIT}s wall clock)" >&2
     kill -TERM "$PROBE_PID" 2>/dev/null || true
+    for _ in $(seq 1 90); do
+      if ! kill -0 "$PROBE_PID" 2>/dev/null; then
+        wait "$PROBE_PID" 2>/dev/null || true
+        break
+      fi
+      sleep 1
+    done
+    kill -KILL "$PROBE_PID" 2>/dev/null || true
     wait "$PROBE_PID" 2>/dev/null || true
     exit 1
   fi
   sleep "$poll_s"
-  elapsed=$((elapsed + poll_s))
 done
 
 kill -TERM "$PROBE_PID" 2>/dev/null || true
+for _ in $(seq 1 90); do
+  if ! kill -0 "$PROBE_PID" 2>/dev/null; then
+    wait "$PROBE_PID" 2>/dev/null || true
+    break
+  fi
+  sleep 1
+done
+kill -KILL "$PROBE_PID" 2>/dev/null || true
 wait "$PROBE_PID" 2>/dev/null || true
 
 lines="$(wc -l <"$DEPLOY_PROBE_OUT" | tr -d ' ')"
@@ -45,7 +61,8 @@ echo "Collected ${lines} probe lines"
 export DEPLOY_PROBE_OTLP_LOGS_ENDPOINT="https://${COLLECTOR_HOST}/v1/logs"
 export DEPLOY_PROBE_TARGET_URL
 
-dotnet run --project "$GITHUB_WORKSPACE/tools/DeployProbeLog/DeployProbeLog.csproj" -c Release --no-build -- "$DEPLOY_PROBE_OUT"
+# OTLP export can hang on network; cap wall time so the Actions step cannot run unbounded.
+timeout 15m dotnet run --project "$GITHUB_WORKSPACE/tools/DeployProbeLog/DeployProbeLog.csproj" -c Release --no-build -- "$DEPLOY_PROBE_OUT"
 
 if [[ -s "$DEPLOY_PROBE_OUT" ]] && grep -qE '"ok"\s*:\s*false' "$DEPLOY_PROBE_OUT"; then
   echo "::error::Synthetic probe recorded one or more failed requests (see Loki: service_name=DeploySyntheticProbe)."
