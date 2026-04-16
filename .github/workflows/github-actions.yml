@@ -194,7 +194,7 @@ jobs:
     name: Deploy synthetic probe
     # Only prod-style runs on main (not PR preview deploys). Push to main is always main here; workflow_dispatch must be from main.
     if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     permissions:
       actions: read
       contents: read
@@ -207,19 +207,19 @@ jobs:
       - name: Check out repository code
         uses: actions/checkout@v4
 
-      - uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: "10.0.x"
-
       - name: Build DeployProbeLog
-        run: dotnet build tools/DeployProbeLog/DeployProbeLog.csproj -c Release
+        run: |
+          nix-shell -p dotnetCorePackages.sdk_10_0-bin \
+            --run "dotnet build tools/DeployProbeLog/DeployProbeLog.csproj -c Release"
 
       - name: Run probe until deploy completes then export OTLP
         env:
           GH_TOKEN: ${{ github.token }}
           DEPLOY_PROBE_RPS: "80"
           DEPLOY_PROBE_MAX_WAIT: "180"
-        run: bash tools/run_deploy_probe.sh
+        run: |
+          nix-shell -p dotnetCorePackages.sdk_10_0-bin \
+            --run "bash tools/run_deploy_probe.sh"
 
   deploy-probe-report:
     name: Deploy / probe summary
