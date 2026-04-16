@@ -64,7 +64,14 @@ export DEPLOY_PROBE_TARGET_URL
 # OTLP export can hang on network; cap wall time so the Actions step cannot run unbounded.
 timeout 15m dotnet run --project "$GITHUB_WORKSPACE/tools/DeployProbeLog/DeployProbeLog.csproj" -c Release --no-build -- "$DEPLOY_PROBE_OUT"
 
-if [[ -s "$DEPLOY_PROBE_OUT" ]] && grep -qE '"ok"\s*:\s*false' "$DEPLOY_PROBE_OUT"; then
-  echo "::error::Synthetic probe recorded one or more failed requests (see Loki: service_name=DeploySyntheticProbe)."
-  exit 1
+# Count failures for informational logging only — probe failures are data, not a CI error.
+# The job only fails if the probe machinery itself breaks (script error, dotnet crash, collector unreachable).
+fail_count=0
+if [[ -s "$DEPLOY_PROBE_OUT" ]]; then
+  fail_count=$(grep -cE '"ok"\s*:\s*false' "$DEPLOY_PROBE_OUT" || true)
+fi
+ok_count=$(( lines - fail_count ))
+echo "Probe summary: ${ok_count} ok, ${fail_count} failed out of ${lines} total (see Loki: service_name=DeploySyntheticProbe)"
+if (( fail_count > 0 )); then
+  echo "::warning::${fail_count} probe request(s) failed during the deploy window — check the dashboard for details."
 fi

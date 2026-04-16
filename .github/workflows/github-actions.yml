@@ -232,7 +232,7 @@ jobs:
           echo "site-speak-deploy: ${{ needs.site-speak-deploy.result }}"
           echo "deploy-synthetic-probe: ${{ needs.deploy-synthetic-probe.result }}"
           if [[ "${{ needs.deploy-synthetic-probe.result }}" == "failure" ]]; then
-            echo "::error::Synthetic probe job failed (see workflow logs and Loki: service_name=DeploySyntheticProbe)."
+            echo "::error::Synthetic probe job failed — the probe machinery itself broke (not just app errors during deploy). Check workflow logs."
             exit 1
           fi
 
