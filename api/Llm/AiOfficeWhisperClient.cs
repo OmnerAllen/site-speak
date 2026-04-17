@@ -4,6 +4,7 @@ using System.Net.Http.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using System.IO;
+using System.Text.Json;
 
 namespace SiteSpeak.Llm;
 
@@ -18,77 +19,43 @@ public class AiOfficeWhisperClient : IWhisperClient
 
     public async Task<string> TranscribeAudioAsync(Stream audioStream, string filename, string language = "", string prompt = "", CancellationToken cancellationToken = default)
     {
-        if (audioStream.CanSeek)
-        {
-            audioStream.Position = 0;
-        }
-        
-        using var ms = new MemoryStream();
-        await audioStream.CopyToAsync(ms, cancellationToken);
-        var fileBytes = ms.ToArray();
-        
-        MultipartFormDataContent CreateContent()
-        {
-            var boundary = System.Guid.NewGuid().ToString();
-            var multipart = new MultipartFormDataContent(boundary);
-            multipart.Headers.Remove("Content-Type");
-            // Some C++ servers do not understand boundary IDs surrounded by quotes, so we strip them explicitly
-            multipart.Headers.TryAddWithoutValidation("Content-Type", $"multipart/form-data; boundary={boundary}");
-            
-            var byteContent = new ByteArrayContent(fileBytes);
-            byteContent.Headers.ContentType = new MediaTypeHeaderValue("audio/webm");
-            // To prevent .NET from emitting filename*=utf-8'' attributes which break cpp-httplib,
-            // we configure the disposition explicitly without using the .Add(content, name, filename) helper
-            byteContent.Headers.ContentDisposition = new ContentDispositionHeaderValue("form-data")
-            {
-                Name = "\"file\"",
-                FileName = $"\"{filename}\""
-            };
-            multipart.Add(byteContent);
-            
-            var jsonContent = new StringContent("json");
-            jsonContent.Headers.ContentDisposition = new ContentDispositionHeaderValue("form-data") { Name = "\"response_format\"" };
-            multipart.Add(jsonContent);
-            
-            if (!string.IsNullOrEmpty(language) && language != "auto")
-            {
-                var langContent = new StringContent(language);
-                langContent.Headers.ContentDisposition = new ContentDispositionHeaderValue("form-data") { Name = "\"language\"" };
-                multipart.Add(langContent);
-            }
-                
-            if (!string.IsNullOrEmpty(prompt))
-            {
-                var promptContent = new StringContent(prompt);
-                promptContent.Headers.ContentDisposition = new ContentDispositionHeaderValue("form-data") { Name = "\"prompt\"" };
-                multipart.Add(promptContent);
-            }
-                
-            return multipart;
-        }
+        if (audioStream.CanSeek) audioStream.Position = 0;
 
-        string originalStreamLength = audioStream.CanSeek ? audioStream.Length.ToString() : "Unknown (not seekable)";
-        System.Console.WriteLine($"[Whisper API] Initiating transcription to {_httpClient.BaseAddress}. Original stream length: {originalStreamLength} bytes, Payload buffer length: {fileBytes.Length} bytes.");
+        var boundary = System.Guid.NewGuid().ToString();
+        using var multipart = new MultipartFormDataContent(boundary);
+        multipart.Headers.Remove("Content-Type");
+        multipart.Headers.TryAddWithoutValidation("Content-Type", $"multipart/form-data; boundary={boundary}");
 
-        // Newer whisper.cpp servers (main branch) removed /inference and use standard OpenAI API routes
-        using var contentV1 = CreateContent();
-        var response = await _httpClient.PostAsync("/v1/audio/transcriptions", contentV1, cancellationToken);
-        
-        if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+        var fileContent = new StreamContent(audioStream);
+        var mime = Path.GetExtension(filename).ToLowerInvariant() switch
         {
-            response.Dispose();
-            using var contentInference = CreateContent();
-            response = await _httpClient.PostAsync("/inference", contentInference, cancellationToken);
-        }
-        
-        if (!response.IsSuccessStatusCode)
-        {
-            var error = await response.Content.ReadAsStringAsync(cancellationToken);
-            throw new HttpRequestException($"Whisper API error: {response.StatusCode} - {error}");
-        }
-        
-        var result = await response.Content.ReadFromJsonAsync<WhisperResponse>(cancellationToken: cancellationToken);
-        return result?.text ?? string.Empty;
+            ".mp3" => "audio/mpeg", ".wav" => "audio/wav", ".webm" => "audio/webm",
+            ".m4a" => "audio/mp4", _ => "application/octet-stream"
+        };
+        fileContent.Headers.ContentType = new MediaTypeHeaderValue(mime);
+        fileContent.Headers.ContentDisposition = new ContentDispositionHeaderValue("form-data") { Name = "\"file\"", FileName = $"\"{filename}\"" };
+        multipart.Add(fileContent);
+
+        AddText(multipart, "response_format", "json");
+        AddText(multipart, "language", language);
+        AddText(multipart, "prompt", prompt);
+
+        var response = await _httpClient.PostAsync("/inference", multipart, cancellationToken);
+
+        var responseContent = await response.Content.ReadAsStringAsync(cancellationToken);
+
+        Console.WriteLine("whisper response: ", responseContent);
+        var result = JsonSerializer.Deserialize<WhisperResponse>(responseContent, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });   
+        return result?.text ?? throw new Exception("Failed to parse transcription response");
+    }
+
+    private static void AddText(MultipartFormDataContent multipart, string name, string value)
+    {
+        if (string.IsNullOrEmpty(value) || value == "auto") return;
+        var content = new StringContent(value);
+        content.Headers.ContentType = null;
+        content.Headers.ContentDisposition = new ContentDispositionHeaderValue("form-data") { Name = $"\"{name}\"" };
+        multipart.Add(content);
     }
     
     private class WhisperResponse

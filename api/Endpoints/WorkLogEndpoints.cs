@@ -22,6 +22,12 @@ public static class WorkLogEndpoints
             if (sub is null) return Results.Unauthorized();
 
             using var stream = file.OpenReadStream();
+            
+            if (stream.Length == 0)
+                throw new ArgumentException("The provided audio file is empty.");
+
+            Console.WriteLine($"[WorkLog] Sending audio to Whisper. Size: {stream.Length / 1024.0:F2} KB");
+
             var transcript = await whisper.TranscribeAudioAsync(stream, file.FileName, language ?? "auto", prompt ?? "", cancellationToken);
 
             return Results.Ok(new { text = transcript });

@@ -188,12 +188,7 @@ export const api = {
       window.location.href = "/";
       throw new Error("Unauthorized");
     }
-    if (!res.ok) {
-      const errText = await res.text();
-      let errorData;
-      try { errorData = JSON.parse(errText); } catch {}
-      throw new ApiError(errorData?.error || `Failed to parse audio: ${errText}`, res.status);
-    }
+    
     const data = await res.json();
     return data;
   },

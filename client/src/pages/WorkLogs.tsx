@@ -81,6 +81,7 @@ function VoicePlaybackTester() {
     try {
       const { text } = await api.parseAudioWorkLog(audioBlob);
       setTranscription(text);
+      console.log("transcription: ", text);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to transcribe audio.");
     } finally {

@@ -38,11 +38,9 @@ builder.Services.AddHttpClient(OpenAiCompatibleChatClient.HttpClientName, client
 builder.Services.AddSingleton<ILlmChatClient, OpenAiCompatibleChatClient>();
 builder.Services.AddHttpClient<IWhisperClient, SiteSpeak.Llm.AiOfficeWhisperClient>((sp, client) =>
 {
-    var options = sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<SiteSpeak.Llm.LlmOptions>>().Value;
-    client.BaseAddress = new Uri(options.WhisperUrl);
-}).ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
-{
-    ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator
+    var url = Environment.GetEnvironmentVariable("Llm__WhisperUrl") ?? throw new Exception("Whisper URL not configured");
+    Console.WriteLine($"[Program] Configuring WhisperClient with URL: {url}");
+    client.BaseAddress = new Uri(url);
 });
 builder.Services.AddSingleton<MaterialEstimateService>();
 builder.Services.AddSingleton<AiChatService>();
