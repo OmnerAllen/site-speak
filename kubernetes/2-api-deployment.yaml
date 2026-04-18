@@ -6,7 +6,13 @@ metadata:
   labels:
     app: api
 spec:
-  replicas: 1
+  replicas: 3
+  minReadySeconds: 10
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
   selector:
     matchLabels:
       app: api
@@ -32,6 +38,10 @@ spec:
         # Substituted by CI (envsubst); must match client image build arg AI_CHAT_ENABLED.
         - name: Features__AiChatEnabled
           value: "${AI_CHAT_ENABLED}"
+        lifecycle:
+          preStop:
+            exec:
+              command: ["sleep", "5"]
         envFrom:
         - secretRef:
             name: postgres-secret

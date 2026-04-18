@@ -1,0 +1,26 @@
+services:
+  integration-db:
+    image: postgres:18
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: sitespeak
+    ports:
+      - "5434:5432"
+    volumes:
+      - integration_postgres_data:/var/lib/postgresql
+      - ./database/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql
+      - ./database/1-seed_supplier.sql:/docker-entrypoint-initdb.d/02-seed_supplier.sql
+      - ./database/2-seed_equipment.sql:/docker-entrypoint-initdb.d/03-seed_equipment.sql
+      - ./database/2-seed_material.sql:/docker-entrypoint-initdb.d/04-seed_material.sql
+      - ./database/3-seed_basic.sql:/docker-entrypoint-initdb.d/05-seed_basic.sql
+      - ./database/4-seed_auth.sql:/docker-entrypoint-initdb.d/06-seed_auth.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d sitespeak"]
+      interval: 2s
+      timeout: 5s
+      retries: 30
+      start_period: 10s
+
+volumes:
+  integration_postgres_data:

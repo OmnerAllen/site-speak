@@ -22,7 +22,21 @@ export interface DynamicFormProps {
   onCancel?: () => void;
   submitDisabled?: boolean;
   cancelDisabled?: boolean;
+  /** Lets external buttons submit this form via the `form` attribute. */
+  formId?: string;
+  /**
+   * Constrains form height so fields scroll inside the card while Cancel/Submit stay visible
+   * at the bottom of the card.
+   */
+  stickyActionBar?: boolean;
+  /** Omits the bottom action row (e.g. when using header `form=` submit only). */
+  hideBottomActions?: boolean;
+  /** When true, omits outer card border/shadow so a parent can provide one shell (e.g. form + materials). */
+  embedded?: boolean;
 }
+
+const actionRowClass =
+  "flex gap-3 items-center shrink-0 px-6 py-4 border-t border-brick-700 bg-brick-800";
 
 export const DynamicForm: React.FC<DynamicFormProps> = ({
   fields,
@@ -34,6 +48,10 @@ export const DynamicForm: React.FC<DynamicFormProps> = ({
   onCancel,
   submitDisabled = false,
   cancelDisabled = false,
+  formId,
+  stickyActionBar = false,
+  hideBottomActions = false,
+  embedded = false,
 }) => {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -170,33 +188,61 @@ export const DynamicForm: React.FC<DynamicFormProps> = ({
     }
   };
 
-  return (
-    <form
-      onSubmit={handleSubmit}
-      className="space-y-6 bg-brick-800 p-6 rounded-lg shadow-md border border-brick-700"
-    >
-      {fields.map(renderField)}
-      <div
-        className={`flex gap-3 items-center ${onCancel ? "justify-between" : "justify-end"}`}
-      >
-        {onCancel && (
-          <button
-            type="button"
-            onClick={onCancel}
-            disabled={cancelDisabled}
-            className="px-4 py-2 text-brick-300 hover:text-brick-100 border border-brick-600 rounded-md hover:bg-brick-700 transition-colors cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
-          >
-            Cancel
-          </button>
-        )}
+  const actionButtons = (
+    <>
+      {onCancel && (
         <button
-          type="submit"
-          disabled={submitDisabled}
-          className="bg-grass-700 text-grass-100 font-medium py-2 px-4 rounded-md hover:bg-grass-600 focus:outline-none focus:ring-2 focus:ring-brick-500 focus:ring-offset-2 transition-colors cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+          type="button"
+          onClick={onCancel}
+          disabled={cancelDisabled}
+          className="px-4 py-2 text-brick-300 hover:text-brick-100 border border-brick-600 rounded-md hover:bg-brick-700 transition-colors cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
         >
-          {submitLabel}
+          Cancel
         </button>
-      </div>
+      )}
+      <button
+        type="submit"
+        disabled={submitDisabled}
+        className="bg-grass-700 text-grass-100 font-medium py-2 px-4 rounded-md hover:bg-grass-600 focus:outline-none focus:ring-2 focus:ring-brick-500 focus:ring-offset-2 focus:ring-offset-brick-800 transition-colors cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+      >
+        {submitLabel}
+      </button>
+    </>
+  );
+
+  const actionRow = !hideBottomActions && (
+    <div className={`${actionRowClass} ${onCancel ? "justify-between" : "justify-end"}`}>
+      {actionButtons}
+    </div>
+  );
+
+  const fieldsBlock = <div className="space-y-6 p-6">{fields.map(renderField)}</div>;
+
+  const cardShell =
+    "bg-brick-800 rounded-lg shadow-md border border-brick-700 overflow-hidden flex flex-col";
+  const embeddedShell = "flex flex-col min-h-0 overflow-hidden";
+
+  if (stickyActionBar) {
+    return (
+      <form
+        id={formId}
+        onSubmit={handleSubmit}
+        className={
+          embedded
+            ? `${embeddedShell} max-h-[min(85dvh,56rem)]`
+            : `${cardShell} max-h-[min(85dvh,56rem)]`
+        }
+      >
+        <div className="flex-1 min-h-0 overflow-y-auto">{fieldsBlock}</div>
+        {actionRow}
+      </form>
+    );
+  }
+
+  return (
+    <form id={formId} onSubmit={handleSubmit} className={embedded ? embeddedShell : cardShell}>
+      {fieldsBlock}
+      {actionRow}
     </form>
   );
 };

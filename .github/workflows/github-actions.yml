@@ -27,6 +27,7 @@ jobs:
           kubectl delete namespace "site-speak-pr-${PR_USER}-${{ github.event.pull_request.number }}" --ignore-not-found
 
   site-speak-deploy:
+    name: site-speak-deploy
     if: github.event_name != 'pull_request' || github.event.action != 'closed'
     runs-on: self-hosted
     # Single knob: repository variable AI_CHAT_ENABLED=false disables chat, or override on workflow_dispatch.
@@ -41,6 +42,7 @@ jobs:
             PR_USER=$(echo "${{ github.event.pull_request.user.login }}" | tr '[:upper:]' '[:lower:]')
             echo "NAMESPACE=site-speak-pr-${PR_USER}-${{ github.event.pull_request.number }}" >> $GITHUB_ENV
             echo "APP_HOST=${PR_USER}-pr-${{ github.event.pull_request.number }}.site-speak.duckdns.org" >> $GITHUB_ENV
+            echo "APP_TLS_SECRET=sitespeak-wildcard-tls" >> $GITHUB_ENV
             echo "CLIENT_ID=site-speak-dev" >> $GITHUB_ENV
             echo "GRAFANA_HOST=grafana-${PR_USER}-pr-${{ github.event.pull_request.number }}.site-speak.duckdns.org" >> $GITHUB_ENV
             echo "PROMETHEUS_HOST=prometheus-${PR_USER}-pr-${{ github.event.pull_request.number }}.site-speak.duckdns.org" >> $GITHUB_ENV
@@ -48,6 +50,7 @@ jobs:
           else
             echo "NAMESPACE=site-speak-prod" >> $GITHUB_ENV
             echo "APP_HOST=site-speak.duckdns.org" >> $GITHUB_ENV
+            echo "APP_TLS_SECRET=sitespeak-root-tls" >> $GITHUB_ENV
             echo "CLIENT_ID=site-speak" >> $GITHUB_ENV
             echo "GRAFANA_HOST=grafana.site-speak.duckdns.org" >> $GITHUB_ENV
             echo "PROMETHEUS_HOST=prometheus.site-speak.duckdns.org" >> $GITHUB_ENV
@@ -67,10 +70,15 @@ jobs:
           nix-shell -p nodejs_22 pnpm \
             --run "cd client && pnpm install --frozen-lockfile && pnpm run lint"
 
-      - name: testing
+      - name: Unit tests
         run: |
           nix-shell -p dotnetCorePackages.sdk_10_0-bin \
-            --run "dotnet test site-speak.sln -c Release --verbosity minimal"
+            --run "dotnet build site-speak.sln -c Release && dotnet test SiteSpeak.Logic.Tests/SiteSpeak.Logic.Tests.csproj -c Release --verbosity minimal"
+
+      - name: Integration tests
+        run: |
+          nix-shell -p dotnetCorePackages.sdk_10_0-bin \
+            --run "bash tools/run-integration-tests.sh"
 
       - name: Login to Docker Hub
         uses: docker/login-action@v3
@@ -187,10 +195,56 @@ jobs:
               });
             }
 
+  deploy-synthetic-probe:
+    name: Deploy synthetic probe
+    # Only prod-style runs on main (not PR preview deploys). Push to main is always main here; workflow_dispatch must be from main.
+    if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    runs-on: self-hosted
+    permissions:
+      actions: read
+      contents: read
+    steps:
+      - name: Set target hosts (prod only)
+        run: |
+          echo "APP_HOST=site-speak.duckdns.org" >> $GITHUB_ENV
+          echo "COLLECTOR_HOST=otel-collector.site-speak.duckdns.org" >> $GITHUB_ENV
+
+      - name: Check out repository code
+        uses: actions/checkout@v4
+
+      - name: Build DeployProbeLog
+        run: |
+          nix-shell -p dotnetCorePackages.sdk_10_0-bin \
+            --run "dotnet build tools/DeployProbeLog/DeployProbeLog.csproj -c Release"
+
+      - name: Run probe until deploy completes then export OTLP
+        env:
+          GH_TOKEN: ${{ github.token }}
+          DEPLOY_PROBE_RPS: "80"
+          DEPLOY_PROBE_MAX_WAIT: "180"
+        run: |
+          nix-shell -p dotnetCorePackages.sdk_10_0-bin \
+            --run "bash tools/run_deploy_probe.sh"
+
+  deploy-probe-report:
+    name: Deploy / probe summary
+    needs: [site-speak-deploy, deploy-synthetic-probe]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Report job results
+        run: |
+          echo "site-speak-deploy: ${{ needs.site-speak-deploy.result }}"
+          echo "deploy-synthetic-probe: ${{ needs.deploy-synthetic-probe.result }}"
+          if [[ "${{ needs.deploy-synthetic-probe.result }}" == "failure" ]]; then
+            echo "::error::Synthetic probe job failed — the probe machinery itself broke (not just app errors during deploy). Check workflow logs."
+            exit 1
+          fi
+
   discord-notify:
     name: Notify Discord on failure
-    needs: [site-speak-deploy]
-    if: ${{ always() && needs.site-speak-deploy.result == 'failure' }}
+    needs: [site-speak-deploy, deploy-synthetic-probe]
+    if: ${{ always() && (needs.site-speak-deploy.result == 'failure' || needs.deploy-synthetic-probe.result == 'failure') }}
     runs-on: self-hosted
     steps:
       - name: Post to Discord

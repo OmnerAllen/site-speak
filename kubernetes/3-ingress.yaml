@@ -14,7 +14,7 @@ spec:
   tls:
   - hosts:
     - ${APP_HOST}
-    secretName: sitespeak-root-tls
+    secretName: ${APP_TLS_SECRET}
   rules:
   - host: ${APP_HOST}
     http:

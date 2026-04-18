@@ -2,6 +2,7 @@ apiVersion: 1
 datasources:
   - name: Loki
     type: loki
+    uid: P8E80F9AEF21F6940
     access: proxy
     orgId: 1
     url: http://loki:3100
@@ -9,6 +10,10 @@ datasources:
     isDefault: true
     version: 1
     editable: false
+    jsonData:
+      # Instant LogQL with count_over_time([$__range]) can exceed the default client timeout on wide ranges (e.g. 6h).
+      timeout: 300
+      maxLines: 5000
   - name: Prometheus
     type: prometheus
     uid: PBFA97CFB590B2093

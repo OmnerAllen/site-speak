@@ -57,3 +57,5 @@ app.UseSiteSpeakAuth();
 app.MapSiteSpeakEndpoints();
 
 app.Run();
+
+public partial class Program;
