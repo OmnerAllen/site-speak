@@ -277,17 +277,23 @@ export default function WorkLogsPage() {
   const [formValues, setFormValues] = useState<Record<string, string>>(emptyFormValues());
 
   const parseTextMutation = useMutation({
-    mutationFn: (text: string) => api.parseTextWorkLog(text),
+    mutationFn: (text: string) => {
+      console.log("[WorkLogs] Sending complete dictated transcript to AI parser:", text);
+      return api.parseTextWorkLog(text);
+    },
     onSuccess: (data, text) => {
+      console.log("[WorkLogs] Received structured draft from AI:", data);
       handleDictationFinish({ draft: data.draft, transcript: text });
     },
     onError: (err) => {
+      console.error("[WorkLogs] AI parser errored out:", err);
       toast.error(err instanceof Error ? err.message : "Failed to parse dictation");
     },
   });
 
   const dictation = usePTTWhisper({
     onTranscriptionComplete: (text) => {
+      console.log("[WorkLogs] PTT whisper emitted transcription:", text);
       if (!showForm) return; // ignore if form closed
       if (text.trim()) {
         parseTextMutation.mutate(text);
@@ -297,9 +303,11 @@ export default function WorkLogsPage() {
 
   const handleDictationFinish = (data: { draft: import("../types").WorkLogDraft; transcript: string }) => {
     const { draft } = data;
+    console.log("[WorkLogs] handleDictationFinish called, merging draft into form fields:", draft);
     setFormValues((prev) => {
       const merged = { ...prev };
       if (!merged.projectId && draft.projectId) merged.projectId = draft.projectId;
+      if (!merged.employeeId && draft.employeeId) merged.employeeId = draft.employeeId;
       if (!merged.startedAt && draft.startedAt) merged.startedAt = toDatetimeLocalValue(draft.startedAt);
       if (!merged.endedAt && draft.endedAt) merged.endedAt = toDatetimeLocalValue(draft.endedAt);
       if (draft.notes) {

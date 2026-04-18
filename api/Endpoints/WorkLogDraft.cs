@@ -7,6 +7,9 @@ public class WorkLogDraft
     [JsonPropertyName("projectId")]
     public Guid? ProjectId { get; set; }
 
+    [JsonPropertyName("employeeId")]
+    public Guid? EmployeeId { get; set; }
+
     [JsonPropertyName("startedAt")]
     public DateTime? StartedAt { get; set; }
 

@@ -60,7 +60,6 @@ export function usePTTWhisper(options?: { onTranscriptionComplete?: (text: strin
       };
 
       mediaRecorder.onstop = async () => {
-        try {
           if (recordingVersionRef.current !== currentVersion) return;
           const blob = new Blob(chunksRef.current, { type: mediaRecorder.mimeType || "audio/webm" });
           
@@ -70,7 +69,9 @@ export function usePTTWhisper(options?: { onTranscriptionComplete?: (text: strin
           const words = transcriptRef.current.trim().split(/\s+/).filter(Boolean);
           const prompt = words.slice(-PROMPT_WORDS).join(" ");
           
+          console.log("[usePTTWhisper] Sending audio chunk to Whisper...", { blobSize: blob.size, prompt });
           const { text } = await api.parseAudioWorkLog(blob, "auto", prompt);
+          console.log("[usePTTWhisper] Received transcript from whisper:", text);
           
           if (recordingVersionRef.current !== currentVersion) return;
           
@@ -84,18 +85,13 @@ export function usePTTWhisper(options?: { onTranscriptionComplete?: (text: strin
              if (optionsRef.current?.onTranscriptionComplete) {
                 optionsRef.current.onTranscriptionComplete(transcriptRef.current);
              }
-          }
-        } catch (err) {
-          console.error("Transcription error:", err);
-          import("react-hot-toast").then((module) => {
-            module.default.error(err instanceof Error ? err.message : "Failed to transcribe audio.");
-          });
-        } finally {
+          
+        }  
           if (mountedRef.current && recordingVersionRef.current === currentVersion) {
             isTranscribingRef.current = false;
             setIsTranscribing(false);
           }
-        }
+        
       };
 
       mediaRecorder.start(100);

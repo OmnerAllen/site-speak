@@ -30,6 +30,8 @@ public static class WorkLogEndpoints
 
             var transcript = await whisper.TranscribeAudioAsync(stream, file.FileName, language ?? "auto", prompt ?? "", cancellationToken);
 
+            Console.WriteLine($"[WorkLog] Whisper transcript result: {transcript}");
+
             return Results.Ok(new { text = transcript });
         }).DisableAntiforgery().RequireAuthorization();
 
@@ -37,6 +39,7 @@ public static class WorkLogEndpoints
             ParseTextRequest req,
             ClaimsPrincipal user,
             ProjectRepository projects,
+            EmployeeRepository employees,
             ILlmChatClient llm,
             CancellationToken cancellationToken) =>
         {
@@ -49,6 +52,9 @@ public static class WorkLogEndpoints
             var activeProjects = await projects.ListForCompanyAsync(companyId.Value);
             var projectContext = "Available Projects:\n" + string.Join("\n", activeProjects.Select(p => $"- {p.Name} (ID: {p.Id})"));
 
+            var activeEmployees = await employees.ListForCompanyAsync(companyId.Value);
+            var employeeContext = "Available Employees:\n" + string.Join("\n", activeEmployees.Select(e => $"- {e.Name} (ID: {e.Id})"));
+
             var promptMsg = $@"
 You are an expert parsing assistant. Extract work log details from the following transcript into a JSON object matching the 'WorkLogDraft' schema.
 The current date is {DateTime.UtcNow:yyyy-MM-ddTHH:mm:ssZ}. Use this to resolve relative time like 'today' or 'yesterday'. Assume the user is in the local timezone if unspecified.
@@ -56,6 +62,7 @@ The current date is {DateTime.UtcNow:yyyy-MM-ddTHH:mm:ssZ}. Use this to resolve 
 Schema:
 {{
   ""projectId"": ""guid or null (try to match the project name from available projects)"",
+  ""employeeId"": ""guid or null (try to match the employee name from available employees)"",
   ""startedAt"": ""ISO 8601 date/time or null"",
   ""endedAt"": ""ISO 8601 date/time or null"",
   ""notes"": ""string (brief notes based on the transcript) or null""
@@ -63,24 +70,52 @@ Schema:
 
 {projectContext}
 
+{employeeContext}
+
 Transcript: {req.Transcript}";
+
+            Console.WriteLine($"[WorkLog] Sending transcript to LLM for parsing: '{req.Transcript}'");
 
             var messages = new[] { new LlmChatMessage("user", promptMsg) };
             var (resultStr, error) = await llm.CompleteAsync(messages, true, cancellationToken);
+            
+            Console.WriteLine($"[WorkLog] LLM returned resultStr: '{resultStr}'");
+            
             if (string.IsNullOrWhiteSpace(resultStr) || error != null)
+            {
+                Console.WriteLine($"[WorkLog] Failed to parse info from LLM. Error: {error}");
                 return Results.BadRequest(new { error = "Failed to parse info from LLM." });
+            }
 
             SiteSpeak.Endpoints.WorkLogDraft? draft = null;
             try
             {
-                draft = System.Text.Json.JsonSerializer.Deserialize<SiteSpeak.Endpoints.WorkLogDraft>(resultStr, new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+                var cleanJson = resultStr.Trim();
+                if (cleanJson.StartsWith("```json", StringComparison.OrdinalIgnoreCase))
+                    cleanJson = cleanJson.Substring(7);
+                else if (cleanJson.StartsWith("```"))
+                    cleanJson = cleanJson.Substring(3);
+                
+                if (cleanJson.EndsWith("```"))
+                    cleanJson = cleanJson.Substring(0, cleanJson.Length - 3);
+
+                cleanJson = cleanJson.Trim();
+
+                draft = System.Text.Json.JsonSerializer.Deserialize<SiteSpeak.Endpoints.WorkLogDraft>(cleanJson, new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true });
             }
-            catch (System.Text.Json.JsonException)
+            catch (System.Text.Json.JsonException ex)
             {
+                Console.WriteLine($"[WorkLog] JSON Deserialization exception: {ex.Message}");
                 // swallow
             }
 
-            if (draft is null) return Results.BadRequest(new { error = "LLM returned invalid JSON." });
+            if (draft is null)
+            {
+                Console.WriteLine("[WorkLog] draft object is null after parsing!");
+                return Results.BadRequest(new { error = "LLM returned invalid JSON." });
+            }
+
+            Console.WriteLine($"[WorkLog] Parsed completed! EmployeeId={draft.EmployeeId}, ProjectId={draft.ProjectId}, StartedAt={draft.StartedAt}, EndedAt={draft.EndedAt}, Notes={draft.Notes}");
 
             return Results.Ok(new { draft, transcript = req.Transcript });
         }).RequireAuthorization();

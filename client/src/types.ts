@@ -30,6 +30,7 @@ export interface WorkLog {
 
 export interface WorkLogDraft {
   projectId: string | null;
+  employeeId: string | null;
   startedAt: string | null;
   endedAt: string | null;
   notes: string | null;
