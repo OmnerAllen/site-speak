@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Start Postgres (schema + seeds), wait until healthy, run full solution tests, then tear down.
+# Start Postgres (schema + seeds), wait until healthy, run API integration tests only, then tear down.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -17,4 +17,4 @@ trap cleanup EXIT
 export INTEGRATION_TEST_CONNECTION_STRING='Host=127.0.0.1;Port=5434;Database=sitespeak;Username=postgres;Password=postgres'
 export OTEL_SDK_DISABLED=true
 
-dotnet test site-speak.sln -c Release --verbosity minimal
+dotnet test SiteSpeak.Api.IntegrationTests/SiteSpeak.Api.IntegrationTests.csproj -c Release --verbosity minimal

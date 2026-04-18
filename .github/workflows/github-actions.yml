@@ -70,7 +70,12 @@ jobs:
           nix-shell -p nodejs_22 pnpm \
             --run "cd client && pnpm install --frozen-lockfile && pnpm run lint"
 
-      - name: testing
+      - name: Unit tests
+        run: |
+          nix-shell -p dotnetCorePackages.sdk_10_0-bin \
+            --run "dotnet build site-speak.sln -c Release && dotnet test SiteSpeak.Logic.Tests/SiteSpeak.Logic.Tests.csproj -c Release --verbosity minimal"
+
+      - name: Integration tests
         run: |
           nix-shell -p dotnetCorePackages.sdk_10_0-bin \
             --run "bash tools/run-integration-tests.sh"
