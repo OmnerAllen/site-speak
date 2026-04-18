@@ -14,18 +14,35 @@ import type { ProjectStageResourcesResponse, StageName, StageResourcesPutBody } 
 
 /** Site Speak @theme radioactive palette — keep classes referenced for Tailwind. */
 const MATERIALS_PANEL_DEFAULT =
-  "rounded-xl border border-brick-700/50 bg-brick-900/40 p-4 md:p-5 space-y-5";
+  "rounded-lg border border-brick-700 bg-brick-800 p-4 md:p-6 space-y-5 shadow-md";
 const MATERIALS_PANEL_RADIOACTIVE =
-  "rounded-xl border border-radioactive-500/55 bg-radioactive-600/15 ring-1 ring-radioactive-400/35 shadow-[0_0_22px_rgba(234,179,8,0.14)] p-4 md:p-5 space-y-5";
+  "rounded-lg border border-radioactive-500/55 bg-radioactive-600/15 ring-1 ring-radioactive-400/35 shadow-[0_0_22px_rgba(234,179,8,0.14)] p-4 md:p-6 space-y-5";
+/** Second half of a unified project card (below DynamicForm). */
+const MATERIALS_PANEL_EMBEDDED = "border-t border-brick-700 px-6 pt-5 pb-6 space-y-5";
+const MATERIALS_PANEL_EMBEDDED_RADIOACTIVE =
+  "border-t border-radioactive-500/50 px-6 pt-5 pb-6 space-y-5 bg-radioactive-600/10 ring-1 ring-inset ring-radioactive-400/25 shadow-[inset_0_0_20px_rgba(234,179,8,0.06)]";
+/** Slightly recessed dark well — stands out from outer `bg-brick-800` without a bright sheet. */
+const MATERIALS_INNER_SURFACE =
+  "rounded-md border border-brick-600/90 bg-brick-950/55 p-4 md:p-5 text-brick-200 shadow-inner ring-1 ring-brick-800/60";
 
 export type EditorPrompt = {
   overview: string;
   stages: Array<{ name: StageName; details: string; notes: string }>;
 };
 
+export type MaterialEstimateToolbarState = {
+  estimatePending: boolean;
+  applyPending: boolean;
+  canReset: boolean;
+};
+
 export type ProjectMaterialEstimateHandle = {
   /** Runs estimate using current editor text (overview + stages) and radius. */
   runEstimate: () => void;
+  /** Same as the section “Regenerate” control (does not require overview text). */
+  regenerateEstimate: () => void;
+  applyResources: () => void;
+  resetFromSaved: () => void;
 };
 
 function stageLabel(name: StageName): string {
@@ -79,6 +96,16 @@ function draftToPutBody(draft: DraftStage[]): StageResourcesPutBody {
 interface Props {
   projectId: string;
   getEditorPrompt: () => EditorPrompt;
+  /** When true, Regenerate / Apply / Reset are omitted (e.g. shown in a page toolbar). */
+  hideActionButtons?: boolean;
+  onActionState?: (state: MaterialEstimateToolbarState) => void;
+  /**
+   * Aligns with project editor tabs: `info` hides stage tables (materials are per stage).
+   * A stage name shows only that stage. Omit for legacy “all stages” view.
+   */
+  viewStage?: "info" | StageName;
+  /** When true, no outer card — sits under DynamicForm inside one parent shell. */
+  embedded?: boolean;
 }
 
 /** Mutation result — avoids throwing on informational empty-catalog cases (warnings are not errors). */
@@ -86,8 +113,21 @@ type MaterialEstimateMutationResult =
   | { status: "empty_seed" }
   | { status: "completed"; appliedViaSubmitTool: boolean };
 
+function viewStageToTableMode(
+  viewStage: "info" | StageName | undefined,
+): "all" | "info" | { idx: number } {
+  if (viewStage === undefined) return "all";
+  if (viewStage === "info") return "info";
+  const idx = STAGE_ORDER.indexOf(viewStage);
+  if (idx < 0) return "all";
+  return { idx };
+}
+
 export const ProjectMaterialEstimateSection = forwardRef<ProjectMaterialEstimateHandle, Props>(
-  function ProjectMaterialEstimateSection({ projectId, getEditorPrompt }, ref) {
+  function ProjectMaterialEstimateSection(
+    { projectId, getEditorPrompt, hideActionButtons = false, onActionState, viewStage, embedded = false },
+    ref,
+  ) {
     const queryClient = useQueryClient();
     const [radiusMiles, setRadiusMiles] = useState(50);
     const [draft, setDraft] = useState<DraftStage[]>(() => emptyDraft());
@@ -169,22 +209,6 @@ export const ProjectMaterialEstimateSection = forwardRef<ProjectMaterialEstimate
       },
     });
 
-    const mutateEstimateRef = useRef(estimateMutation.mutate);
-    useEffect(() => {
-      mutateEstimateRef.current = estimateMutation.mutate;
-    }, [estimateMutation.mutate]);
-
-    useImperativeHandle(ref, () => ({
-      runEstimate: () => {
-        const p = getPromptRef.current();
-        if (!p.overview.trim()) {
-          toast.error("Add a project overview first.");
-          return;
-        }
-        mutateEstimateRef.current();
-      },
-    }));
-
     const applyMutation = useMutation({
       mutationFn: () => api.putStageResources(projectId, draftToPutBody(draft)),
       onSuccess: () => {
@@ -196,6 +220,61 @@ export const ProjectMaterialEstimateSection = forwardRef<ProjectMaterialEstimate
         toast.error("Could not save stage resources.");
       },
     });
+
+    const mutateEstimateRef = useRef(estimateMutation.mutate);
+    useEffect(() => {
+      mutateEstimateRef.current = estimateMutation.mutate;
+    }, [estimateMutation.mutate]);
+
+    const applyMutateRef = useRef(applyMutation.mutate);
+    useEffect(() => {
+      applyMutateRef.current = applyMutation.mutate;
+    }, [applyMutation.mutate]);
+
+    const resetDraftFromServerRef = useRef(resetDraftFromServer);
+    const resourcesRef = useRef(resources);
+    useEffect(() => {
+      resetDraftFromServerRef.current = resetDraftFromServer;
+    }, [resetDraftFromServer]);
+    useEffect(() => {
+      resourcesRef.current = resources;
+    }, [resources]);
+
+    useImperativeHandle(ref, () => ({
+      runEstimate: () => {
+        const p = getPromptRef.current();
+        if (!p.overview.trim()) {
+          toast.error("Add a project overview first.");
+          return;
+        }
+        mutateEstimateRef.current();
+      },
+      regenerateEstimate: () => {
+        mutateEstimateRef.current();
+      },
+      applyResources: () => {
+        applyMutateRef.current();
+      },
+      resetFromSaved: () => {
+        const r = resourcesRef.current;
+        if (r) resetDraftFromServerRef.current(r);
+      },
+    }));
+
+    useEffect(() => {
+      if (!onActionState) return;
+      onActionState({
+        estimatePending: estimateMutation.isPending,
+        applyPending: applyMutation.isPending,
+        canReset: !loadingResources && !!resources,
+      });
+    }, [
+      onActionState,
+      estimateMutation.isPending,
+      applyMutation.isPending,
+      loadingResources,
+      resources,
+    ]);
 
     const updateMaterialQuantity = (stageIdx: number, lineIdx: number, quantity: number) => {
       setDraft((prev) => {
@@ -248,20 +327,33 @@ export const ProjectMaterialEstimateSection = forwardRef<ProjectMaterialEstimate
       );
     };
 
+    const tableMode = viewStageToTableMode(viewStage);
+    const stageRows =
+      tableMode === "all"
+        ? draft.map((stage, si) => ({ stage, si }))
+        : tableMode === "info"
+          ? []
+          : [{ stage: draft[tableMode.idx], si: tableMode.idx }];
+
+    const materialsTitle =
+      typeof tableMode === "object"
+        ? `Materials & equipment — ${stageLabel(stageRows[0]!.stage.name)}`
+        : "Materials & equipment";
+
+    const sectionSurfaceClass = embedded
+      ? materialsPanelSurface === "radioactive"
+        ? MATERIALS_PANEL_EMBEDDED_RADIOACTIVE
+        : MATERIALS_PANEL_EMBEDDED
+      : materialsPanelSurface === "radioactive"
+        ? MATERIALS_PANEL_RADIOACTIVE
+        : MATERIALS_PANEL_DEFAULT;
+
     return (
-      <section
-        className={
-          materialsPanelSurface === "radioactive" ? MATERIALS_PANEL_RADIOACTIVE : MATERIALS_PANEL_DEFAULT
-        }
-      >
+      <section className={sectionSurfaceClass}>
         {/* Keep dynamic radioactive utility classes in the bundle */}
         <div className="hidden border-radioactive-500/55 bg-radioactive-600/15 ring-radioactive-400/35 shadow-[0_0_22px_rgba(234,179,8,0.14)]" />
-        <div>
-          <h2 className="text-base md:text-lg font-semibold text-brick-100">Materials &amp; equipment</h2>
-          <p className="text-xs md:text-sm text-brick-400 mt-1">
-            Tab out of <strong className="text-brick-300">Project Overview</strong> to generate an estimate from your draft text.
-            Set a radius in miles—the model is asked to prefer suppliers and rentals within that range of the job address (judged from text, not GPS).
-          </p>
+        <div className="mb-1">
+          <h2 className="text-base md:text-lg font-semibold text-brick-100">{materialsTitle}</h2>
         </div>
 
         <div className="flex flex-wrap items-end gap-3">
@@ -274,139 +366,152 @@ export const ProjectMaterialEstimateSection = forwardRef<ProjectMaterialEstimate
               step={1}
               value={radiusMiles}
               onChange={(e) => setRadiusMiles(Number(e.target.value))}
-              className="rounded border border-brick-600 bg-brick-950 px-2 py-1.5 text-brick-100 w-24 text-sm"
+              className="rounded-md border border-brick-600 bg-brick-900 px-2 py-1.5 text-brick-100 w-24 text-sm focus:outline-none focus:ring-2 focus:ring-brick-500"
             />
           </label>
-          <button
-            type="button"
-            onClick={() => estimateMutation.mutate()}
-            disabled={estimateMutation.isPending}
-            className="rounded bg-brick-600 hover:bg-brick-500 text-brick-50 px-3 py-2 text-xs md:text-sm font-medium disabled:opacity-50"
-          >
-            {estimateMutation.isPending ? "Generating…" : "Regenerate"}
-          </button>
-          <button
-            type="button"
-            onClick={() => applyMutation.mutate()}
-            disabled={applyMutation.isPending}
-            className="rounded border border-brick-500 text-brick-200 hover:bg-brick-800 px-3 py-2 text-xs md:text-sm font-medium disabled:opacity-50"
-          >
-            {applyMutation.isPending ? "Saving…" : "Apply to project"}
-          </button>
-          <button
-            type="button"
-            onClick={() => resources && resetDraftFromServer(resources)}
-            disabled={loadingResources || !resources}
-            className="text-xs text-brick-400 hover:text-brick-200 underline disabled:opacity-50"
-          >
-            Reset from saved
-          </button>
+          {!hideActionButtons ? (
+            <>
+              <button
+                type="button"
+                onClick={() => estimateMutation.mutate()}
+                disabled={estimateMutation.isPending}
+                className="rounded bg-brick-600 hover:bg-brick-500 text-brick-50 px-3 py-2 text-xs md:text-sm font-medium disabled:opacity-50"
+              >
+                {estimateMutation.isPending ? "Generating…" : "Regenerate"}
+              </button>
+              <button
+                type="button"
+                onClick={() => applyMutation.mutate()}
+                disabled={applyMutation.isPending}
+                className="rounded border border-brick-500 text-brick-200 hover:bg-brick-800 px-3 py-2 text-xs md:text-sm font-medium disabled:opacity-50"
+              >
+                {applyMutation.isPending ? "Saving…" : "Apply to project"}
+              </button>
+              <button
+                type="button"
+                onClick={() => resources && resetDraftFromServer(resources)}
+                disabled={loadingResources || !resources}
+                className="text-xs text-brick-400 hover:text-brick-200 underline disabled:opacity-50"
+              >
+                Reset from saved
+              </button>
+            </>
+          ) : null}
         </div>
 
-        {warnings.length > 0 && (
-          <ul className="text-xs text-amber-200/90 list-disc pl-4 space-y-0.5">
-            {warnings.map((w) => (
-              <li key={w}>{w}</li>
-            ))}
-          </ul>
-        )}
+        <div className={`${MATERIALS_INNER_SURFACE} space-y-4 max-h-[70vh] overflow-y-auto`}>
+          {warnings.length > 0 && (
+            <ul className="text-xs text-amber-200/90 list-disc pl-4 space-y-0.5 border-b border-brick-700/80 pb-3">
+              {warnings.map((w) => (
+                <li key={w}>{w}</li>
+              ))}
+            </ul>
+          )}
 
-        <div className="space-y-6 max-h-[70vh] overflow-y-auto pr-1">
-          {draft.map((stage, si) => (
-            <div key={stage.name} className="space-y-2">
-              <h3 className="text-sm font-medium text-brick-200">{stageLabel(stage.name)}</h3>
-              <div className="overflow-x-auto">
-                <p className="text-[10px] text-brick-500 mb-0.5">Materials</p>
-                <table className="w-full text-xs text-left border-collapse">
-                  <thead>
-                    <tr className="text-brick-400 border-b border-brick-700">
-                      <th className="py-1 pr-2 font-medium">Product</th>
-                      <th className="py-1 pr-2 font-medium w-24">Qty</th>
-                      <th className="py-1 font-medium w-16" />
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {stage.materials.length === 0 ? (
-                      <tr>
-                        <td colSpan={3} className="py-1 text-brick-500">
-                          None
-                        </td>
+          <div className="space-y-6 pr-1">
+            {tableMode === "info" ? (
+              <p className="text-sm text-brick-400 border border-brick-700 rounded-md p-4 bg-brick-900/40">
+                Materials and equipment are organized by stage. Open the <strong className="text-brick-200">Demo</strong>,{" "}
+                <strong className="text-brick-200">Prep</strong>, <strong className="text-brick-200">Build/Install</strong>, or{" "}
+                <strong className="text-brick-200">QA</strong> tab to view and edit lines for that stage.
+              </p>
+            ) : null}
+            {stageRows.map(({ stage, si }) => (
+              <div key={stage.name} className="space-y-2">
+                {typeof tableMode === "object" ? null : (
+                  <h3 className="text-sm font-semibold text-brick-200">{stageLabel(stage.name)}</h3>
+                )}
+                <div className="overflow-x-auto">
+                  <table className="w-full text-xs text-left border-collapse">
+                    <thead>
+                      <tr className="text-brick-400 border-b border-brick-700">
+                        <th className="py-1.5 pr-2 font-medium">Materials</th>
+                        <th className="py-1.5 pr-2 font-medium w-24">Qty</th>
+                        <th className="py-1.5 font-medium w-16" />
                       </tr>
-                    ) : (
-                      stage.materials.map((m, mi) => (
-                        <tr key={`${m.materialId}-${mi}`} className="border-b border-brick-800/80">
-                          <td className="py-1 pr-2 text-brick-200">{m.label}</td>
-                          <td className="py-1 pr-2">
-                            <input
-                              type="number"
-                              min={0}
-                              step={0.01}
-                              value={m.quantity}
-                              onChange={(e) => updateMaterialQuantity(si, mi, parseFloat(e.target.value))}
-                              className="w-full rounded border border-brick-600 bg-brick-950 px-1 py-0.5 text-brick-100 text-xs"
-                            />
-                          </td>
-                          <td className="py-1">
-                            <button
-                              type="button"
-                              onClick={() => removeMaterial(si, mi)}
-                              className="text-[10px] text-red-300 hover:text-red-200"
-                            >
-                              Remove
-                            </button>
+                    </thead>
+                    <tbody>
+                      {stage.materials.length === 0 ? (
+                        <tr>
+                          <td colSpan={3} className="py-2 text-brick-500">
+                            None
                           </td>
                         </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-              </div>
-              <div className="overflow-x-auto">
-                <p className="text-[10px] text-brick-500 mb-0.5">Equipment</p>
-                <table className="w-full text-xs text-left border-collapse">
-                  <thead>
-                    <tr className="text-brick-400 border-b border-brick-700">
-                      <th className="py-1 pr-2 font-medium">Equipment</th>
-                      <th className="py-1 pr-2 font-medium w-20">½ day</th>
-                      <th className="py-1 font-medium w-14" />
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {stage.equipment.length === 0 ? (
-                      <tr>
-                        <td colSpan={3} className="py-1 text-brick-500">
-                          None
-                        </td>
+                      ) : (
+                        stage.materials.map((m, mi) => (
+                          <tr key={`${m.materialId}-${mi}`} className="border-b border-brick-800/80">
+                            <td className="py-1.5 pr-2 text-brick-200">{m.label}</td>
+                            <td className="py-1.5 pr-2">
+                              <input
+                                type="number"
+                                min={0}
+                                step={0.01}
+                                value={m.quantity}
+                                onChange={(e) => updateMaterialQuantity(si, mi, parseFloat(e.target.value))}
+                                className="w-full rounded-md border border-brick-600 bg-brick-900 px-1.5 py-0.5 text-brick-100 text-xs focus:outline-none focus:ring-1 focus:ring-brick-500"
+                              />
+                            </td>
+                            <td className="py-1.5">
+                              <button
+                                type="button"
+                                onClick={() => removeMaterial(si, mi)}
+                                className="text-[10px] font-medium text-red-300 hover:text-red-200"
+                              >
+                                Remove
+                              </button>
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+                <div className="overflow-x-auto mt-4">
+                  <table className="w-full text-xs text-left border-collapse">
+                    <thead>
+                      <tr className="text-brick-400 border-b border-brick-700">
+                        <th className="py-1.5 pr-2 font-medium">Equipment</th>
+                        <th className="py-1.5 pr-2 font-medium w-20">½ day</th>
+                        <th className="py-1.5 font-medium w-14" />
                       </tr>
-                    ) : (
-                      stage.equipment.map((e, ei) => (
-                        <tr key={`${e.equipmentId}-${ei}`} className="border-b border-brick-800/80">
-                          <td className="py-1 pr-2 text-brick-200">{e.label}</td>
-                          <td className="py-1 pr-2">
-                            <input
-                              type="checkbox"
-                              checked={e.halfDay}
-                              onChange={() => toggleEquipmentHalfDay(si, ei)}
-                              className="accent-brick-500"
-                            />
-                          </td>
-                          <td className="py-1">
-                            <button
-                              type="button"
-                              onClick={() => removeEquipment(si, ei)}
-                              className="text-[10px] text-red-300 hover:text-red-200"
-                            >
-                              Remove
-                            </button>
+                    </thead>
+                    <tbody>
+                      {stage.equipment.length === 0 ? (
+                        <tr>
+                          <td colSpan={3} className="py-2 text-brick-500">
+                            None
                           </td>
                         </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
+                      ) : (
+                        stage.equipment.map((e, ei) => (
+                          <tr key={`${e.equipmentId}-${ei}`} className="border-b border-brick-800/80">
+                            <td className="py-1.5 pr-2 text-brick-200">{e.label}</td>
+                            <td className="py-1.5 pr-2">
+                              <input
+                                type="checkbox"
+                                checked={e.halfDay}
+                                onChange={() => toggleEquipmentHalfDay(si, ei)}
+                                className="accent-brick-500"
+                              />
+                            </td>
+                            <td className="py-1.5">
+                              <button
+                                type="button"
+                                onClick={() => removeEquipment(si, ei)}
+                                className="text-[10px] font-medium text-red-300 hover:text-red-200"
+                              >
+                                Remove
+                              </button>
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       </section>
     );

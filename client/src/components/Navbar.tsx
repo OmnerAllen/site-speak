@@ -19,16 +19,18 @@ export function Navbar({ items = MAIN_NAV_ITEMS }: NavbarProps) {
 
   return (
     <nav className="border-b border-brick-800 bg-brick-950/80 backdrop-blur sticky top-0 z-50">
-      <div className="max-w-6xl mx-auto flex items-center justify-between px-6 py-3">
-        <div className="flex items-center gap-6">
+      <div className="max-w-6xl mx-auto flex items-center justify-between gap-4 px-6 py-3 min-w-0">
+        <div className="flex items-center gap-4 min-w-0 flex-1">
           <Link
             to="/"
-            className="text-lg font-bold text-grass-400 tracking-tight"
+            className="text-lg font-bold text-grass-400 tracking-tight shrink-0"
           >
             Site Speak
           </Link>
           {auth.isAuthenticated && items.length > 0 && (
-            <TabNav items={items} className="hidden sm:flex gap-1" />
+            <div className="hidden sm:block min-w-0 flex-1 overflow-x-auto [scrollbar-width:thin]">
+              <TabNav items={items} className="flex flex-nowrap pb-0.5" />
+            </div>
           )}
         </div>
 

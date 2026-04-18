@@ -8,8 +8,22 @@ public static class TelemetryWebApplicationBuilderExtensions
     private const string ServiceName = "SiteSpeak";
     private const string OtlpBaseUrl = "http://otel-collector:4318";
 
+    static bool OtelSdkDisabled()
+    {
+        var v = Environment.GetEnvironmentVariable("OTEL_SDK_DISABLED");
+        return string.Equals(v, "true", StringComparison.OrdinalIgnoreCase)
+            || v == "1";
+    }
+
     public static WebApplicationBuilder AddSiteSpeakTelemetry(this WebApplicationBuilder builder)
     {
+        if (OtelSdkDisabled())
+        {
+            builder.Logging.ClearProviders();
+            builder.Logging.AddConsole();
+            return builder;
+        }
+
         builder.Logging.ClearProviders();
         builder.Logging.AddConsole();
 

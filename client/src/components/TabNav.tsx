@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React from "react";
 import { Link, useLocation } from "react-router-dom";
 
 export interface NavItem {
@@ -18,24 +18,13 @@ function isActiveRoute(pathname: string, to: string, activePaths?: string[]) {
 export function NavLink({ to, activePaths, children }: { to: string; activePaths?: string[]; children: React.ReactNode }) {
   const { pathname } = useLocation();
   const active = isActiveRoute(pathname, to, activePaths);
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    const frame = requestAnimationFrame(() => setMounted(true));
-    return () => cancelAnimationFrame(frame);
-  }, []);
-
-  const activeUnderline = active && mounted;
 
   const baseClasses =
-    "relative px-3 py-1.5 rounded-sm text-sm font-medium transition-colors " +
-    "after:content-[''] after:absolute after:left-0 after:-bottom-1 " +
-    "after:w-full after:h-1 after:bg-grass-400 " +
-    "after:origin-center after:transition-transform after:duration-300 after:ease-out ";
+    "shrink-0 px-3 py-2 rounded-md text-sm font-medium border-b-2 border-transparent transition-colors ";
 
   const statusClasses = active
-    ? "text-grass-400 " + (activeUnderline ? "after:scale-x-100" : "after:scale-x-0")
-    : "text-brick-300 hover:text-brick-100 hover:bg-brick-800/50 after:scale-x-0";
+    ? "text-grass-400 border-grass-400 bg-brick-900/40"
+    : "text-brick-300 hover:text-brick-100 hover:bg-brick-900/30";
 
   return (
     <Link to={to} className={`${baseClasses}${statusClasses}`}>
@@ -51,7 +40,7 @@ export interface TabNavProps {
 
 export function TabNav({ items, className = "" }: TabNavProps) {
   return (
-    <div className={`flex items-center ${className}`}>
+    <div className={`flex items-stretch gap-0.5 min-w-0 ${className}`}>
       {items.map((item) => (
         <NavLink key={item.to} to={item.to} activePaths={item.activePaths}>
           {item.label}
