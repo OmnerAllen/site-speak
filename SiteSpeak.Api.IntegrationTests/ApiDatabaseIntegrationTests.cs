@@ -41,6 +41,6 @@ public sealed class ApiDatabaseIntegrationTests : IClassFixture<SiteSpeakWebAppl
         Assert.Equal(JsonValueKind.Array, doc.RootElement.ValueKind);
 
         var names = doc.RootElement.EnumerateArray().Select(e => e.GetProperty("name").GetString()).ToList();
-        Assert.Contains("Definitely not a mini excavator", names);
+        Assert.Contains("Mini Excavator (3.5 Ton)", names);
     }
 }
