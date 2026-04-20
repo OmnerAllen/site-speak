@@ -16,7 +16,6 @@ export function DictationWidget({ onCancel, onFinish }: Props) {
     isTranscribing,
     transcript,
     mediaStream,
-    setTranscript,
     startRecording,
     stopRecording,
     clearTranscript,

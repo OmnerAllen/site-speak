@@ -22,7 +22,7 @@ public static class WorkLogEndpoints
             if (sub is null) return Results.Unauthorized();
 
             using var stream = file.OpenReadStream();
-            
+
             if (stream.Length == 0)
                 throw new ArgumentException("The provided audio file is empty.");
 
@@ -117,9 +117,9 @@ Transcript: {req.Transcript}";
 
             var payloadElement = System.Text.Json.JsonSerializer.SerializeToElement(payload);
             var (rawBody, result, error) = await llm.PostChatCompletionsAsync(payloadElement, cancellationToken);
-            
+
             Console.WriteLine($"[WorkLog] LLM returned. Error: {error}");
-            
+
             if (result is null || error != null)
             {
                 Console.WriteLine($"[WorkLog] Failed to parse info from LLM. Error: {error}");
@@ -133,7 +133,7 @@ Transcript: {req.Transcript}";
                 return Results.BadRequest(new { error = "LLM did not return the expected tool call." });
             }
 
-            var (draft,errorMessage) = ParseLlmResponse<SiteSpeak.Endpoints.WorkLogDraft>(toolCall.Arguments);
+            var (draft, errorMessage) = ParseLlmResponse<SiteSpeak.Endpoints.WorkLogDraft>(toolCall.Arguments);
 
             if (draft is null)
             {
@@ -200,9 +200,9 @@ Transcript: {req.Transcript}";
     {
         try
         {
-            var res = 
+            var res =
                 System.Text.Json.JsonSerializer.Deserialize<T>(
-                    json, 
+                    json,
                     new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true });
             return (res, null);
         }

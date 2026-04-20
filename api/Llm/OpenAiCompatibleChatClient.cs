@@ -58,7 +58,7 @@ public sealed class OpenAiCompatibleChatClient(
         }
 
         var body = await res.Content.ReadAsStringAsync(cancellationToken);
-        
+
         Console.WriteLine($"[OpenAiChatClient] Received HTTP {(int)res.StatusCode} from {url}");
         Console.WriteLine($"[OpenAiChatClient] Raw LLM response ({body.Length} characters): {body}");
 
@@ -137,7 +137,7 @@ public sealed class OpenAiCompatibleChatClient(
         }
 
         var body = await res.Content.ReadAsStringAsync(cancellationToken);
-        
+
         Console.WriteLine($"[OpenAiChatClient] Received HTTP {(int)res.StatusCode} from {url}");
         Console.WriteLine($"[OpenAiChatClient] Raw LLM response ({body.Length} characters): {body}");
 

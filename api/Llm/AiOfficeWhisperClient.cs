@@ -29,8 +29,11 @@ public class AiOfficeWhisperClient : IWhisperClient
         var fileContent = new StreamContent(audioStream);
         var mime = Path.GetExtension(filename).ToLowerInvariant() switch
         {
-            ".mp3" => "audio/mpeg", ".wav" => "audio/wav", ".webm" => "audio/webm",
-            ".m4a" => "audio/mp4", _ => "application/octet-stream"
+            ".mp3" => "audio/mpeg",
+            ".wav" => "audio/wav",
+            ".webm" => "audio/webm",
+            ".m4a" => "audio/mp4",
+            _ => "application/octet-stream"
         };
         fileContent.Headers.ContentType = new MediaTypeHeaderValue(mime);
         fileContent.Headers.ContentDisposition = new ContentDispositionHeaderValue("form-data") { Name = "\"file\"", FileName = $"\"{filename}\"" };
@@ -42,21 +45,21 @@ public class AiOfficeWhisperClient : IWhisperClient
 
         Console.WriteLine($"[AiOfficeWhisper] Audio stream length: {audioStream.Length} bytes.");
         Console.WriteLine($"[AiOfficeWhisper] Sending POST request to {_httpClient.BaseAddress}inference");
-        
+
         var response = await _httpClient.PostAsync("/inference", multipart, cancellationToken);
-        
+
         Console.WriteLine($"[AiOfficeWhisper] Received HTTP {response.StatusCode}");
 
         var responseContent = await response.Content.ReadAsStringAsync(cancellationToken);
 
         Console.WriteLine($"[AiOfficeWhisper] raw whisper response: {responseContent}");
-        
+
         if (!response.IsSuccessStatusCode)
         {
             Console.WriteLine($"[AiOfficeWhisper] Warning: API returned non-success code! {responseContent}");
         }
 
-        var result = JsonSerializer.Deserialize<WhisperResponse>(responseContent, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });   
+        var result = JsonSerializer.Deserialize<WhisperResponse>(responseContent, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
         return result?.text ?? throw new Exception("Failed to parse transcription response");
     }
 
@@ -68,7 +71,7 @@ public class AiOfficeWhisperClient : IWhisperClient
         content.Headers.ContentDisposition = new ContentDispositionHeaderValue("form-data") { Name = $"\"{name}\"" };
         multipart.Add(content);
     }
-    
+
     private class WhisperResponse
     {
         public string text { get; set; } = string.Empty;
