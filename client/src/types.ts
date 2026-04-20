@@ -28,6 +28,14 @@ export interface WorkLog {
   notes: string | null;
 }
 
+export interface WorkLogDraft {
+  projectId: string | null;
+  employeeId: string | null;
+  startedAt: string | null;
+  endedAt: string | null;
+  notes: string | null;
+}
+
 export interface ProjectStage {
   id: string;
   name: "demo" | "prep" | "build/install" | "qa";

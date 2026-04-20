@@ -36,6 +36,7 @@ services:
       - ConnectionStrings__DefaultConnection=Host=db;Port=5432;Database=sitespeak;Username=postgres;Password=postgres
       # LLM must be reachable from this container (localhost:9292 is wrong unless the model runs inside the same container)
       - Llm__ChatCompletionsUrl=${LLM_CHAT_COMPLETIONS_URL:-https://ai-snow.reindeer-pinecone.ts.net:9292/v1/chat/completions}
+      - Llm__WhisperUrl=http://ai-snow.reindeer-pinecone.ts.net:8081/inference
       # Optional: set Llm__Model in .env to override api/Llm/LlmOptions.DefaultModelId (do not set empty)
     volumes:
       - ./api:/app
@@ -65,7 +66,7 @@ services:
       - ./client:/app
       - /app/node_modules
     command: >-
-      sh -c "npm install -g pnpm && pnpm i && pnpm run dev -- --host 0.0.0.0 --port 80"
+      sh -c "npm install -g pnpm && pnpm i && pnpm run dev --host 0.0.0.0 --port 80"
     depends_on:
       - db
 

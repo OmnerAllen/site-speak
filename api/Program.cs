@@ -36,6 +36,12 @@ builder.Services.AddHttpClient(OpenAiCompatibleChatClient.HttpClientName, client
     client.Timeout = TimeSpan.FromMinutes(15);
 });
 builder.Services.AddSingleton<ILlmChatClient, OpenAiCompatibleChatClient>();
+builder.Services.AddHttpClient<IWhisperClient, SiteSpeak.Llm.AiOfficeWhisperClient>((sp, client) =>
+{
+    var url = Environment.GetEnvironmentVariable("Llm__WhisperUrl") ?? throw new Exception("Whisper URL not configured");
+    Console.WriteLine($"[Program] Configuring WhisperClient with URL: {url}");
+    client.BaseAddress = new Uri(url);
+});
 builder.Services.AddSingleton<MaterialEstimateService>();
 builder.Services.AddSingleton<AiChatService>();
 

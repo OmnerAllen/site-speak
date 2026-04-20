@@ -9,12 +9,14 @@ import type {
   ScheduleProject,
   Employee,
   WorkLog,
+  WorkLogDraft,
   MaterialEstimateRequestBody,
   MaterialEstimateCompleteResponse,
   StageResourcesPutBody,
   AiChatMessage,
 } from "./types";
 import { ApiError } from "./error/ApiError";
+import toast from "react-hot-toast";
 
 async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`/api${path}`, {
@@ -172,6 +174,56 @@ export const api = {
     apiFetch<void>(`/my/employees/${id}`, { method: "DELETE" }),
 
   getWorkLogs: () => apiFetch<WorkLog[]>("/my/work-logs"),
+  
+  parseAudioWorkLog: async (audioBlob: Blob, language: string = "auto", prompt: string = ""): Promise<{ text: string }> => {
+    const formData = new FormData();
+    formData.append("file", audioBlob, "recording.webm");
+    formData.append("language", language);
+    formData.append("prompt", prompt);
+    const res = await fetch("/api/my/work-logs/transcribe-chunk", {
+      method: "POST",
+      body: formData,
+    });
+    if (res.status === 401) {
+      document.cookie = "id_token=; path=/; max-age=0";
+      window.location.href = "/";
+      throw new Error("Unauthorized");
+    }
+
+
+    if (!res.ok){
+      const error = await res.text();
+      await toast.error(`error from parse audio work log: ${error}`)
+      console.log(`Error response from parse audio work log: ${error}`);
+      throw new Error(`Failed to parse audio work log: ${error}`);
+    }
+    
+    const data = await res.json();
+    return data;
+  },
+
+  parseTextWorkLog: async (transcript: string): Promise<{ draft: WorkLogDraft; transcript: string }> => {
+    const localTime = new Date().toISOString();
+    const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    const res = await fetch("/api/my/work-logs/parse-text", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ transcript, localTime, timeZone }),
+    });
+    if (res.status === 401) {
+      document.cookie = "id_token=; path=/; max-age=0";
+      window.location.href = "/";
+      throw new Error("Unauthorized");
+    }
+    if (!res.ok) {
+      const text = await res.text();
+      throw new ApiError(`did not get back ok from ${res.url}: ${text}`, res.status);
+
+    }
+    const data = await res.json();
+    return data;
+  },
+
   createWorkLog: (body: {
     employeeId: string;
     projectId: string;
