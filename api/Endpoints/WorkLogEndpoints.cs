@@ -133,12 +133,7 @@ Transcript: {req.Transcript}";
                 return Results.BadRequest(new { error = "LLM did not return the expected tool call." });
             }
 
-            var (draft, errorMessage) = ParseLlmResponse<SiteSpeak.Endpoints.WorkLogDraft>(toolCall.Arguments);
-
-            if (draft is null)
-            {
-                return Results.BadRequest(new { error = errorMessage ?? $"LLM returned invalid JSON: {toolCall.Arguments}" });
-            }
+            var draft = ParseLlmResponse<SiteSpeak.Endpoints.WorkLogDraft>(toolCall.Arguments);
 
             Console.WriteLine($"[WorkLog] Parsed completed! EmployeeId={draft.EmployeeId}, ProjectId={draft.ProjectId}, StartedAt={draft.StartedAt}, EndedAt={draft.EndedAt}, Notes={draft.Notes}");
 
@@ -196,7 +191,7 @@ Transcript: {req.Transcript}";
         return app;
     }
 
-    private static (T?, string?) ParseLlmResponse<T>(string json)
+    private static T ParseLlmResponse<T>(string json)
     {
         try
         {
@@ -204,14 +199,12 @@ Transcript: {req.Transcript}";
                 System.Text.Json.JsonSerializer.Deserialize<T>(
                     json,
                     new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-            return (res, null);
+            return res;
         }
         catch (System.Text.Json.JsonException ex)
         {
             var errorMessage = $"JSON deserialization error: {ex.Message}, Original JSON: {json}, Type: {typeof(T).FullName}";
-            Console.WriteLine(ex);
-            Console.WriteLine(errorMessage);
-            return (default(T), errorMessage);
+            throw new ToolCallArgumentsParsingException(errorMessage, ex);
         }
     }
 }

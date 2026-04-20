@@ -52,7 +52,35 @@ builder.AddSiteSpeakAuth();
 
 var app = builder.Build();
 
+
 app.UseSiteSpeakAuth();
+
+
+
+app.Use(async (context, next) =>
+{
+    string email = context.User.Claims.FirstOrDefault(c => c.Type == "email")?.Value ?? "email not found ;)";
+
+    try
+    {
+        await next.Invoke(context);
+        Console.WriteLine($"[{email}]: {context.Response.StatusCode} {context.Request.Method} {context.Request.Path}");
+    }
+    catch (ToolCallArgumentsParsingException ex)
+    {
+        Console.WriteLine($"[{email}]: Tool call arguments parsing error: {ex.Message}");
+        context.Response.StatusCode = 400;
+        await context.Response.WriteAsJsonAsync(new { error = ex.Message });
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"[{email}]: Unhandled exception: {ex}");
+        context.Response.StatusCode = 500;
+        await context.Response.WriteAsJsonAsync(new { error = "An unexpected error occurred." });
+    }
+    
+    
+});
 
 app.MapSiteSpeakEndpoints();
 
