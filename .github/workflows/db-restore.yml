@@ -11,7 +11,6 @@ jobs:
         id: find_backup
         run: |
           BACKUP_POD=$(kubectl get pod -l app=backup-storage -n site-speak-db-backup -o jsonpath="{.items[0].metadata.name}")
-          # Get the most recent .sql file
           LATEST_BACKUP=$(kubectl exec -n site-speak-db-backup ${BACKUP_POD} -- sh -c "cd /backups && ls -1t *.sql | head -n 1")
           if [ -z "$LATEST_BACKUP" ]; then
             echo "No backups found!"
@@ -28,10 +27,7 @@ jobs:
         run: |
           echo "Scaling down api-deployment to 0..."
           kubectl scale deployment api-deployment --replicas=0 -n site-speak-prod
-          # Wait for pods to terminate
           sleep 10
-          # We might also want to terminate any open connections to the DB if clients are still connected.
-          # The clean flag often fails if there are active connections.
 
       - name: Download Backup File
         run: |
@@ -43,8 +39,6 @@ jobs:
           echo "Restoring ${{ env.LATEST_BACKUP }}..."
           # Give connections a moment to fully drop before restoring
           sleep 5
-          # Use psql instead of pg_restore because pg_dump plain text (.sql) format uses psql to apply
-          # We wrap this in bash inside the pod with psql reading from standard input
           kubectl exec -i deployment/postgres-deployment -n site-speak-prod -- psql -U site-speak-user -d site-speak-db < /tmp/${{ env.LATEST_BACKUP }}
 
       - name: Clean up temporary file
