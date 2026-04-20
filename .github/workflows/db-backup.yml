@@ -1,0 +1,53 @@
+name: Postgres Database Backup
+
+on:
+  schedule:
+    - cron: '0 5 * * *' # 5 AM UTC daily
+  workflow_dispatch: # Allow manual triggering
+
+jobs:
+  backup:
+    runs-on: self-hosted
+    steps:
+      - name: Check out repository code
+        uses: actions/checkout@v4
+
+      - name: Deploy Backup Storage Infrastructure
+        run: kubectl apply -f kubernetes/9-db-backup-storage.yaml
+
+      - name: Wait for Backup Storage Pod
+        run: kubectl rollout status deployment/backup-storage -n site-speak-db-backup --timeout=90s
+
+      - name: Generate Backup Name
+        id: vars
+        run: echo "BACKUP_FILE=backup-$(date +%Y-%m-%d-%H%M%S).sql" >> $GITHUB_ENV
+
+      - name: Create dump from Postgres
+        # We dump the db from the existing postgres pod directly to a local file on the runner
+        run: |
+          kubectl exec deployment/postgres-deployment -n site-speak-prod -- pg_dump -U site-speak-user site-speak-db > /tmp/${{ env.BACKUP_FILE }}
+
+      - name: Verify dump size
+        run: |
+          ls -lh /tmp/${{ env.BACKUP_FILE }}
+          # Fail if the file is absurdly small (e.g. pg_dump error output instead of db)
+          SIZE=$(stat -c%s /tmp/${{ env.BACKUP_FILE }})
+          if [ $SIZE -lt 1000 ]; then
+            echo "Backup file is incredibly small ($SIZE bytes), possibly failed."
+            exit 1
+          fi
+
+      - name: Transfer dump to Backup PVC
+        # Copy the dump to the pod running in site-speak-db-backup namespace
+        run: |
+          # Get the pod name holding the backup volume
+          BACKUP_POD=$(kubectl get pod -l app=backup-storage -n site-speak-db-backup -o jsonpath="{.items[0].metadata.name}")
+          kubectl cp /tmp/${{ env.BACKUP_FILE }} site-speak-db-backup/${BACKUP_POD}:/backups/${{ env.BACKUP_FILE }}
+
+      - name: Clean up temporary runner file
+        run: rm /tmp/${{ env.BACKUP_FILE }}
+
+      - name: Prune Old Backups (Keep most recent 4)
+        run: |
+          BACKUP_POD=$(kubectl get pod -l app=backup-storage -n site-speak-db-backup -o jsonpath="{.items[0].metadata.name}")
+          kubectl exec -n site-speak-db-backup ${BACKUP_POD} -- sh -c 'cd /backups && for f in $(ls -1t *.sql | tail -n +5); do rm -f "$f"; done'
