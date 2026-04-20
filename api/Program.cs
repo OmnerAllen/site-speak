@@ -78,8 +78,8 @@ app.Use(async (context, next) =>
         context.Response.StatusCode = 500;
         await context.Response.WriteAsJsonAsync(new { error = "An unexpected error occurred." });
     }
-    
-    
+
+
 });
 
 app.MapSiteSpeakEndpoints();
