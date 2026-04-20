@@ -5,17 +5,17 @@ namespace SiteSpeak.Endpoints;
 public class WorkLogDraft
 {
     [JsonPropertyName("projectId")]
-    public Guid? ProjectId { get; set; }
+    public string ProjectId { get; set; }
 
     [JsonPropertyName("employeeId")]
-    public Guid? EmployeeId { get; set; }
+    public string EmployeeId { get; set; }
 
     [JsonPropertyName("startedAt")]
-    public DateTime? StartedAt { get; set; }
+    public string StartedAt { get; set; }
 
     [JsonPropertyName("endedAt")]
-    public DateTime? EndedAt { get; set; }
+    public string EndedAt { get; set; }
 
     [JsonPropertyName("notes")]
-    public string? Notes { get; set; }
+    public string Notes { get; set; }
 }

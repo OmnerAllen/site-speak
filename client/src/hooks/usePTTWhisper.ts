@@ -94,7 +94,7 @@ export function usePTTWhisper(options?: { onTranscriptionComplete?: (text: strin
         
       };
 
-      mediaRecorder.start(100);
+      mediaRecorder.start(); // Start recording without timeslices, triggering ondataavailable only on stop.
       isRecordingRef.current = true;
       setIsRecording(true);
     } catch (err) {
@@ -131,11 +131,16 @@ export function usePTTWhisper(options?: { onTranscriptionComplete?: (text: strin
       if (mediaStream) {
         mediaStream.getTracks().forEach(track => track.stop());
       }
+    };
+  }, [mediaStream]);
+
+  useEffect(() => {
+    return () => {
       if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
         mediaRecorderRef.current.stop();
       }
     };
-  }, [mediaStream]);
+  }, []);
 
   return {
     isRecording,

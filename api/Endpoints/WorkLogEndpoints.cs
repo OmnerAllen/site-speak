@@ -61,8 +61,8 @@ The current date is {DateTime.UtcNow:yyyy-MM-ddTHH:mm:ssZ}. Use this to resolve 
 
 Schema:
 {{
-  ""projectId"": ""guid or null (try to match the project name from available projects)"",
-  ""employeeId"": ""guid or null (try to match the employee name from available employees)"",
+  ""projectId"": ""string or null (try to match the project name from available projects)"",
+  ""employeeId"": ""string or null (try to match the employee name from available employees)"",
   ""startedAt"": ""ISO 8601 date/time or null"",
   ""endedAt"": ""ISO 8601 date/time or null"",
   ""notes"": ""string (brief notes based on the transcript) or null""
@@ -76,43 +76,67 @@ Transcript: {req.Transcript}";
 
             Console.WriteLine($"[WorkLog] Sending transcript to LLM for parsing: '{req.Transcript}'");
 
-            var messages = new[] { new LlmChatMessage("user", promptMsg) };
-            var (resultStr, error) = await llm.CompleteAsync(messages, true, cancellationToken);
+            var payload = new
+            {
+                messages = new object[]
+                {
+                    new { role = "system", content = promptMsg },
+                    new { role = "user", content = req.Transcript }
+                },
+                temperature = 0.0,
+                tools = new object[]
+                {
+                    new
+                    {
+                        type = "function",
+                        function = new
+                        {
+                            name = "createWorkLogDraft",
+                            parameters = new
+                            {
+                                type = "object",
+                                properties = new
+                                {
+                                    projectId = new { type = new[] { "string", "null" } },
+                                    employeeId = new { type = new[] { "string", "null" } },
+                                    startedAt = new { type = new[] { "string", "null" } },
+                                    endedAt = new { type = new[] { "string", "null" } },
+                                    notes = new { type = new[] { "string", "null" } }
+                                }
+                            }
+                        }
+                    }
+                },
+                tool_choice = new
+                {
+                    type = "function",
+                    function = new { name = "createWorkLogDraft" }
+                }
+            };
+
+            var payloadElement = System.Text.Json.JsonSerializer.SerializeToElement(payload);
+            var (rawBody, result, error) = await llm.PostChatCompletionsAsync(payloadElement, cancellationToken);
             
-            Console.WriteLine($"[WorkLog] LLM returned resultStr: '{resultStr}'");
+            Console.WriteLine($"[WorkLog] LLM returned. Error: {error}");
             
-            if (string.IsNullOrWhiteSpace(resultStr) || error != null)
+            if (result is null || error != null)
             {
                 Console.WriteLine($"[WorkLog] Failed to parse info from LLM. Error: {error}");
                 return Results.BadRequest(new { error = "Failed to parse info from LLM." });
             }
 
-            SiteSpeak.Endpoints.WorkLogDraft? draft = null;
-            try
+            var toolCall = result.ToolCalls.FirstOrDefault();
+            if (toolCall is null || string.IsNullOrWhiteSpace(toolCall.Arguments))
             {
-                var cleanJson = resultStr.Trim();
-                if (cleanJson.StartsWith("```json", StringComparison.OrdinalIgnoreCase))
-                    cleanJson = cleanJson.Substring(7);
-                else if (cleanJson.StartsWith("```"))
-                    cleanJson = cleanJson.Substring(3);
-                
-                if (cleanJson.EndsWith("```"))
-                    cleanJson = cleanJson.Substring(0, cleanJson.Length - 3);
-
-                cleanJson = cleanJson.Trim();
-
-                draft = System.Text.Json.JsonSerializer.Deserialize<SiteSpeak.Endpoints.WorkLogDraft>(cleanJson, new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+                Console.WriteLine($"[WorkLog] No tool call returned. Raw: {rawBody}");
+                return Results.BadRequest(new { error = "LLM did not return the expected tool call." });
             }
-            catch (System.Text.Json.JsonException ex)
-            {
-                Console.WriteLine($"[WorkLog] JSON Deserialization exception: {ex.Message}");
-                // swallow
-            }
+
+            var (draft,errorMessage) = ParseLlmResponse<SiteSpeak.Endpoints.WorkLogDraft>(toolCall.Arguments);
 
             if (draft is null)
             {
-                Console.WriteLine("[WorkLog] draft object is null after parsing!");
-                return Results.BadRequest(new { error = "LLM returned invalid JSON." });
+                return Results.BadRequest(new { error = errorMessage ?? $"LLM returned invalid JSON: {toolCall.Arguments}" });
             }
 
             Console.WriteLine($"[WorkLog] Parsed completed! EmployeeId={draft.EmployeeId}, ProjectId={draft.ProjectId}, StartedAt={draft.StartedAt}, EndedAt={draft.EndedAt}, Notes={draft.Notes}");
@@ -169,6 +193,25 @@ Transcript: {req.Transcript}";
         }).RequireAuthorization();
 
         return app;
+    }
+
+    private static (T?, string?) ParseLlmResponse<T>(string json)
+    {
+        try
+        {
+            var res = 
+                System.Text.Json.JsonSerializer.Deserialize<T>(
+                    json, 
+                    new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            return (res, null);
+        }
+        catch (System.Text.Json.JsonException ex)
+        {
+            var errorMessage = $"JSON deserialization error: {ex.Message}, Original JSON: {json}, Type: {typeof(T).FullName}";
+            Console.WriteLine(ex);
+            Console.WriteLine(errorMessage);
+            return (default(T), errorMessage);
+        }
     }
 }
 

@@ -33,6 +33,10 @@ public sealed class OpenAiCompatibleChatClient(
             }
             : new { model = _options.Model, messages = messageBodies };
 
+        var outgoingText = JsonSerializer.Serialize(payload, new JsonSerializerOptions { DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull });
+        Console.WriteLine($"[OpenAiChatClient] Sending POST request to {url}");
+        Console.WriteLine($"[OpenAiChatClient] Payload size: {outgoingText.Length} characters / {System.Text.Encoding.UTF8.GetByteCount(outgoingText)} bytes. Model: {_options.Model}");
+
         using var req = new HttpRequestMessage(HttpMethod.Post, url);
         req.Content = JsonContent.Create(payload, options: new JsonSerializerOptions
         {
@@ -47,21 +51,32 @@ public sealed class OpenAiCompatibleChatClient(
         catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or IOException)
         {
             var detail = ex.InnerException?.Message is { } inner ? $"{ex.Message} ({inner})" : ex.Message;
+            Console.WriteLine($"[OpenAiChatClient] Exception during POST: {detail}");
             return (null,
                 $"Could not reach the language model at {url}: {detail}. " +
                 "Common causes: request body too large, server/proxy body limit, network drop mid-transfer, or timeout.");
         }
 
         var body = await res.Content.ReadAsStringAsync(cancellationToken);
+        
+        Console.WriteLine($"[OpenAiChatClient] Received HTTP {(int)res.StatusCode} from {url}");
+        Console.WriteLine($"[OpenAiChatClient] Raw LLM response ({body.Length} characters): {body}");
+
         if (!res.IsSuccessStatusCode)
         {
             var snippet = body.Length > 400 ? body[..400] + "…" : body;
+            Console.WriteLine($"[OpenAiChatClient] Error: HTTP {(int)res.StatusCode}. Body snippet: {snippet}");
             return (null, $"Language model returned HTTP {(int)res.StatusCode}. Body: {snippet}");
         }
 
         var parsed = LlmCompletionParser.TryParse(body);
         if (parsed is null)
+        {
+            Console.WriteLine($"[OpenAiChatClient] Failed to parse valid chat completions choice from JSON.");
             return (null, "Language model response was not valid JSON or had no choices.");
+        }
+
+        Console.WriteLine($"[OpenAiChatClient] Parsed successfully. FinishReason: {parsed.FinishReason}");
 
         if (parsed.ToolCalls.Count > 0 && string.IsNullOrWhiteSpace(parsed.Content))
             return (null,
@@ -102,6 +117,11 @@ public sealed class OpenAiCompatibleChatClient(
             DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
         });
 
+        // Use ReadAsStringAsync to get the exact content length going out (for logging)
+        var outgoingText = payloadObj.ToJsonString(new JsonSerializerOptions { DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull });
+        Console.WriteLine($"[OpenAiChatClient] Sending POST request to {url}");
+        Console.WriteLine($"[OpenAiChatClient] Payload size: {outgoingText.Length} characters / {System.Text.Encoding.UTF8.GetByteCount(outgoingText)} bytes. Model: {payloadObj["model"]}");
+
         HttpResponseMessage res;
         try
         {
@@ -110,22 +130,32 @@ public sealed class OpenAiCompatibleChatClient(
         catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or IOException)
         {
             var detail = ex.InnerException?.Message is { } inner ? $"{ex.Message} ({inner})" : ex.Message;
+            Console.WriteLine($"[OpenAiChatClient] Exception during POST: {detail}");
             return ("", null,
                 $"Could not reach the language model at {url}: {detail}. " +
                 "Common causes: request body too large, server/proxy body limit, network drop mid-transfer, or timeout.");
         }
 
         var body = await res.Content.ReadAsStringAsync(cancellationToken);
+        
+        Console.WriteLine($"[OpenAiChatClient] Received HTTP {(int)res.StatusCode} from {url}");
+        Console.WriteLine($"[OpenAiChatClient] Raw LLM response ({body.Length} characters): {body}");
+
         if (!res.IsSuccessStatusCode)
         {
             var snippet = body.Length > 400 ? body[..400] + "…" : body;
+            Console.WriteLine($"[OpenAiChatClient] Error: HTTP {(int)res.StatusCode}. Body snippet: {snippet}");
             return (body, null, $"Language model returned HTTP {(int)res.StatusCode}. Body: {snippet}");
         }
 
         var parsed = LlmCompletionParser.TryParse(body);
         if (parsed is null)
+        {
+            Console.WriteLine($"[OpenAiChatClient] Failed to parse valid chat completions choice from JSON.");
             return (body, null, "Language model response was not valid JSON or had no choices.");
+        }
 
+        Console.WriteLine($"[OpenAiChatClient] Parsed successfully. FinishReason: {parsed.FinishReason}");
         return (body, parsed, null);
     }
 

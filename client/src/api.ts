@@ -16,6 +16,7 @@ import type {
   AiChatMessage,
 } from "./types";
 import { ApiError } from "./error/ApiError";
+import toast from "react-hot-toast";
 
 async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`/api${path}`, {
@@ -188,6 +189,14 @@ export const api = {
       window.location.href = "/";
       throw new Error("Unauthorized");
     }
+
+
+    if (!res.ok){
+      const error = await res.text();
+      await toast.error(`error from parse audio work log: ${error}`)
+      console.log(`Error response from parse audio work log: ${error}`);
+      throw new Error(`Failed to parse audio work log: ${error}`);
+    }
     
     const data = await res.json();
     return data;
@@ -204,10 +213,12 @@ export const api = {
       window.location.href = "/";
       throw new Error("Unauthorized");
     }
-    const data = await res.json();
     if (!res.ok) {
-      throw new ApiError(data.error || "Failed to parse text", res.status);
+      const text = await res.text();
+      throw new ApiError(`did not get back ok from ${res.url}: ${text}`, res.status);
+
     }
+    const data = await res.json();
     return data;
   },
 

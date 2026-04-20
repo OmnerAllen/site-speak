@@ -40,11 +40,22 @@ public class AiOfficeWhisperClient : IWhisperClient
         AddText(multipart, "language", language);
         AddText(multipart, "prompt", prompt);
 
+        Console.WriteLine($"[AiOfficeWhisper] Audio stream length: {audioStream.Length} bytes.");
+        Console.WriteLine($"[AiOfficeWhisper] Sending POST request to {_httpClient.BaseAddress}inference");
+        
         var response = await _httpClient.PostAsync("/inference", multipart, cancellationToken);
+        
+        Console.WriteLine($"[AiOfficeWhisper] Received HTTP {response.StatusCode}");
 
         var responseContent = await response.Content.ReadAsStringAsync(cancellationToken);
 
-        Console.WriteLine("whisper response: ", responseContent);
+        Console.WriteLine($"[AiOfficeWhisper] raw whisper response: {responseContent}");
+        
+        if (!response.IsSuccessStatusCode)
+        {
+            Console.WriteLine($"[AiOfficeWhisper] Warning: API returned non-success code! {responseContent}");
+        }
+
         var result = JsonSerializer.Deserialize<WhisperResponse>(responseContent, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });   
         return result?.text ?? throw new Exception("Failed to parse transcription response");
     }
