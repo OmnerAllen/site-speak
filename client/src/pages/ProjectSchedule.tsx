@@ -6,9 +6,9 @@ import {
 } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import toast from "react-hot-toast";
-import { DynamicForm } from "../components/DynamicForm";
+import { StageScheduleEditor } from "../components/StageScheduleEditor";
 import { api } from "../api";
-import type { FormFieldConfig, ProjectStage, ScheduleProject, ScheduleStage } from "../types";
+import type { ProjectStage, ScheduleProject, ScheduleStage } from "../types";
 
 const MS_DAY = 86400000;
 
@@ -72,6 +72,21 @@ function addDays(d: Date, n: number): Date {
   return x;
 }
 
+/** Label for the visible week: full month + year, or two months if the week crosses a boundary. */
+function formatWeekMonthLabel(weekDays: Date[]): string {
+  const start = weekDays[0];
+  const end = weekDays[6];
+  if (start.getMonth() === end.getMonth() && start.getFullYear() === end.getFullYear()) {
+    return start.toLocaleDateString(undefined, { month: "long", year: "numeric" });
+  }
+  if (start.getFullYear() === end.getFullYear()) {
+    const a = start.toLocaleDateString(undefined, { month: "long" });
+    const b = end.toLocaleDateString(undefined, { month: "long", year: "numeric" });
+    return `${a} – ${b}`;
+  }
+  return `${start.toLocaleDateString(undefined, { month: "short", year: "numeric" })} – ${end.toLocaleDateString(undefined, { month: "short", year: "numeric" })}`;
+}
+
 function dateOnlyKey(d: Date): string {
   const y = d.getFullYear();
   const m = String(d.getMonth() + 1).padStart(2, "0");
@@ -122,25 +137,6 @@ function overlapSegment(
     widthPct: ((segEnd - segStart) / (7 * MS_DAY)) * 100,
   };
 }
-
-function buildScheduleFormFields(): FormFieldConfig[] {
-  return STAGE_ORDER.flatMap((name) => [
-    {
-      type: "date" as const,
-      label: `${stageLabel(name)} — start`,
-      name: `${name}_start`,
-      required: false,
-    },
-    {
-      type: "date" as const,
-      label: `${stageLabel(name)} — end`,
-      name: `${name}_end`,
-      required: false,
-    },
-  ]);
-}
-
-const SCHEDULE_FORM_FIELDS = buildScheduleFormFields();
 
 function emptyScheduleFormValues(): Record<string, string> {
   const o: Record<string, string> = {};
@@ -321,10 +317,6 @@ export default function ProjectSchedulePage() {
     <div className="max-w-6xl mx-auto p-4 md:p-12 space-y-6 md:space-y-8">
       <div className="border-b border-brick-800 pb-4">
         <h1 className="text-2xl font-bold text-brick-100">Project schedule</h1>
-        <p className="text-sm text-brick-400 mt-1 max-w-2xl">
-          Tap a day in the week calendar to see that day’s work here. Stages are color-coded below. Overall
-          project dates follow the earliest stage start and latest stage end.
-        </p>
       </div>
 
       {/* Selected day summary (driven by week calendar) */}
@@ -371,7 +363,6 @@ export default function ProjectSchedulePage() {
       {/* Week calendar */}
       <section className="space-y-3">
         <h2 className="text-lg font-semibold text-brick-200">Week calendar</h2>
-        <p className="text-sm text-brick-500">Tap a day to show its schedule in the summary above.</p>
         <div className="flex flex-wrap items-center gap-2">
           <button
             type="button"
@@ -410,11 +401,7 @@ export default function ProjectSchedulePage() {
           </button>
         </div>
 
-        <p className="text-xs text-brick-500">
-          {weekDays[0].toLocaleDateString(undefined, { month: "short", day: "numeric" })}
-          {" — "}
-          {weekDays[6].toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}
-        </p>
+        <p className="text-sm text-brick-500">{formatWeekMonthLabel(weekDays)}</p>
 
         <div className="grid grid-cols-7 gap-1 sm:gap-1.5 items-stretch min-h-0">
           {weekDays.map((d) => {
@@ -521,31 +508,34 @@ export default function ProjectSchedulePage() {
                           </span>
                         </div>
                         <span className="text-sm text-brick-500">{p.address}</span>
-                        <div className="flex flex-wrap gap-1.5 mt-2">
-                          {incomplete.map((st) => (
-                            <span
-                              key={st.id}
-                              className={`text-[10px] font-medium rounded border px-1.5 py-0.5 ${stageBadgeClass(st.name)}`}
-                            >
-                              {stageLabel(st.name)}
-                            </span>
-                          ))}
-                        </div>
+                        {!isSelected ? (
+                          <div className="flex flex-wrap gap-1.5 mt-2">
+                            {incomplete.map((st) => (
+                              <span
+                                key={st.id}
+                                className={`text-[10px] font-medium rounded border px-1.5 py-0.5 ${stageBadgeClass(st.name)}`}
+                              >
+                                {stageLabel(st.name)}
+                              </span>
+                            ))}
+                          </div>
+                        ) : null}
                       </button>
                       {isSelected && (
                         <div className="px-4 pb-4 border-t border-brick-800 pt-3">
-                          <DynamicForm
-                            fields={SCHEDULE_FORM_FIELDS}
-                            values={formValues}
-                            onChange={(name, value) =>
+                          <StageScheduleEditor
+                            key={p.id}
+                            project={p}
+                            formValues={formValues}
+                            onFieldChange={(name, value) =>
                               setFormValues((prev) => ({ ...prev, [name]: value }))
                             }
-                            onSubmit={(values) => handleScheduleSubmit(values, p)}
-                            submitLabel="Save schedule"
+                            onSave={() => handleScheduleSubmit(formValues, p)}
                             onCancel={() => {
                               setSelectedBacklogId(null);
                               setFormValues(emptyScheduleFormValues());
                             }}
+                            savePending={patchMutation.isPending}
                           />
                         </div>
                       )}
@@ -591,15 +581,16 @@ export default function ProjectSchedulePage() {
                   </div>
                   {editingTimelineId === p.id && (
                     <div className="px-3 pb-4 border-t border-brick-800 pt-3">
-                      <DynamicForm
-                        fields={SCHEDULE_FORM_FIELDS}
-                        values={formValues}
-                        onChange={(name, value) =>
+                      <StageScheduleEditor
+                        key={p.id}
+                        project={p}
+                        formValues={formValues}
+                        onFieldChange={(name, value) =>
                           setFormValues((prev) => ({ ...prev, [name]: value }))
                         }
-                        onSubmit={(values) => handleScheduleSubmit(values, p)}
-                        submitLabel="Save schedule"
+                        onSave={() => handleScheduleSubmit(formValues, p)}
                         onCancel={cancelEditTimeline}
+                        savePending={patchMutation.isPending}
                       />
                     </div>
                   )}

@@ -219,20 +219,12 @@ export default function ProjectDetailsPage() {
   );
 
   const estimateSectionRef = useRef<ProjectMaterialEstimateHandle>(null);
-  const [materialToolbarState, setMaterialToolbarState] = useState<MaterialEstimateToolbarState>({
-    estimatePending: false,
-    applyPending: false,
-    canReset: false,
-  });
+  const [materialEstimatePending, setMaterialEstimatePending] = useState(false);
+  const [materialResourcesDirty, setMaterialResourcesDirty] = useState(false);
 
   const onMaterialActionState = useCallback((next: MaterialEstimateToolbarState) => {
-    setMaterialToolbarState((prev) =>
-      prev.estimatePending === next.estimatePending &&
-      prev.applyPending === next.applyPending &&
-      prev.canReset === next.canReset
-        ? prev
-        : next,
-    );
+    setMaterialEstimatePending((prev) => (prev === next.estimatePending ? prev : next.estimatePending));
+    setMaterialResourcesDirty((prev) => (prev === next.resourcesDirty ? prev : next.resourcesDirty));
   }, []);
 
   const getEditorPrompt = useCallback((): EditorPrompt => {
@@ -268,6 +260,7 @@ export default function ProjectDetailsPage() {
       }
 
       await api.updateProjectDetails(projectId as string, payload);
+      await estimateSectionRef.current?.applyResourcesIfDirtyAsync();
       return projectId as string;
     },
     onSuccess: (savedProjectId) => {
@@ -316,8 +309,13 @@ export default function ProjectDetailsPage() {
   if (!isCreateMode && !project && !isLoading) {
     return (
       <div className="max-w-5xl mx-auto p-6 md:p-12 space-y-4">
-        <Link to="/projects" className="text-sm text-brick-400 hover:text-brick-200 transition-colors">
-          ← Back to Projects
+        <Link
+          to="/projects"
+          aria-label="Back to projects"
+          title="Back"
+          className="text-lg text-brick-400 hover:text-brick-200 transition-colors inline-flex items-center justify-center min-w-9"
+        >
+          ←
         </Link>
         <p className="text-brick-300">Project not found.</p>
       </div>
@@ -334,7 +332,7 @@ export default function ProjectDetailsPage() {
     saveMutation.isPending ||
     !formValues.name?.trim() ||
     !formValues.address?.trim() ||
-    (!isCreateMode && !hasChanges);
+    (!isCreateMode && !hasChanges && !materialResourcesDirty);
 
   const pageTitle = isCreateMode ? "New Project" : "Project Details";
 
@@ -365,9 +363,11 @@ export default function ProjectDetailsPage() {
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1 min-w-0">
             <Link
               to="/projects"
-              className="text-sm text-brick-400 hover:text-brick-200 transition-colors shrink-0"
+              aria-label="Back to projects"
+              title="Back"
+              className="text-lg text-brick-400 hover:text-brick-200 transition-colors shrink-0 inline-flex items-center justify-center min-w-9"
             >
-              ← Projects
+              ←
             </Link>
             <h1 className="text-xl md:text-2xl font-bold text-brick-100 truncate">{pageTitle}</h1>
           </div>
@@ -377,26 +377,10 @@ export default function ProjectDetailsPage() {
                 <button
                   type="button"
                   onClick={() => estimateSectionRef.current?.regenerateEstimate()}
-                  disabled={materialToolbarState.estimatePending}
+                  disabled={materialEstimatePending}
                   className="rounded bg-brick-600 hover:bg-brick-500 text-brick-50 px-3 py-2 text-xs sm:text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                 >
-                  {materialToolbarState.estimatePending ? "Generating…" : "Regenerate"}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => estimateSectionRef.current?.applyResources()}
-                  disabled={materialToolbarState.applyPending}
-                  className="rounded border border-brick-500 text-brick-200 hover:bg-brick-800 px-3 py-2 text-xs sm:text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-                >
-                  {materialToolbarState.applyPending ? "Saving…" : "Apply materials"}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => estimateSectionRef.current?.resetFromSaved()}
-                  disabled={!materialToolbarState.canReset}
-                  className="text-xs sm:text-sm text-brick-400 hover:text-brick-200 underline disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-                >
-                  Reset materials
+                  {materialEstimatePending ? "Generating…" : "Regenerate"}
                 </button>
                 <span className="hidden sm:inline w-px h-6 bg-brick-700 shrink-0" aria-hidden />
               </>

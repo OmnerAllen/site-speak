@@ -166,17 +166,19 @@ export default function EquipmentPage() {
 
   return (
     <div className="max-w-5xl mx-auto p-6 md:p-12">
-      <ResourceNav />
-      {!showForm && (
-        <div className="flex items-center justify-end mb-6 pb-4 border-b border-brick-800">
-          <button
-            onClick={handleAdd}
-            className="bg-grass-700 text-grass-100 font-medium py-2 px-4 rounded-md hover:bg-grass-600 transition-colors cursor-pointer"
-          >
-            + Add Equipment
-          </button>
-        </div>
-      )}
+      <ResourceNav
+        action={
+          !showForm ? (
+            <button
+              type="button"
+              onClick={handleAdd}
+              className="bg-grass-700 text-grass-100 font-medium py-2 px-4 rounded-md hover:bg-grass-600 transition-colors cursor-pointer"
+            >
+              + Add Equipment
+            </button>
+          ) : undefined
+        }
+      />
 
       {showForm && !editingId && (
         <div className="mb-8">
