@@ -203,10 +203,12 @@ export const api = {
   },
 
   parseTextWorkLog: async (transcript: string): Promise<{ draft: WorkLogDraft; transcript: string }> => {
+    const localTime = new Date().toISOString();
+    const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
     const res = await fetch("/api/my/work-logs/parse-text", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ transcript }),
+      body: JSON.stringify({ transcript, localTime, timeZone }),
     });
     if (res.status === 401) {
       document.cookie = "id_token=; path=/; max-age=0";

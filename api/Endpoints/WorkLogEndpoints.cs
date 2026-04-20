@@ -57,7 +57,8 @@ public static class WorkLogEndpoints
 
             var promptMsg = $@"
 You are an expert parsing assistant. Extract work log details from the following transcript into a JSON object matching the 'WorkLogDraft' schema.
-The current date is {DateTime.UtcNow:yyyy-MM-ddTHH:mm:ssZ}. Use this to resolve relative time like 'today' or 'yesterday'. Assume the user is in the local timezone if unspecified.
+The user's current local date and time is {req.LocalTime}. The user's timezone is {req.TimeZone}.
+Resolve relative times like 'today', 'yesterday', or '3 PM' based on this local time and timezone, but output all final times in strict UTC (ISO 8601 ending in 'Z').
 
 Schema:
 {{
@@ -215,4 +216,4 @@ Transcript: {req.Transcript}";
     }
 }
 
-public record ParseTextRequest(string Transcript);
+public record ParseTextRequest(string Transcript, string LocalTime, string TimeZone);
