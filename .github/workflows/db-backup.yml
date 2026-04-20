@@ -25,7 +25,7 @@ jobs:
       - name: Create dump from Postgres
         # We dump the db from the existing postgres pod directly to a local file on the runner
         run: |
-          kubectl exec deployment/postgres-deployment -n site-speak-prod -- pg_dump -U site-speak-user site-speak-db > /tmp/${{ env.BACKUP_FILE }}
+          kubectl exec deployment/postgres-deployment -n site-speak-prod -- pg_dump --clean -U site-speak-user site-speak-db > /tmp/${{ env.BACKUP_FILE }}
 
       - name: Verify dump size
         run: |
