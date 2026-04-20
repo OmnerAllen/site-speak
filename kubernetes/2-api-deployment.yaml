@@ -38,6 +38,10 @@ spec:
         # Substituted by CI (envsubst); must match client image build arg AI_CHAT_ENABLED.
         - name: Features__AiChatEnabled
           value: "${AI_CHAT_ENABLED}"
+        - name: Llm__ChatCompletionsUrl
+          value: "https://ai-snow.reindeer-pinecone.ts.net:9292/v1/chat/completions"
+        - name: Llm__WhisperUrl
+          value: "http://ai-snow.reindeer-pinecone.ts.net:8081/inference"
         lifecycle:
           preStop:
             exec:
