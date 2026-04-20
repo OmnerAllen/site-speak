@@ -3,6 +3,7 @@ import {
   useCallback,
   useEffect,
   useImperativeHandle,
+  useMemo,
   useRef,
   useState,
 } from "react";
@@ -34,6 +35,8 @@ export type MaterialEstimateToolbarState = {
   estimatePending: boolean;
   applyPending: boolean;
   canReset: boolean;
+  /** Draft differs from last loaded server resources (materials / equipment tables). */
+  resourcesDirty: boolean;
 };
 
 export type ProjectMaterialEstimateHandle = {
@@ -43,6 +46,8 @@ export type ProjectMaterialEstimateHandle = {
   regenerateEstimate: () => void;
   applyResources: () => void;
   resetFromSaved: () => void;
+  /** Persists stage resources only when the draft differs from the server snapshot. */
+  applyResourcesIfDirtyAsync: () => Promise<void>;
 };
 
 function stageLabel(name: StageName): string {
@@ -201,7 +206,7 @@ export const ProjectMaterialEstimateSection = forwardRef<ProjectMaterialEstimate
           );
           return;
         }
-        toast.success("Estimate generated. Review and apply when ready.");
+        toast.success("Estimate generated. Review materials below, then save the project.");
       },
       onError: (e) => {
         const msg = e instanceof Error ? e.message : "Could not generate estimate.";
@@ -233,12 +238,30 @@ export const ProjectMaterialEstimateSection = forwardRef<ProjectMaterialEstimate
 
     const resetDraftFromServerRef = useRef(resetDraftFromServer);
     const resourcesRef = useRef(resources);
+    const draftRef = useRef(draft);
     useEffect(() => {
       resetDraftFromServerRef.current = resetDraftFromServer;
     }, [resetDraftFromServer]);
     useEffect(() => {
       resourcesRef.current = resources;
     }, [resources]);
+    useEffect(() => {
+      draftRef.current = draft;
+    }, [draft]);
+
+    const savedResourcesPutBody = useMemo(
+      () => (resources ? draftToPutBody(resourcesToDraft(resources)) : null),
+      [resources],
+    );
+    const resourcesDirty = useMemo(() => {
+      if (!savedResourcesPutBody) return false;
+      return JSON.stringify(draftToPutBody(draft)) !== JSON.stringify(savedResourcesPutBody);
+    }, [draft, savedResourcesPutBody]);
+
+    const applyMutateAsyncRef = useRef(applyMutation.mutateAsync);
+    useEffect(() => {
+      applyMutateAsyncRef.current = applyMutation.mutateAsync;
+    }, [applyMutation.mutateAsync]);
 
     useImperativeHandle(ref, () => ({
       runEstimate: () => {
@@ -259,6 +282,13 @@ export const ProjectMaterialEstimateSection = forwardRef<ProjectMaterialEstimate
         const r = resourcesRef.current;
         if (r) resetDraftFromServerRef.current(r);
       },
+      applyResourcesIfDirtyAsync: async () => {
+        const r = resourcesRef.current;
+        if (!r) return;
+        const savedBody = draftToPutBody(resourcesToDraft(r));
+        if (JSON.stringify(draftToPutBody(draftRef.current)) === JSON.stringify(savedBody)) return;
+        await applyMutateAsyncRef.current();
+      },
     }));
 
     useEffect(() => {
@@ -267,6 +297,7 @@ export const ProjectMaterialEstimateSection = forwardRef<ProjectMaterialEstimate
         estimatePending: estimateMutation.isPending,
         applyPending: applyMutation.isPending,
         canReset: !loadingResources && !!resources,
+        resourcesDirty,
       });
     }, [
       onActionState,
@@ -274,6 +305,7 @@ export const ProjectMaterialEstimateSection = forwardRef<ProjectMaterialEstimate
       applyMutation.isPending,
       loadingResources,
       resources,
+      resourcesDirty,
     ]);
 
     const updateMaterialQuantity = (stageIdx: number, lineIdx: number, quantity: number) => {

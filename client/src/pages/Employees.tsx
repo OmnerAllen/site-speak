@@ -112,17 +112,18 @@ export default function EmployeesPage() {
 
   return (
     <div className="max-w-5xl mx-auto p-6 md:p-12">
-      {!showForm && (
-        <div className="flex items-center justify-end mb-6 pb-4 border-b border-brick-800">
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-6 pb-4 border-b border-brick-800">
+        <h1 className="text-xl md:text-2xl font-bold text-brick-100">Employees</h1>
+        {!showForm ? (
           <button
             type="button"
             onClick={handleAdd}
-            className="bg-grass-700 text-grass-100 font-medium py-2 px-4 rounded-md hover:bg-grass-600 transition-colors cursor-pointer"
+            className="bg-grass-700 text-grass-100 font-medium py-2 px-4 rounded-md hover:bg-grass-600 transition-colors cursor-pointer shrink-0"
           >
             + Add Employee
           </button>
-        </div>
-      )}
+        ) : null}
+      </div>
 
       {showForm && !editingId && (
         <div className="mb-8">
