@@ -5,12 +5,12 @@ import {
   useQueryClient,
 } from "@tanstack/react-query";
 import toast from "react-hot-toast";
-import { DynamicForm } from "../components/DynamicForm";
-import { PhoneInput } from "../components/PhoneInput";
-import { ResourceList } from "../components/ResourceList";
-import { ResourceNav } from "../components/ResourceNav";
-import { api } from "../api";
-import type { FormFieldConfig, Supplier, SupplierUpsertBody } from "../types";
+import { DynamicForm } from "../../components/forms/DynamicForm";
+import { PhoneInput } from "../../components/form-fields/PhoneInput";
+import { ResourceList } from "../../components/resource-list/ResourceList";
+import { ResourceNav } from "../../components/shell/ResourceNav";
+import { api } from "../../api";
+import type { FormFieldConfig, Supplier, SupplierUpsertBody } from "../../types";
 
 const SUPPLIER_FIELDS: FormFieldConfig[] = [
   {

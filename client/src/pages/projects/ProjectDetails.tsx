@@ -2,17 +2,17 @@ import { useCallback, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
-import { DynamicForm } from "../components/DynamicForm";
-import { ProjectAiChatPanel } from "../components/ProjectAiChatPanel";
+import { DynamicForm } from "../../components/forms/DynamicForm";
+import { ProjectAiChatPanel } from "../../components/features/ProjectAiChatPanel";
 import {
   ProjectMaterialEstimateSection,
   type EditorPrompt,
   type MaterialEstimateToolbarState,
   type ProjectMaterialEstimateHandle,
-} from "../components/ProjectMaterialEstimateSection";
-import { api } from "../api";
-import { isAiChatEnabled } from "../features";
-import type { FormFieldConfig, ProjectDetails, ProjectStage } from "../types";
+} from "../../components/features/ProjectMaterialEstimateSection";
+import { api } from "../../api";
+import { isAiChatEnabled } from "../../features";
+import type { FormFieldConfig, ProjectDetails, ProjectStage } from "../../types";
 
 const STAGE_ORDER: ProjectStage["name"][] = ["demo", "prep", "build/install", "qa"];
 

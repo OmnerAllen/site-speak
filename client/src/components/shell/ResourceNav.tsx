@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
-import { TabNav } from "./TabNav";
-import { RESOURCE_NAV_ITEMS } from "./navigation";
+import { TabNav } from "../navigation/TabNav";
+import { RESOURCE_NAV_ITEMS } from "../navigation/navigation";
 
 type ResourceNavProps = {
   /** Shown on the same row as the sub-tabs (right side); e.g. “+ Add …” on desktop. */

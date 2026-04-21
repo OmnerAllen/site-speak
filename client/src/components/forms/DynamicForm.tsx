@@ -1,11 +1,11 @@
 import React from "react";
-import type { FormFieldConfig } from "../types";
-import { SmallTextInput } from "./SmallTextInput";
-import { LargeTextInput } from "./LargeTextInput";
+import type { FormFieldConfig } from "../../types";
+import { SmallTextInput } from "../form-fields/SmallTextInput";
+import { LargeTextInput } from "../form-fields/LargeTextInput";
 import { TimeSelector } from "./TimeSelector";
-import { NumberInput } from "./NumberInput";
-import { PhoneInput } from "./PhoneInput";
-import { SelectInput } from "./SelectInput";
+import { NumberInput } from "../form-fields/NumberInput";
+import { PhoneInput } from "../form-fields/PhoneInput";
+import { SelectInput } from "../form-fields/SelectInput";
 import { DateInput } from "./DateInput";
 import { DateTimeLocalInput } from "./DateTimeLocalInput";
 import { MoneyInput } from "./MoneyInput";

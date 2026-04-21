@@ -6,9 +6,9 @@ import {
 } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import toast from "react-hot-toast";
-import { StageScheduleEditor } from "../components/StageScheduleEditor";
-import { api } from "../api";
-import type { ProjectStage, ScheduleProject, ScheduleStage } from "../types";
+import { StageScheduleEditor } from "../../components/features/StageScheduleEditor";
+import { api } from "../../api";
+import type { ProjectStage, ScheduleProject, ScheduleStage } from "../../types";
 
 const MS_DAY = 86400000;
 

@@ -9,9 +9,9 @@ import {
 } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
-import { api } from "../api";
-import { STAGE_ORDER, type DraftStage } from "../ai/materialEstimateTypes";
-import type { ProjectStageResourcesResponse, StageName, StageResourcesPutBody } from "../types";
+import { api } from "../../api";
+import { STAGE_ORDER, type DraftStage } from "../../ai/materialEstimateTypes";
+import type { ProjectStageResourcesResponse, StageName, StageResourcesPutBody } from "../../types";
 
 /** Site Speak @theme radioactive palette — keep classes referenced for Tailwind. */
 const MATERIALS_PANEL_DEFAULT =

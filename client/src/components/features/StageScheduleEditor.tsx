@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
-import { DateInput } from "./DateInput";
-import type { ProjectStage, ScheduleProject } from "../types";
+import { DateInput } from "../forms/DateInput";
+import type { ProjectStage, ScheduleProject } from "../../types";
 
 const STAGE_ORDER: ProjectStage["name"][] = ["demo", "prep", "build/install", "qa"];
 

@@ -6,10 +6,10 @@ import {
   useQueryClient,
 } from "@tanstack/react-query";
 import toast from "react-hot-toast";
-import { DynamicForm } from "../components/DynamicForm";
-import { ResourceList } from "../components/ResourceList";
-import { api } from "../api";
-import type { Employee, FormFieldConfig } from "../types";
+import { DynamicForm } from "../../components/forms/DynamicForm";
+import { ResourceList } from "../../components/resource-list/ResourceList";
+import { api } from "../../api";
+import type { Employee, FormFieldConfig } from "../../types";
 
 const EMPLOYEE_FIELDS: FormFieldConfig[] = [
   {

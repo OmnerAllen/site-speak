@@ -1,8 +1,8 @@
 import { Link } from "react-router-dom";
 import { useAuth } from "react-oidc-context";
-import { useUser } from "../auth/useUser";
-import { TabNav, type NavItem } from "./TabNav";
-import { MAIN_NAV_ITEMS } from "./navigation";
+import { useUser } from "../../auth/useUser";
+import { TabNav, type NavItem } from "../navigation/TabNav";
+import { MAIN_NAV_ITEMS } from "../navigation/navigation";
 
 export interface NavbarProps {
   items?: NavItem[];

@@ -1,13 +1,13 @@
-import type { Employee, FormFieldConfig, Project, WorkLog } from "../types";
+import type { Employee, FormFieldConfig, Project, WorkLog } from "../../types";
 import { useState, useMemo, useRef, useEffect } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { useQueryClient, useSuspenseQuery, useMutation } from "@tanstack/react-query";
 import toast from "react-hot-toast";
-import { api } from "../api";
-import { DynamicForm } from "../components/DynamicForm";
-import { ResourceList } from "../components/ResourceList";
-import { AudioVisualizer } from "../components/AudioVisualizer";
-import { usePTTWhisper } from "../hooks/usePTTWhisper";
+import { api } from "../../api";
+import { DynamicForm } from "../../components/forms/DynamicForm";
+import { ResourceList } from "../../components/resource-list/ResourceList";
+import { AudioVisualizer } from "../../components/features/AudioVisualizer";
+import { usePTTWhisper } from "../../hooks/usePTTWhisper";
 
 function VoicePlaybackTester() {
   const [isRecording, setIsRecording] = useState(false);
@@ -301,7 +301,7 @@ export default function WorkLogsPage() {
     }
   });
 
-  const handleDictationFinish = (data: { draft: import("../types").WorkLogDraft; transcript: string }) => {
+  const handleDictationFinish = (data: { draft: import("../../types").WorkLogDraft; transcript: string }) => {
     const { draft } = data;
     console.log("[WorkLogs] handleDictationFinish called, merging draft into form fields:", draft);
     setFormValues((prev) => {

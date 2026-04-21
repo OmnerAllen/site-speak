@@ -5,11 +5,11 @@ import {
   useQueryClient,
 } from "@tanstack/react-query";
 import toast from "react-hot-toast";
-import { DynamicForm } from "../components/DynamicForm";
-import { ResourceList } from "../components/ResourceList";
-import { ResourceNav } from "../components/ResourceNav";
-import { api } from "../api";
-import type { FormFieldConfig, Material } from "../types";
+import { DynamicForm } from "../../components/forms/DynamicForm";
+import { ResourceList } from "../../components/resource-list/ResourceList";
+import { ResourceNav } from "../../components/shell/ResourceNav";
+import { api } from "../../api";
+import type { FormFieldConfig, Material } from "../../types";
 
 const MATERIAL_FIELDS: FormFieldConfig[] = [
   {

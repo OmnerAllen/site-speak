@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import toast from "react-hot-toast";
-import { api } from "../api";
-import type { AiChatMessage } from "../types";
+import { api } from "../../api";
+import type { AiChatMessage } from "../../types";
 
 type Props = {
   /** Shown in the panel header only. */

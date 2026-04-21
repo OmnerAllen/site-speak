@@ -1,13 +1,13 @@
 import { useEffect } from "react";
-import { usePTTWhisper } from "../hooks/usePTTWhisper";
+import { usePTTWhisper } from "../../hooks/usePTTWhisper";
 import { AudioVisualizer } from "./AudioVisualizer";
 import { useMutation } from "@tanstack/react-query";
-import { api } from "../api";
+import { api } from "../../api";
 import toast from "react-hot-toast";
 
 interface Props {
   onCancel: () => void;
-  onFinish: (data: { draft: import("../types").WorkLogDraft; transcript: string }) => void;
+  onFinish: (data: { draft: import("../../types").WorkLogDraft; transcript: string }) => void;
 }
 
 export function DictationWidget({ onCancel, onFinish }: Props) {

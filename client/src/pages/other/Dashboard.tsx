@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
-import { useUser } from "../auth/useUser";
+import { useUser } from "../../auth/useUser";
 import { useSuspenseQueries } from "@tanstack/react-query";
-import { api } from "../api";
+import { api } from "../../api";
 
 const NAV_TILES = [
   {

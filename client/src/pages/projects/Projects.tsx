@@ -5,8 +5,8 @@ import {
 } from "@tanstack/react-query";
 import toast from "react-hot-toast";
 import { useNavigate } from "react-router-dom";
-import { ResourceList } from "../components/ResourceList";
-import { api } from "../api";
+import { ResourceList } from "../../components/resource-list/ResourceList";
+import { api } from "../../api";
 
 export default function Projects() {
   const navigate = useNavigate();

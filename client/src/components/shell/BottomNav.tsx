@@ -1,6 +1,6 @@
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "react-oidc-context";
-import { MAIN_NAV_ITEMS, RESOURCE_NAV_ITEMS } from "./navigation";
+import { MAIN_NAV_ITEMS, RESOURCE_NAV_ITEMS } from "../navigation/navigation";
 
 export function BottomNav() {
   const auth = useAuth();
