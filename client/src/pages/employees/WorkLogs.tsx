@@ -8,6 +8,7 @@ import { DynamicForm } from "../../components/forms/DynamicForm";
 import { ResourceList } from "../../components/resource-list/ResourceList";
 import { AudioVisualizer } from "../../components/features/AudioVisualizer";
 import { usePTTWhisper } from "../../hooks/usePTTWhisper";
+import { isWorkLogMicTestEnabled } from "../../features";
 
 function VoicePlaybackTester() {
   const [isRecording, setIsRecording] = useState(false);
@@ -475,8 +476,7 @@ export default function WorkLogsPage() {
         </div>
       )}
 
-      {/* Voice recorder tester added per your request */}
-      <VoicePlaybackTester />
+      {isWorkLogMicTestEnabled && <VoicePlaybackTester />}
 
       <ResourceList
         items={filteredWorkLogs}
