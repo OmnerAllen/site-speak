@@ -16,6 +16,8 @@ export interface ResourceListProps<T extends { id: string }> {
   onItemClick?: (item: T) => void;
   renderRowActions?: (item: T) => React.ReactNode;
   editLabel?: string;
+  /** When set, replaces the default edit/Open button styles. */
+  editButtonClassName?: string;
   emptyMessage?: string;
   editingId?: string;
   renderEditForm?: (item: T) => React.ReactNode;
@@ -32,6 +34,7 @@ export function ResourceList<T extends { id: string }>({
   onDelete,
   onItemClick,
   editLabel = "Edit",
+  editButtonClassName,
   emptyMessage = "No items yet.",
   editingId,
   renderEditForm,
@@ -122,7 +125,10 @@ export function ResourceList<T extends { id: string }>({
                         e.stopPropagation();
                         onEdit(item);
                       }}
-                      className="text-sm text-brick-300 hover:text-brick-100 px-3 py-1.5 border border-brick-700 rounded-md hover:bg-brick-800 transition-colors cursor-pointer"
+                      className={
+                        editButtonClassName ??
+                        "text-sm text-brick-300 hover:text-brick-100 px-3 py-1.5 border border-brick-700 rounded-md hover:bg-brick-800 transition-colors cursor-pointer"
+                      }
                     >
                       {editLabel}
                     </button>

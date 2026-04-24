@@ -114,7 +114,7 @@ export const TimeSelector: React.FC<TimeSelectorProps> = ({ label, value = "", o
         value={inputValue}
         onChange={handleInputChange}
         onBlur={handleBlur}
-        className="px-3 py-2 bg-brick-100 text-brick-900 border border-brick-300 rounded-md focus:outline-none focus:ring-2 focus:ring-brick-500 font-mono tracking-widest"
+        className="px-3 py-2 bg-brick-950/55 text-brick-100 border border-brick-600/90 rounded-md focus:outline-none focus:ring-2 focus:ring-brick-500 placeholder:text-brick-400 font-mono tracking-widest"
         {...props}
       />
     </div>

@@ -63,6 +63,7 @@ export default function Projects() {
         onItemClick={(project) => openProject(project.id)}
         onEdit={(project) => openProject(project.id)}
         editLabel="Open"
+        editButtonClassName="text-sm font-medium text-brick-100 px-3 py-1.5 rounded-md border border-brick-600 bg-brick-800/90 hover:bg-brick-700 hover:border-brick-500 transition-colors cursor-pointer"
         onDelete={(id) => deleteMutation.mutate(id)}
         emptyMessage="No projects found for your company."
       />

@@ -3,33 +3,6 @@ import { useUser } from "../../auth/useUser";
 import { useSuspenseQueries } from "@tanstack/react-query";
 import { api } from "../../api";
 
-const NAV_TILES = [
-  {
-    to: "/projects",
-    title: "Projects",
-    description: "View and manage active projects",
-    accent: "text-grass-400",
-  },
-  {
-    to: "/materials",
-    title: "Materials",
-    description: "Browse and manage your material inventory",
-    accent: "text-grass-400",
-  },
-  {
-    to: "/equipment",
-    title: "Equipment",
-    description: "Track rental equipment and costs",
-    accent: "text-grass-400",
-  },
-  {
-    to: "/suppliers",
-    title: "Suppliers",
-    description: "Manage your supplier contacts and info",
-    accent: "text-grass-400",
-  }
-];
-
 export default function Dashboard() {
   const { profile } = useUser();
 
@@ -47,56 +20,36 @@ export default function Dashboard() {
     ],
   });
 
-  const STATS = [
-    { label: "Projects", count: projects?.length || 0 },
-    { label: "Materials", count: materials?.length || 0 },
-    { label: "Equipment", count: equipment?.length || 0 },
-    { label: "Suppliers", count: suppliers?.length || 0 },
+  const overviewStats = [
+    { label: "Projects", count: projects?.length || 0, to: "/projects" },
+    { label: "Materials", count: materials?.length || 0, to: "/materials" },
+    { label: "Equipment", count: equipment?.length || 0, to: "/equipment" },
+    { label: "Suppliers", count: suppliers?.length || 0, to: "/suppliers" },
   ];
 
   return (
     <div className="max-w-5xl mx-auto p-6 md:p-12">
       {profile?.companyName && (
         <header className="bg-brick-900 border border-brick-800 rounded-xl p-8 mb-10 shadow-lg">
-          <h1 className="text-3xl font-bold text-grass-300">
+          <h1 className="text-3xl font-bold text-grass-500">
             {profile.companyName}
           </h1>
         </header>
       )}
 
-      <section className="mb-10">
+      <section>
         <h2 className="text-lg font-semibold text-brick-200 mb-4">Overview</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          {STATS.map((stat) => (
-            <div
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {overviewStats.map((stat) => (
+            <Link
               key={stat.label}
-              className="bg-brick-900 border border-brick-800 rounded-lg p-6 text-center"
+              to={stat.to}
+              className="block bg-brick-900 border border-brick-800 rounded-lg p-6 text-center hover:border-brick-700 hover:bg-brick-900/80 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-grass-500/70 focus-visible:ring-offset-2 focus-visible:ring-offset-brick-950"
             >
-              <p className="text-3xl font-bold text-grass-400 mb-1">
+              <p className="text-3xl font-bold text-grass-500 mb-1">
                 {stat.count}
               </p>
               <p className="text-sm text-brick-200">{stat.label}</p>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      <section>
-        <h2 className="text-lg font-semibold text-brick-200 mb-4">
-          Quick Access
-        </h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {NAV_TILES.map((tile) => (
-            <Link
-              key={tile.to}
-              to={tile.to}
-              className="group bg-brick-900 border border-brick-800 rounded-lg p-6 hover:border-brick-700 hover:bg-brick-900/80 transition-colors"
-            >
-              <h3
-                className={`text-xl font-semibold ${tile.accent} group-hover:underline`}
-              >
-                {tile.title}
-              </h3>
             </Link>
           ))}
         </div>

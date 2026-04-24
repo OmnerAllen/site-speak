@@ -41,3 +41,11 @@
   --color-radioactive-950: hsl(42, 95%, 6%);
 }
 
+@layer base {
+  input,
+  textarea,
+  select {
+    color-scheme: dark;
+  }
+}
+

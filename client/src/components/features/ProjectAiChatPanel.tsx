@@ -97,7 +97,7 @@ export function ProjectAiChatPanel({ projectName }: Props) {
           placeholder="Message… (Enter to send, Shift+Enter for newline)"
           rows={3}
           disabled={pending}
-          className="w-full rounded border border-brick-600 bg-brick-950 px-3 py-2 text-sm text-brick-100 placeholder:text-brick-300 resize-y min-h-18 disabled:opacity-50"
+          className="w-full rounded border border-brick-600/90 bg-brick-950/55 px-3 py-2 text-sm text-brick-100 placeholder:text-brick-400 resize-y min-h-18 disabled:opacity-50"
         />
         <button
           type="button"

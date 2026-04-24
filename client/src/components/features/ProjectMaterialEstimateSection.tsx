@@ -398,7 +398,7 @@ export const ProjectMaterialEstimateSection = forwardRef<ProjectMaterialEstimate
               step={1}
               value={radiusMiles}
               onChange={(e) => setRadiusMiles(Number(e.target.value))}
-              className="rounded-md border border-brick-600 bg-brick-900 px-2 py-1.5 text-brick-100 w-24 text-sm focus:outline-none focus:ring-2 focus:ring-brick-500"
+              className="rounded-md border border-brick-600/90 bg-brick-950/55 px-2 py-1.5 text-brick-100 w-24 text-sm focus:outline-none focus:ring-2 focus:ring-brick-500 placeholder:text-brick-400"
             />
           </label>
           {!hideActionButtons ? (
@@ -480,7 +480,7 @@ export const ProjectMaterialEstimateSection = forwardRef<ProjectMaterialEstimate
                                 step={0.01}
                                 value={m.quantity}
                                 onChange={(e) => updateMaterialQuantity(si, mi, parseFloat(e.target.value))}
-                                className="w-full rounded-md border border-brick-600 bg-brick-900 px-1.5 py-0.5 text-brick-100 text-xs focus:outline-none focus:ring-1 focus:ring-brick-500"
+                                className="w-full rounded-md border border-brick-600/90 bg-brick-950/55 px-1.5 py-0.5 text-brick-100 text-xs focus:outline-none focus:ring-1 focus:ring-brick-500 placeholder:text-brick-400"
                               />
                             </td>
                             <td className="py-1.5">

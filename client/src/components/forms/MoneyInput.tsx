@@ -65,12 +65,12 @@ export const MoneyInput: React.FC<MoneyInputProps> = ({
       <label className="text-sm font-medium text-brick-200">{label}</label>
       <div className="relative">
         <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-          <span className="text-brick-900">{currencySymbol}</span>
+          <span className="text-brick-300">{currencySymbol}</span>
         </div>
         <input
           type="text"
           inputMode="decimal"
-          className="w-full pl-8 pr-3 py-2 bg-brick-100 text-brick-900 border border-brick-300 rounded-md focus:outline-none focus:ring-2 focus:ring-brick-500"
+          className="w-full pl-8 pr-3 py-2 bg-brick-950/55 text-brick-100 border border-brick-600/90 rounded-md focus:outline-none focus:ring-2 focus:ring-brick-500 placeholder:text-brick-400"
           value={internalValue}
           onChange={handleChange}
           onBlur={handleBlur}
