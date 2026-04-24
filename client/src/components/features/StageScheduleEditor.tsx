@@ -24,7 +24,7 @@ function stageBadgeClass(name: ProjectStage["name"]): string {
     case "build/install":
       return "bg-emerald-950/90 text-emerald-100 border-emerald-600/70";
     case "qa":
-      return "bg-violet-950/90 text-violet-100 border-violet-600/80";
+      return "bg-rose-950/90 text-rose-100 border-rose-600/80";
     default:
       return "bg-brick-800 text-brick-100 border-brick-600";
   }
