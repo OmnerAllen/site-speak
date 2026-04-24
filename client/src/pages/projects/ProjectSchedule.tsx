@@ -29,7 +29,7 @@ function stageBarClass(name: ProjectStage["name"]): string {
     case "build/install":
       return "bg-grass-800/90 border-grass-700";
     case "qa":
-      return "bg-violet-800/90 border-violet-600";
+      return "bg-rose-800/90 border-rose-600";
     default:
       return "bg-grass-800/90 border-grass-700";
   }
@@ -45,9 +45,25 @@ function stageBadgeClass(name: ProjectStage["name"]): string {
     case "build/install":
       return "bg-emerald-950/90 text-emerald-100 border-emerald-600/70";
     case "qa":
-      return "bg-violet-950/90 text-violet-100 border-violet-600/80";
+      return "bg-rose-950/90 text-rose-100 border-rose-600/80";
     default:
       return "bg-brick-800 text-brick-100 border-brick-600";
+  }
+}
+
+/** Week calendar day tiles — same fills as badges, quieter outlines */
+function stageCalendarCardClass(name: ProjectStage["name"]): string {
+  switch (name) {
+    case "demo":
+      return "bg-amber-950/90 text-amber-100 border-amber-600/35";
+    case "prep":
+      return "bg-sky-950/90 text-sky-100 border-sky-600/35";
+    case "build/install":
+      return "bg-emerald-950/90 text-emerald-100 border-emerald-600/30";
+    case "qa":
+      return "bg-rose-950/90 text-rose-100 border-rose-600/35";
+    default:
+      return "bg-brick-800 text-brick-100 border-brick-600/45";
   }
 }
 
@@ -215,7 +231,6 @@ export default function ProjectSchedulePage() {
   });
 
   const [weekAnchor, setWeekAnchor] = useState(() => startOfWeekMonday(new Date()));
-  const [selectedDayKey, setSelectedDayKey] = useState(() => dateOnlyKey(new Date()));
 
   const weekStart = useMemo(() => startOfWeekMonday(weekAnchor), [weekAnchor]);
   const weekDays = useMemo(() => {
@@ -223,26 +238,8 @@ export default function ProjectSchedulePage() {
   }, [weekStart]);
 
   const todayKey = dateOnlyKey(new Date());
-
-  /** When the visible week changes, keep the selected day on-screen (prefer today if it falls in the week). */
-  const [prevWeekStart, setPrevWeekStart] = useState(weekStart);
-  if (weekStart.getTime() !== prevWeekStart.getTime()) {
-    setPrevWeekStart(weekStart);
-    const keys = weekDays.map((d) => dateOnlyKey(d));
-    setSelectedDayKey((prev) => {
-      if (keys.includes(prev)) return prev;
-      const todayK = dateOnlyKey(new Date());
-      if (keys.includes(todayK)) return todayK;
-      return keys[0];
-    });
-  }
-
-  const selectedSummaryDay = useMemo(() => parseDayKey(selectedDayKey), [selectedDayKey]);
-
-  const selectedDayItems = useMemo(
-    () => dayCalendarEvents(scheduleProjects, selectedSummaryDay),
-    [scheduleProjects, selectedSummaryDay],
-  );
+  const todayDate = parseDayKey(todayKey);
+  const todayItems = dayCalendarEvents(scheduleProjects, todayDate);
 
   const backlogProjects = useMemo(
     () => scheduleProjects.filter(projectHasIncompleteStage),
@@ -264,23 +261,10 @@ export default function ProjectSchedulePage() {
     },
   });
 
-  const [editingTimelineId, setEditingTimelineId] = useState<string | null>(null);
   const [selectedBacklogId, setSelectedBacklogId] = useState<string | null>(null);
   const [formValues, setFormValues] = useState<Record<string, string>>(emptyScheduleFormValues());
 
-  const startEditTimeline = (p: ScheduleProject) => {
-    setSelectedBacklogId(null);
-    setEditingTimelineId(p.id);
-    setFormValues(projectToFormValues(p));
-  };
-
-  const cancelEditTimeline = () => {
-    setEditingTimelineId(null);
-    setFormValues(emptyScheduleFormValues());
-  };
-
   const toggleBacklogSelect = (p: ScheduleProject) => {
-    setEditingTimelineId(null);
     setSelectedBacklogId((id) => {
       if (id === p.id) {
         setFormValues(emptyScheduleFormValues());
@@ -296,10 +280,10 @@ export default function ProjectSchedulePage() {
       const stages = buildStagesFromFormValues(values, project);
       if (!stages) return;
       patchMutation.mutate({ id: project.id, stages });
-      cancelEditTimeline();
+      setFormValues(emptyScheduleFormValues());
       setSelectedBacklogId(null);
     },
-    [patchMutation],
+    [patchMutation, setFormValues, setSelectedBacklogId],
   );
 
   const stageRows = useMemo(() => {
@@ -319,27 +303,25 @@ export default function ProjectSchedulePage() {
         <h1 className="text-2xl font-bold text-brick-100">Project schedule</h1>
       </div>
 
-      {/* Selected day summary (driven by week calendar) */}
+      {/* Today’s work — always current local day */}
       <section className="rounded-lg border border-brick-800 bg-brick-900/60 p-4 md:p-5">
         <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1 mb-3">
           <h2 className="text-sm font-semibold text-brick-200 uppercase tracking-wide">
-            {selectedSummaryDay.toLocaleDateString(undefined, {
+            {todayDate.toLocaleDateString(undefined, {
               weekday: "long",
               month: "short",
               day: "numeric",
             })}
           </h2>
-          {selectedDayKey === todayKey ? (
-            <span className="text-[10px] font-semibold uppercase tracking-wide text-grass-400 px-1.5 py-0.5 rounded border border-grass-800 bg-grass-950/50">
-              Today
-            </span>
-          ) : null}
+          <span className="text-[10px] font-semibold uppercase tracking-wide text-grass-400 px-1.5 py-0.5 rounded border border-grass-800 bg-grass-950/50">
+            Today
+          </span>
         </div>
-        {selectedDayItems.length === 0 ? (
-          <p className="text-sm text-brick-500 italic">Nothing scheduled for this day.</p>
+        {todayItems.length === 0 ? (
+          <p className="text-sm text-brick-500 italic">Nothing scheduled for today.</p>
         ) : (
           <ul className="space-y-2">
-            {selectedDayItems.map(({ project, stage }) => (
+            {todayItems.map(({ project, stage }) => (
               <li
                 key={`${project.id}-${stage.id}`}
                 className="flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-1 text-sm border-b border-brick-800/60 pb-2 last:border-0 last:pb-0"
@@ -362,42 +344,44 @@ export default function ProjectSchedulePage() {
 
       {/* Week calendar */}
       <section className="space-y-3">
-        <h2 className="text-lg font-semibold text-brick-200">Week calendar</h2>
-        <div className="flex flex-wrap items-center gap-2">
-          <button
-            type="button"
-            onClick={() =>
-              setWeekAnchor((d) => {
-                const n = new Date(d);
-                n.setDate(n.getDate() - 7);
-                return n;
-              })
-            }
-            className="text-sm text-brick-200 px-3 py-2 min-h-[44px] border border-brick-700 rounded-md hover:bg-brick-800 cursor-pointer touch-manipulation"
-            aria-label="Previous week"
-          >
-            ←
-          </button>
-          <button
-            type="button"
-            onClick={() =>
-              setWeekAnchor((d) => {
-                const n = new Date(d);
-                n.setDate(n.getDate() + 7);
-                return n;
-              })
-            }
-            className="text-sm text-brick-200 px-3 py-2 min-h-[44px] border border-brick-700 rounded-md hover:bg-brick-800 cursor-pointer touch-manipulation"
-            aria-label="Next week"
-          >
-            →
-          </button>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={() =>
+                setWeekAnchor((d) => {
+                  const n = new Date(d);
+                  n.setDate(n.getDate() - 7);
+                  return n;
+                })
+              }
+              className="text-sm text-brick-200 px-3 py-2 min-h-[44px] border border-brick-700 rounded-md hover:bg-brick-800 cursor-pointer touch-manipulation"
+              aria-label="Previous week"
+            >
+              ←
+            </button>
+            <button
+              type="button"
+              onClick={() =>
+                setWeekAnchor((d) => {
+                  const n = new Date(d);
+                  n.setDate(n.getDate() + 7);
+                  return n;
+                })
+              }
+              className="text-sm text-brick-200 px-3 py-2 min-h-[44px] border border-brick-700 rounded-md hover:bg-brick-800 cursor-pointer touch-manipulation"
+              aria-label="Next week"
+            >
+              →
+            </button>
+          </div>
           <button
             type="button"
             onClick={() => setWeekAnchor(startOfWeekMonday(new Date()))}
-            className="text-sm text-grass-400 px-3 py-2 min-h-[44px] border border-grass-800 rounded-md hover:bg-brick-800 cursor-pointer touch-manipulation"
+            className="text-sm text-brick-200 px-3 py-2 min-h-[44px] border border-brick-700 rounded-md hover:bg-brick-800 cursor-pointer touch-manipulation whitespace-nowrap"
+            aria-label="Go to this week"
           >
-            This week
+            Go to this week
           </button>
         </div>
 
@@ -407,47 +391,36 @@ export default function ProjectSchedulePage() {
           {weekDays.map((d) => {
             const dayKey = dateOnlyKey(d);
             const isToday = dayKey === todayKey;
-            const isSelected = dayKey === selectedDayKey;
             const events = dayCalendarEvents(scheduleProjects, d);
             return (
               <div
                 key={d.getTime()}
-                className={`flex flex-col rounded-lg border overflow-hidden min-h-[100px] sm:min-h-[120px] transition-shadow ${
-                  isSelected
-                    ? "ring-2 ring-violet-500/90 border-violet-600/70 bg-violet-950/25 shadow-[0_0_12px_rgba(139,92,246,0.15)]"
-                    : isToday
-                      ? "border-grass-600/80 ring-1 ring-grass-600/30 bg-grass-950/20"
-                      : "border-brick-800/80 bg-brick-900/50"
+                className={`flex flex-col rounded-lg border bg-brick-900/50 overflow-hidden min-h-[100px] sm:min-h-[120px] ${
+                  isToday ? "border-grass-700/55" : "border-brick-800/80"
                 }`}
               >
-                <button
-                  type="button"
-                  onClick={() => setSelectedDayKey(dayKey)}
-                  className={`shrink-0 w-full text-center py-1.5 px-0.5 border-b border-brick-800/60 cursor-pointer touch-manipulation ${
-                    isSelected
-                      ? "bg-violet-900/50"
-                      : isToday
-                        ? "bg-grass-900/40"
-                        : "bg-brick-950/60 hover:bg-brick-800/50"
+                <div
+                  className={`shrink-0 w-full text-center py-1.5 px-0.5 border-b border-brick-800/60 ${
+                    isToday ? "bg-grass-900/50" : "bg-brick-950/60"
                   }`}
-                  aria-pressed={isSelected}
-                  aria-label={`Select ${d.toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" })}`}
+                  aria-current={isToday ? "date" : undefined}
                 >
-                  <div className="text-[9px] sm:text-[10px] font-semibold text-brick-400 uppercase leading-tight">
+                  <div
+                    className={`text-[9px] sm:text-[10px] font-semibold uppercase leading-tight ${
+                      isToday ? "text-grass-400" : "text-brick-400"
+                    }`}
+                  >
                     {d.toLocaleDateString(undefined, { weekday: "narrow" })}
                   </div>
                   <div
                     className={`text-sm font-semibold leading-tight ${
-                      isSelected ? "text-violet-200" : isToday ? "text-grass-300" : "text-brick-100"
+                      isToday ? "text-grass-200" : "text-brick-100"
                     }`}
                   >
                     {d.getDate()}
                   </div>
-                </button>
-                <div
-                  onClick={() => setSelectedDayKey(dayKey)}
-                  className="flex-1 flex flex-col gap-1 p-1 overflow-y-auto min-h-0 cursor-pointer hover:bg-brick-950/30"
-                >
+                </div>
+                <div className="flex-1 flex flex-col gap-1 p-1 overflow-y-auto min-h-0">
                   {events.length === 0 ? (
                     <span className="text-[10px] text-brick-600 text-center py-1 pointer-events-none">—</span>
                   ) : (
@@ -456,7 +429,7 @@ export default function ProjectSchedulePage() {
                         key={`${project.id}-${stage.id}`}
                         to={`/projects/${project.id}`}
                         onClick={(e) => e.stopPropagation()}
-                        className={`block rounded border px-1 py-1 text-left shadow-sm active:opacity-90 ${stageBadgeClass(stage.name)}`}
+                        className={`block rounded border px-1 py-1 text-left active:opacity-90 outline-none focus-visible:ring-2 focus-visible:ring-grass-500/70 focus-visible:ring-offset-2 focus-visible:ring-offset-brick-900 ${stageCalendarCardClass(stage.name)}`}
                       >
                         <span className="font-medium block truncate text-[9px] sm:text-[10px] leading-tight">
                           {project.name}
@@ -545,59 +518,6 @@ export default function ProjectSchedulePage() {
               </ul>
             </section>
           )}
-
-          {/* Edit schedules (all projects) */}
-          <section className="space-y-3">
-            <h2 className="text-lg font-semibold text-brick-200">Manage schedules</h2>
-            <p className="text-sm text-brick-500">
-              Open the full stage date editor for any project. The week calendar above shows what is already
-              planned.
-            </p>
-            <div className="rounded-lg border border-brick-800 bg-brick-900/80 overflow-hidden divide-y divide-brick-800/80">
-              {scheduleProjects.map((p) => (
-                <div key={p.id}>
-                  <div className="p-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
-                    <div className="min-w-0 flex-1">
-                      <div className="font-medium text-brick-100 truncate">{p.name}</div>
-                      <div className="text-xs text-brick-500 truncate">{p.address}</div>
-                      {p.plannedStartDate || p.plannedEndDate ? (
-                        <p className="text-xs text-brick-500 mt-1 font-mono">
-                          {p.plannedStartDate ?? "—"} → {p.plannedEndDate ?? "—"}{" "}
-                          <span className="text-brick-600 font-sans">(derived)</span>
-                        </p>
-                      ) : (
-                        <p className="text-xs text-brick-500 mt-1 italic">No stage dates yet</p>
-                      )}
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() =>
-                        editingTimelineId === p.id ? cancelEditTimeline() : startEditTimeline(p)
-                      }
-                      className="text-sm shrink-0 text-brick-300 px-3 py-2 min-h-[40px] border border-brick-700 rounded-md hover:bg-brick-800 cursor-pointer self-start sm:self-center touch-manipulation"
-                    >
-                      {editingTimelineId === p.id ? "Close editor" : "Edit schedule"}
-                    </button>
-                  </div>
-                  {editingTimelineId === p.id && (
-                    <div className="px-3 pb-4 border-t border-brick-800 pt-3">
-                      <StageScheduleEditor
-                        key={p.id}
-                        project={p}
-                        formValues={formValues}
-                        onFieldChange={(name, value) =>
-                          setFormValues((prev) => ({ ...prev, [name]: value }))
-                        }
-                        onSave={() => handleScheduleSubmit(formValues, p)}
-                        onCancel={cancelEditTimeline}
-                        savePending={patchMutation.isPending}
-                      />
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          </section>
 
           {/* Stage breakdown — desktop */}
           <details className="hidden md:block group rounded-lg border border-brick-800 bg-brick-900/40 open:bg-brick-900/60">
