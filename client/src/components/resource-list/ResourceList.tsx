@@ -51,7 +51,7 @@ export function ResourceList<T extends { id: string }>({
 
   if (items.length === 0) {
     return (
-      <p className="text-brick-400 italic bg-brick-900/50 p-6 rounded-lg border border-brick-800/50 text-center">
+      <p className="text-brick-300 italic bg-brick-900/50 p-6 rounded-lg border border-brick-800/50 text-center">
         {emptyMessage}
       </p>
     );
@@ -106,8 +106,8 @@ export function ResourceList<T extends { id: string }>({
                 <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm">
                   {columns.map((col) => (
                     <div key={col.label}>
-                      <div className="text-xs text-brick-500">{col.label}</div>
-                      <div className="text-brick-400">{col.value(item)}</div>
+                      <div className="text-xs text-brick-300">{col.label}</div>
+                      <div className="text-brick-200">{col.value(item)}</div>
                     </div>
                   ))}
                 </div>
@@ -137,7 +137,7 @@ export function ResourceList<T extends { id: string }>({
                       className={`text-sm px-3 py-1.5 rounded-md transition-colors cursor-pointer ${
                         confirmDeleteId === item.id
                           ? "bg-radioactive-700 text-radioactive-100 border border-radioactive-600"
-                          : "text-brick-400 hover:text-radioactive-300 border border-brick-700 hover:border-radioactive-800"
+                          : "text-brick-300 hover:text-radioactive-300 border border-brick-700 hover:border-radioactive-800"
                       }`}
                     >
                       {confirmDeleteId === item.id ? "Confirm?" : "Delete"}

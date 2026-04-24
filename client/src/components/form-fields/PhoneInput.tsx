@@ -45,7 +45,7 @@ export const PhoneInput: PhoneInputComponent = ({
 }) => {
   return (
     <div className="flex flex-col gap-1">
-      <label className="text-sm font-medium text-brick-300">{label}</label>
+      <label className="text-sm font-medium text-brick-200">{label}</label>
       <input
         type="tel"
         value={value}

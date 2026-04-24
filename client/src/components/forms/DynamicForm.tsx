@@ -69,11 +69,11 @@ export const DynamicForm: React.FC<DynamicFormProps> = ({
             key={name}
             className="mt-14 first:mt-0 pt-6 border-t border-brick-700 first:border-t-0 first:pt-0"
           >
-            <h3 className="text-base md:text-lg font-semibold text-brick-200">
+            <h3 className="text-base md:text-lg font-semibold text-brick-100">
               {label}
             </h3>
             {description ? (
-              <p className="text-xs text-brick-500 mt-1">{description}</p>
+              <p className="text-xs text-brick-300 mt-1">{description}</p>
             ) : null}
           </div>
         );

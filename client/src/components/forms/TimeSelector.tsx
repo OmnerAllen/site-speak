@@ -107,7 +107,7 @@ export const TimeSelector: React.FC<TimeSelectorProps> = ({ label, value = "", o
 
   return (
     <div className="flex flex-col gap-1">
-      <label className="text-sm font-medium text-brick-300">{label}</label>
+      <label className="text-sm font-medium text-brick-200">{label}</label>
       <input
         type="text"
         placeholder="HH:MM AM"

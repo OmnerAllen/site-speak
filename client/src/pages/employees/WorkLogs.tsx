@@ -93,7 +93,7 @@ function VoicePlaybackTester() {
   return (
     <div className="mb-6 p-4 bg-brick-900/40 rounded-lg border border-brick-800">
       <h3 className="text-lg font-medium text-brick-200 mb-2">Mic Test (Local Playback & Transcribe)</h3>
-      <p className="text-sm text-brick-400 mb-4">Record your voice and play it back, or send it to AI for transcription.</p>
+      <p className="text-sm text-brick-300 mb-4">Record your voice and play it back, or send it to AI for transcription.</p>
       <div className="flex items-center flex-wrap gap-4">
         <button
           type="button"
@@ -389,7 +389,7 @@ export default function WorkLogsPage() {
   return (
     <div className="max-w-5xl mx-auto p-6 md:p-12">
       {!canAdd && (
-        <p className="mb-6 text-sm text-brick-400 bg-brick-900/60 border border-brick-800 rounded-lg p-4">
+        <p className="mb-6 text-sm text-brick-300 bg-brick-900/60 border border-brick-800 rounded-lg p-4">
           Create employees and projects before logging time. Empty selects mean there is no data to
           attach this entry to.
         </p>
@@ -456,7 +456,7 @@ export default function WorkLogsPage() {
               {dictation.isRecording && <AudioVisualizer stream={dictation.mediaStream} />}
               <div className="mt-2 text-brick-100 whitespace-pre-wrap min-h-[40px]">
                 {dictation.transcript || (
-                  <span className="text-brick-500 italic">
+                  <span className="text-brick-300 italic">
                     {dictation.isRecording ? "Listening..." : "Processing audio..."}
                   </span>
                 )}

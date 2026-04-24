@@ -300,7 +300,7 @@ export default function ProjectDetailsPage() {
 
   if (!isCreateMode && isLoading) {
     return (
-      <div className="max-w-5xl mx-auto p-6 md:p-12 text-brick-300 animate-pulse">
+      <div className="max-w-5xl mx-auto p-6 md:p-12 text-brick-200 animate-pulse">
         Loading project...
       </div>
     );
@@ -317,7 +317,7 @@ export default function ProjectDetailsPage() {
         >
           ←
         </Link>
-        <p className="text-brick-300">Project not found.</p>
+        <p className="text-brick-200">Project not found.</p>
       </div>
     );
   }
@@ -389,7 +389,7 @@ export default function ProjectDetailsPage() {
               type="button"
               onClick={handleCancel}
               disabled={saveMutation.isPending}
-              className="px-3 py-2 text-brick-300 hover:text-brick-100 border border-brick-600 rounded-md hover:bg-brick-700 transition-colors text-xs sm:text-sm cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+              className="px-3 py-2 text-brick-200 hover:text-brick-100 border border-brick-600 rounded-md hover:bg-brick-700 transition-colors text-xs sm:text-sm cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
             >
               Cancel
             </button>
@@ -419,10 +419,10 @@ export default function ProjectDetailsPage() {
               role="tab"
               aria-selected={active}
               onClick={() => setEditorSection(tab.id)}
-              className={`shrink-0 px-3 py-2 text-sm font-medium rounded-t-md border-b-2 transition-colors cursor-pointer ${
+              className={`shrink-0 px-3 py-2 text-sm font-medium rounded-md transition-colors cursor-pointer ${
                 active
-                  ? "text-grass-400 border-grass-400 bg-brick-900/50"
-                  : "text-brick-400 border-transparent hover:text-brick-200 hover:bg-brick-900/30"
+                  ? "text-grass-400 bg-brick-900/50"
+                  : "text-brick-200 hover:text-brick-100 hover:bg-brick-900/30"
               }`}
             >
               {tab.label}

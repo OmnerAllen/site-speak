@@ -124,7 +124,7 @@ export function StageScheduleEditor({
       </div>
 
       <div className="rounded-lg border border-brick-700/90 bg-brick-950/40 px-3 py-4 sm:px-5 sm:py-5">
-        <p className="text-xs font-medium uppercase tracking-wide text-brick-500 mb-3">
+        <p className="text-xs font-medium uppercase tracking-wide text-brick-300 mb-3">
           {stageLabel(activeStage)}
         </p>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 max-w-xl">
