@@ -419,10 +419,10 @@ export default function ProjectDetailsPage() {
               role="tab"
               aria-selected={active}
               onClick={() => setEditorSection(tab.id)}
-              className={`shrink-0 px-3 py-2 text-sm font-medium rounded-t-md border-b-2 transition-colors cursor-pointer ${
+              className={`shrink-0 px-3 py-2 text-sm font-medium rounded-md transition-colors cursor-pointer ${
                 active
-                  ? "text-grass-400 border-grass-400 bg-brick-900/50"
-                  : "text-brick-200 border-transparent hover:text-brick-100 hover:bg-brick-900/30"
+                  ? "text-grass-400 bg-brick-900/50"
+                  : "text-brick-200 hover:text-brick-100 hover:bg-brick-900/30"
               }`}
             >
               {tab.label}

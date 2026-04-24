@@ -20,10 +20,10 @@ export function NavLink({ to, activePaths, children }: { to: string; activePaths
   const active = isActiveRoute(pathname, to, activePaths);
 
   const baseClasses =
-    "shrink-0 px-3 py-2 rounded-md text-sm font-medium border-b-2 border-transparent transition-colors ";
+    "shrink-0 px-3 py-2 rounded-md text-sm font-medium transition-colors ";
 
   const statusClasses = active
-    ? "text-grass-400 border-grass-400 bg-brick-900/40"
+    ? "text-grass-400 bg-brick-900/40"
     : "text-brick-200 hover:text-brick-100 hover:bg-brick-900/30";
 
   return (
