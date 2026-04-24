@@ -239,11 +239,7 @@ export default function ProjectSchedulePage() {
 
   const todayKey = dateOnlyKey(new Date());
   const todayDate = parseDayKey(todayKey);
-
-  const todayItems = useMemo(
-    () => dayCalendarEvents(scheduleProjects, parseDayKey(todayKey)),
-    [scheduleProjects, todayKey],
-  );
+  const todayItems = dayCalendarEvents(scheduleProjects, todayDate);
 
   const backlogProjects = useMemo(
     () => scheduleProjects.filter(projectHasIncompleteStage),
@@ -287,7 +283,7 @@ export default function ProjectSchedulePage() {
       setFormValues(emptyScheduleFormValues());
       setSelectedBacklogId(null);
     },
-    [patchMutation],
+    [patchMutation, setFormValues, setSelectedBacklogId],
   );
 
   const stageRows = useMemo(() => {
