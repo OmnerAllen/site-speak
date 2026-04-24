@@ -37,7 +37,7 @@ export function ProtectedRoute({ children, roles }: Props) {
         <h1 className="text-3xl font-bold text-brick-300 mb-4">
           Access Denied
         </h1>
-        <p className="text-brick-400">
+        <p className="text-brick-300">
           You don't have permission to view this page.
         </p>
       </div>

@@ -13,7 +13,7 @@ export interface DateInputProps {
 
 export const DateInput: React.FC<DateInputProps> = ({ label, name, value, onChange, required }) => (
   <div className="flex flex-col gap-1">
-    <label className="text-sm font-medium text-brick-300">{label}</label>
+    <label className="text-sm font-medium text-brick-200">{label}</label>
     <input type="date" name={name} value={value} onChange={onChange} required={required} className={inputClass} />
   </div>
 );

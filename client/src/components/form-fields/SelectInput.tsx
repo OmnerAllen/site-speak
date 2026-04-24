@@ -29,7 +29,7 @@ export const SelectInput: React.FC<SelectInputProps> = ({
 }) => {
   return (
     <div className="flex flex-col gap-1">
-      <label className="text-sm font-medium text-brick-300">{label}</label>
+      <label className="text-sm font-medium text-brick-200">{label}</label>
       <select
         name={name}
         value={value}

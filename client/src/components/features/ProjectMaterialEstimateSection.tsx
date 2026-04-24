@@ -423,7 +423,7 @@ export const ProjectMaterialEstimateSection = forwardRef<ProjectMaterialEstimate
                 type="button"
                 onClick={() => resources && resetDraftFromServer(resources)}
                 disabled={loadingResources || !resources}
-                className="text-xs text-brick-400 hover:text-brick-200 underline disabled:opacity-50"
+                className="text-xs text-brick-300 hover:text-brick-200 underline disabled:opacity-50"
               >
                 Reset from saved
               </button>
@@ -465,7 +465,7 @@ export const ProjectMaterialEstimateSection = forwardRef<ProjectMaterialEstimate
                     <tbody>
                       {stage.materials.length === 0 ? (
                         <tr>
-                          <td colSpan={3} className="py-2 text-brick-500">
+                          <td colSpan={3} className="py-2 text-brick-300">
                             None
                           </td>
                         </tr>
@@ -510,7 +510,7 @@ export const ProjectMaterialEstimateSection = forwardRef<ProjectMaterialEstimate
                     <tbody>
                       {stage.equipment.length === 0 ? (
                         <tr>
-                          <td colSpan={3} className="py-2 text-brick-500">
+                          <td colSpan={3} className="py-2 text-brick-300">
                             None
                           </td>
                         </tr>

@@ -75,7 +75,7 @@ export default function Dashboard() {
               <p className="text-3xl font-bold text-grass-400 mb-1">
                 {stat.count}
               </p>
-              <p className="text-sm text-brick-400">{stat.label}</p>
+              <p className="text-sm text-brick-200">{stat.label}</p>
             </div>
           ))}
         </div>

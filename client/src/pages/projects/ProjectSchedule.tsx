@@ -336,7 +336,7 @@ export default function ProjectSchedulePage() {
           ) : null}
         </div>
         {selectedDayItems.length === 0 ? (
-          <p className="text-sm text-brick-500 italic">Nothing scheduled for this day.</p>
+          <p className="text-sm text-brick-300 italic">Nothing scheduled for this day.</p>
         ) : (
           <ul className="space-y-2">
             {selectedDayItems.map(({ project, stage }) => (
@@ -346,12 +346,12 @@ export default function ProjectSchedulePage() {
               >
                 <div>
                   <span className="font-medium text-brick-100">{project.name}</span>
-                  <span className="text-brick-500 hidden sm:inline"> — </span>
-                  <span className="text-brick-400 sm:inline block sm:mt-0 mt-0.5">
+                  <span className="text-brick-300 hidden sm:inline"> — </span>
+                  <span className="text-brick-300 sm:inline block sm:mt-0 mt-0.5">
                     {stageLabel(stage.name)}
                   </span>
                 </div>
-                <span className="text-xs text-brick-500 font-mono shrink-0">
+                <span className="text-xs text-brick-300 font-mono shrink-0">
                   {stage.plannedStartDate} → {stage.plannedEndDate}
                 </span>
               </li>
@@ -401,7 +401,7 @@ export default function ProjectSchedulePage() {
           </button>
         </div>
 
-        <p className="text-sm text-brick-500">{formatWeekMonthLabel(weekDays)}</p>
+        <p className="text-sm text-brick-300">{formatWeekMonthLabel(weekDays)}</p>
 
         <div className="grid grid-cols-7 gap-1 sm:gap-1.5 items-stretch min-h-0">
           {weekDays.map((d) => {
@@ -433,7 +433,7 @@ export default function ProjectSchedulePage() {
                   aria-pressed={isSelected}
                   aria-label={`Select ${d.toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" })}`}
                 >
-                  <div className="text-[9px] sm:text-[10px] font-semibold text-brick-400 uppercase leading-tight">
+                  <div className="text-[9px] sm:text-[10px] font-semibold text-brick-300 uppercase leading-tight">
                     {d.toLocaleDateString(undefined, { weekday: "narrow" })}
                   </div>
                   <div
@@ -449,7 +449,7 @@ export default function ProjectSchedulePage() {
                   className="flex-1 flex flex-col gap-1 p-1 overflow-y-auto min-h-0 cursor-pointer hover:bg-brick-950/30"
                 >
                   {events.length === 0 ? (
-                    <span className="text-[10px] text-brick-600 text-center py-1 pointer-events-none">—</span>
+                    <span className="text-[10px] text-brick-300 text-center py-1 pointer-events-none">—</span>
                   ) : (
                     events.map(({ project, stage }) => (
                       <Link
@@ -475,7 +475,7 @@ export default function ProjectSchedulePage() {
       </section>
 
       {scheduleProjects.length === 0 ? (
-        <p className="text-brick-400 italic bg-brick-900/50 p-6 rounded-lg border border-brick-800/50 text-center">
+        <p className="text-brick-300 italic bg-brick-900/50 p-6 rounded-lg border border-brick-800/50 text-center">
           No projects yet. Create a project first, then set stage dates here.
         </p>
       ) : (
@@ -484,7 +484,7 @@ export default function ProjectSchedulePage() {
           {backlogProjects.length > 0 && (
             <section className="space-y-3">
               <h2 className="text-lg font-semibold text-brick-200">Needs scheduling</h2>
-              <p className="text-sm text-brick-500">
+              <p className="text-sm text-brick-300">
                 Tap a project to set stage dates. Stages still missing a start or end are listed below each
                 name.
               </p>
@@ -507,7 +507,7 @@ export default function ProjectSchedulePage() {
                             {isSelected ? "Selected" : "Tap to schedule"}
                           </span>
                         </div>
-                        <span className="text-sm text-brick-500">{p.address}</span>
+                        <span className="text-sm text-brick-300">{p.address}</span>
                         {!isSelected ? (
                           <div className="flex flex-wrap gap-1.5 mt-2">
                             {incomplete.map((st) => (
@@ -549,7 +549,7 @@ export default function ProjectSchedulePage() {
           {/* Edit schedules (all projects) */}
           <section className="space-y-3">
             <h2 className="text-lg font-semibold text-brick-200">Manage schedules</h2>
-            <p className="text-sm text-brick-500">
+            <p className="text-sm text-brick-300">
               Open the full stage date editor for any project. The week calendar above shows what is already
               planned.
             </p>
@@ -559,14 +559,14 @@ export default function ProjectSchedulePage() {
                   <div className="p-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
                     <div className="min-w-0 flex-1">
                       <div className="font-medium text-brick-100 truncate">{p.name}</div>
-                      <div className="text-xs text-brick-500 truncate">{p.address}</div>
+                      <div className="text-xs text-brick-300 truncate">{p.address}</div>
                       {p.plannedStartDate || p.plannedEndDate ? (
-                        <p className="text-xs text-brick-500 mt-1 font-mono">
+                        <p className="text-xs text-brick-300 mt-1 font-mono">
                           {p.plannedStartDate ?? "—"} → {p.plannedEndDate ?? "—"}{" "}
-                          <span className="text-brick-600 font-sans">(derived)</span>
+                          <span className="text-brick-300 font-sans">(derived)</span>
                         </p>
                       ) : (
-                        <p className="text-xs text-brick-500 mt-1 italic">No stage dates yet</p>
+                        <p className="text-xs text-brick-300 mt-1 italic">No stage dates yet</p>
                       )}
                     </div>
                     <button
@@ -602,7 +602,7 @@ export default function ProjectSchedulePage() {
           {/* Stage breakdown — desktop */}
           <details className="hidden md:block group rounded-lg border border-brick-800 bg-brick-900/40 open:bg-brick-900/60">
             <summary className="cursor-pointer list-none px-4 py-3 text-sm font-semibold text-brick-300 hover:text-brick-100 flex items-center gap-2">
-              <span className="text-brick-500 group-open:rotate-90 transition-transform">▸</span>
+              <span className="text-brick-300 group-open:rotate-90 transition-transform">▸</span>
               Stage-by-stage breakdown (this week)
             </summary>
             <div className="overflow-x-auto border-t border-brick-800 px-2 pb-4">
@@ -634,7 +634,7 @@ export default function ProjectSchedulePage() {
                         <div className="text-[11px] font-semibold text-brick-300 truncate leading-tight">
                           {project.name}
                         </div>
-                        <div className="text-brick-400 text-xs mt-0.5">{stageLabel(stage.name)}</div>
+                        <div className="text-brick-300 text-xs mt-0.5">{stageLabel(stage.name)}</div>
                       </div>
                       <div className="col-start-2 col-span-7 border-b border-brick-800/50 p-1 relative min-h-[40px]">
                         <div className="absolute inset-1 grid grid-cols-7 gap-px pointer-events-none">

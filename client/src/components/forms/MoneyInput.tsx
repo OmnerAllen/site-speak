@@ -62,10 +62,10 @@ export const MoneyInput: React.FC<MoneyInputProps> = ({
 
   return (
     <div className="flex flex-col gap-1">
-      <label className="text-sm font-medium text-brick-300">{label}</label>
+      <label className="text-sm font-medium text-brick-200">{label}</label>
       <div className="relative">
         <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-          <span className="text-brick-500">{currencySymbol}</span>
+          <span className="text-brick-900">{currencySymbol}</span>
         </div>
         <input
           type="text"

@@ -186,7 +186,7 @@ export default function Materials() {
             value: (m) => (
               <span className="font-mono text-grass-500">
                 {formatMaterialUnitPrice(m)}
-                <span className="text-brick-600 font-sans">
+                <span className="text-brick-300 font-sans">
                   /{m.unit.toLowerCase()}
                 </span>
               </span>

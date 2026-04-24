@@ -65,13 +65,13 @@ export function DictationWidget({ onCancel, onFinish }: Props) {
     <div className="bg-brick-900 border border-brick-800 rounded-lg p-6 mb-6">
       <div className="flex justify-between items-center mb-4">
         <h3 className="text-brick-200 font-semibold text-lg">Push-to-Talk Dictation</h3>
-        <button type="button" onClick={onCancel} className="text-brick-400 hover:text-brick-200 uppercase text-sm">Cancel</button>
+        <button type="button" onClick={onCancel} className="text-brick-200 hover:text-brick-200 uppercase text-sm">Cancel</button>
       </div>
 
       <AudioVisualizer stream={isRecording ? mediaStream : null} />
 
       <div className="min-h-[160px] max-w-full bg-brick-950 border border-brick-800 rounded-lg p-4 mb-4 text-brick-100 whitespace-pre-wrap">
-        {transcript || <span className="text-brick-500 italic">Hold the button below or Spacebar, and start speaking...</span>}
+        {transcript || <span className="text-brick-300 italic">Hold the button below or Spacebar, and start speaking...</span>}
         {isTranscribing && <span className="text-sky-500 italic ml-2">Transcribing...</span>}
       </div>
 

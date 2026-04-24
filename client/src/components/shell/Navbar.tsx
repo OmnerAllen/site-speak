@@ -38,7 +38,7 @@ export function Navbar({ items = MAIN_NAV_ITEMS }: NavbarProps) {
           {auth.isAuthenticated && profile ? (
             <button
               onClick={logout}
-              className="px-4 py-2 text-brick-300 hover:text-brick-100 border border-brick-600 rounded-md hover:bg-brick-700 transition-colors cursor-pointer"
+              className="px-4 py-2 text-brick-200 hover:text-brick-100 border border-brick-600 rounded-md hover:bg-brick-700 transition-colors cursor-pointer"
             >
               Log out
             </button>

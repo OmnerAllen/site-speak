@@ -24,7 +24,7 @@ export function NavLink({ to, activePaths, children }: { to: string; activePaths
 
   const statusClasses = active
     ? "text-grass-400 border-grass-400 bg-brick-900/40"
-    : "text-brick-300 hover:text-brick-100 hover:bg-brick-900/30";
+    : "text-brick-200 hover:text-brick-100 hover:bg-brick-900/30";
 
   return (
     <Link to={to} className={`${baseClasses}${statusClasses}`}>

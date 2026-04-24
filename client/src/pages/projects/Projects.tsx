@@ -54,7 +54,7 @@ export default function Projects() {
           {
             label: "Created",
             value: (p) => (
-              <span className="font-mono text-brick-500">
+              <span className="font-mono text-brick-200">
                 {new Date(p.createdAt).toLocaleDateString()}
               </span>
             ),

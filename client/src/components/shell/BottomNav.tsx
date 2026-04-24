@@ -21,7 +21,7 @@ export function BottomNav() {
         {isResourceRoute && (
           <button
             onClick={() => navigate("/")}
-            className="flex h-full w-full flex-col items-center justify-center p-2 text-[10px] font-medium leading-tight transition-colors text-brick-400 hover:text-brick-100 cursor-pointer"
+            className="flex h-full w-full flex-col items-center justify-center p-2 text-[10px] font-medium leading-tight transition-colors text-brick-200 hover:text-brick-100 cursor-pointer"
           >
             <span className="truncate text-center w-full min-h-[1.25rem] flex items-center justify-center">
               Home
@@ -40,7 +40,7 @@ export function BottomNav() {
               key={item.to}
               to={item.to}
               className={`flex h-full w-full flex-col items-center justify-center p-2 text-[10px] font-medium leading-tight transition-colors ${
-                isActive ? "text-grass-400" : "text-brick-400 hover:text-brick-100"
+                isActive ? "text-grass-400" : "text-brick-200 hover:text-brick-100"
               }`}
             >
               <span className="truncate text-center w-full min-h-[1.25rem] flex items-center justify-center">
