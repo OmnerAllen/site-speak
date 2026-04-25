@@ -51,16 +51,15 @@ Auth - Authorization in house stuff
 ```
 
 ## Pages
-A - CRUD Employee
-A - CRUD Projects
-    - CRUD Stages
-A - Project Scheduling
-A - CRUD Equipment
-A - CRUD Materials
-A - CRUD Suppliers
-W/A - Review Work Log
-W - Fill Work Log
-W/A - Home Page / Dashboard
+CRUD Employee
+CRUD Projects
+Project Details
+Project Scheduling
+CRUD Equipment
+CRUD Materials
+CRUD Suppliers
+Work Logs
+Home Page / Dashboard
 Login Page
 
 
@@ -124,7 +123,7 @@ Features:
 
 Rubric items:
 Note: These will be throughout the project, this is initial setup
-- [ ] Client side state stores
+- [x] Client side state stores
 - [x] Toasts / global notifications or alerts
 - [x] Error handling
 
@@ -148,13 +147,13 @@ Features:
 #### Estimates:
 
 Rubric items:
-- [ ] 10+ pages or views
+- [x] 10+ pages or views
 - [x] 4+ generic layout components
 
 Features:
 - [x] CRUD Projects
 - [x] CRUD Stages
-- [ ] Rest of pages are created
+- [x] Rest of pages are created
 
 #### Delivered
 
@@ -172,7 +171,7 @@ Rubric items:
 Note: We are just working more on these, can't really finish a singular one
 - [x] Project scope is 2-3 times larger than Inventory Management (per group member)
 - [x] Toasts / global notifications or alerts
-- [ ] Error handling (both on api requests and render errors)
+- [x] Error handling (both on api requests and render errors)
 
 Features:
 - [x] CRUD Employees
@@ -193,14 +192,14 @@ Features:
 
 Rubric items:
 Note: We are just working more on these, can't really finish a singular one
-- [ ] 1+ action(s) can be performed autonomously
-- [ ] 1+ action(s) require user confirmation to perform
+- [x] 1+ action(s) can be performed autonomously
+- [x] 1+ action(s) require user confirmation to perform
 
 Features:
-- [ ] Voice-To-Text for worklogs
-- [ ] AI material estimates
+- [x] Voice-To-Text for worklogs
+- [x] AI material estimates
 - Will read from the Project Overview (user needs to type everything in here) and find materials/equipment based on project address and supplier address (Omner's genius idea: filter based on address before AI and let user choose how far {make sure AI knows it can return nothing if outside of the area})for each stage of the project. Then go ahead and return a json object that is a project and inside of the project the number of stages with the materials/equipment for that stage. Use a form to show the materials and allow the user to edit them. 
-- [ ] Split edit schedule into separate page
+- [x] Split edit schedule into separate page
 
 #### Delivered
 
@@ -216,12 +215,12 @@ Features:
 
 Rubric items:
 Note: We are just working more on these, can't really finish a singular one
-- [ ] 1+ action(s) automatically adjust the UI when performed
-- [ ] Professional, organized and smooth experience
+- [x] 1+ action(s) automatically adjust the UI when performed
+- [x] Professional, organized and smooth experience
 
 Features:
-- [ ] AI Project Scheduling materials recommended purchase based on stage time
-- [ ] Design rules of thumb for our UI
+- [x] AI Project Scheduling materials recommended purchase based on stage time
+- [x] Design rules of thumb for our UI
 
 
 #### Delivered
@@ -239,12 +238,12 @@ Features:
 
 Rubric items:
 Note: We are just working more on these, can't really finish a singular one
-- [ ] Professional, organized and smooth experience
-- [ ] Toasts / global notifications or alerts
+- [x] Professional, organized and smooth experience
+- [x] Toasts / global notifications or alerts
 
 Features:
-- [ ] Implement design for desktop
-- [ ] Fine tune error handling and messages - UI
+- [x] Implement design for desktop
+- [x] Fine tune error handling and messages - UI
 
 #### Delivered
 
@@ -260,13 +259,13 @@ Features:
 
 Rubric items:
 Note: We are just working more on these, can't really finish a singular one
-- [ ] 3 instances where elements re-order themselves on smaller screens
-- [ ] all experiences mobile friendly
+- [x] 3 instances where elements re-order themselves on smaller screens
+- [x] all experiences mobile friendly
 
 Features:
-- [ ] Make this work on a phone
-- [ ] Make it incredibly intuitive on a phone
-- [ ] Easy to use worker voice-to-text on phone
+- [x] Make this work on a phone
+- [x] Make it incredibly intuitive on a phone
+- [x] Easy to use worker voice-to-text on phone
 
 #### Delivered
 
@@ -282,13 +281,13 @@ Features:
 
 Rubric items:
 Note: We are just working more on these, can't really finish a singular one
-- [ ] Professional, organized and smooth experience
-- [ ] Personal Rubric item: Testing with real people
+- [x] Professional, organized and smooth experience
+- [x] Personal Rubric item: Testing with real people
 
 Features:
-- [ ] Beautiful design
-- [ ] Smooth transitions
-- [ ] No bugs, only features we didn't know about ;)
+- [x] Beautiful design
+- [x] Smooth transitions
+- [x] No bugs, only features we didn't know about ;)
 
 #### Delivered
 
@@ -304,11 +303,11 @@ Features:
 
 Rubric items:
 Note: We are just working more on these, can't really finish a singular one
-- [ ] Project Scope is 2-3 times larger than IM
-- [ ] All of them
+- [x] Project Scope is 2-3 times larger than IM
+- [x] All of them
 
 Features:
-- [ ] Final touch-ups, make sure everything works.
+- [x] Final touch-ups, make sure everything works.
 
 #### Delivered
 
