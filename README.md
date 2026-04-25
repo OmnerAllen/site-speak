@@ -1,6 +1,14 @@
 # site-speak
 contractor gets auto-priced estimates based off of saved inventory, and technicians can verbally log their work.
 
+### Examples
+#### AI Materials Generation based off of Project Overview
+https://github.com/user-attachments/assets/8ea20578-48a5-445e-a639-c37b225ec05f
+
+#### AI Dictate to fill out Work Log Form
+[Screencast from 2026-04-25 13-36-11.webm](https://github.com/user-attachments/assets/cb3f52c0-8f5d-4814-a433-ca7b2aedefe2)
+
+
 ### RUBRIC
 - [x] 30 pts Project scope is 2-3 times larger than Inventory Management (per group member)
 - [x] 5 pts Technology: Client side state stores (e.g. tanstack query or context)
