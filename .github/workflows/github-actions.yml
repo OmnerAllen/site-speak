@@ -15,6 +15,11 @@ on:
           AI_CHAT_ENABLED instead (set to false to disable).
         type: boolean
         default: true
+      vite_enable_work_log_test:
+        description: >-
+          Enable a speech to text box on the worklog page to verify that the speech-to-text feature is working.
+        type: boolean
+        default: false
 
 jobs:
   cleanup-pr-namespace:
